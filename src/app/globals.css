@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0B0C10;
+  --foreground: #EDEDED;
+  --cyber-yellow: #FCEE0A;
+  --cyber-cyan: #00F0FF;
+  --cyber-pink: #FF003C;
+  --cyber-blue: #05D9E8;
+  --cyber-dark: #0B0C10;
+  --cyber-darker: #050507;
+  --cyber-panel: #12131A;
+  --cyber-border: #1E293B;
+  --cyber-muted: #94A3B8;
+  --cyber-card: #151824;
+}
+
+html.light, body.light {
+  --background: #F1F5F9;
+  --foreground: #0F172A;
+  --cyber-yellow: #D97706;
+  --cyber-cyan: #0284C7;
+  --cyber-pink: #E11D48;
+  --cyber-blue: #0369A1;
+  --cyber-dark: #FFFFFF;
+  --cyber-darker: #E2E8F0;
+  --cyber-panel: #FFFFFF;
+  --cyber-border: #CBD5E1;
+  --cyber-muted: #64748B;
+  --cyber-card: #F8FAFC;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-cyber-yellow: var(--cyber-yellow);
+  --color-cyber-cyan: var(--cyber-cyan);
+  --color-cyber-pink: var(--cyber-pink);
+  --color-cyber-blue: var(--cyber-blue);
+  --color-cyber-dark: var(--cyber-dark);
+  --color-cyber-darker: var(--cyber-darker);
+  --color-cyber-panel: var(--cyber-panel);
+  --color-cyber-border: var(--cyber-border);
+  --color-cyber-muted: var(--cyber-muted);
+  --color-cyber-card: var(--cyber-card);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Cyberpunk specific utility classes */
+.cyber-glitch-text {
+  text-shadow: 2px 0 var(--cyber-cyan), -2px 0 var(--cyber-pink);
+  animation: glitch-anim 3s infinite linear alternate-reverse;
+}
+
+html.light .cyber-glitch-text {
+  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
+}
+
+.cyber-glitch-text-hover:hover {
+  text-shadow: 2px 0 var(--cyber-cyan), -2px 0 var(--cyber-pink);
+}
+
+@keyframes glitch-anim {
+  0% { clip-path: inset(20% 0 80% 0); }
+  20% { clip-path: inset(60% 0 10% 0); }
+  40% { clip-path: inset(40% 0 50% 0); }
+  60% { clip-path: inset(80% 0 5% 0); }
+  80% { clip-path: inset(10% 0 70% 0); }
+  100% { clip-path: inset(30% 0 50% 0); }
+}
+
+.cyber-panel-border {
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+}
+
+.cyber-button-border {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.scanline {
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 240, 255, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+  opacity: 0.25;
+  position: fixed;
+  bottom: 100%;
+  left: 0;
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
+  z-index: 50;
+}
+
+html.light .scanline {
+  opacity: 0.08;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(2, 132, 199, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+}
+
+@keyframes scanline {
+  0% { bottom: 100%; }
+  100% { bottom: -100px; }
+}
+
+.overlay-scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.12) 50%,
+    rgba(0,0,0,0.12)
+  );
+  background-size: 100% 4px;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 49;
+}
+
+html.light .overlay-scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0),
+    rgba(0,0,0,0) 50%,
+    rgba(0,0,0,0.03) 50%,
+    rgba(0,0,0,0.03)
+  );
+  background-size: 100% 4px;
+}
