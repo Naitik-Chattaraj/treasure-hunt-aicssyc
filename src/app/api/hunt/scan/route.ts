@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
+import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,14 +27,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // 1. Fetch team info
+    // 1. Fetch team info with select('*') so it never fails on schema discrepancies
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .select('id, status, current_stage, cooldown_until')
+      .select('*')
       .eq('id', payload.teamId)
       .single();
 
     if (teamError || !team) {
+      console.error('API /hunt/scan: Team error:', teamError);
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
@@ -51,22 +53,66 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // 2. Find matching checkpoint by QR hash (case-insensitive)
-    const { data: matchedNode } = await supabase
-      .from('checkpoints')
-      .select('id, title, area, clue')
-      .ilike('qr_hash', cleanQrHash)
-      .maybeSingle();
+    const assignedRoute: 1 | 2 = (team.assigned_route === 2 || team.assignedRoute === 2) ? 2 : 1;
+    const currentStage: number = team.current_stage || 1;
+
+    // 2. Find matching checkpoint by QR hash (case-insensitive) in database or mock fallback
+    let matchedNode: {
+      id: number;
+      route_id: number;
+      stage: number;
+      title: string;
+      area: string;
+      clue: string;
+    } | null = null;
+
+    try {
+      const { data: dbNode } = await supabase
+        .from('checkpoints')
+        .select('*')
+        .ilike('qr_hash', cleanQrHash)
+        .maybeSingle();
+
+      if (dbNode) {
+        matchedNode = {
+          id: dbNode.id,
+          route_id: dbNode.route_id || 1,
+          stage: dbNode.stage || dbNode.id,
+          title: dbNode.title,
+          area: dbNode.area,
+          clue: dbNode.clue,
+        };
+      }
+    } catch (e) {
+      console.warn('DB QR lookup warning:', e);
+    }
+
+    // Fallback to MOCK_CHECKPOINTS for hash match if DB table is unpopulated or missing hash
+    if (!matchedNode) {
+      const mockMatch = MOCK_CHECKPOINTS.find((c) => c.qrHash?.toLowerCase() === cleanQrHash.toLowerCase());
+      if (mockMatch) {
+        matchedNode = {
+          id: mockMatch.id,
+          route_id: mockMatch.routeId,
+          stage: mockMatch.stage,
+          title: mockMatch.title,
+          area: mockMatch.area,
+          clue: mockMatch.clue,
+        };
+      }
+    }
 
     if (!matchedNode) {
-      // Log failed scan
-      await supabase.from('submissions_log').insert({
-        team_id: team.id,
-        node_id: team.current_stage,
-        submission_type: 'scan',
-        submitted_value: cleanQrHash,
-        is_correct: false,
-      });
+      // Safely log failed scan
+      try {
+        await supabase.from('submissions_log').insert({
+          team_id: team.id,
+          node_id: currentStage,
+          submission_type: 'scan',
+          submitted_value: cleanQrHash,
+          is_correct: false,
+        });
+      } catch {}
 
       return NextResponse.json({
         success: false,
@@ -75,69 +121,53 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Check route match
+    if (matchedNode.route_id !== assignedRoute) {
+      try {
+        await supabase.from('submissions_log').insert({
+          team_id: team.id,
+          node_id: currentStage,
+          submission_type: 'scan',
+          submitted_value: cleanQrHash,
+          is_correct: false,
+        });
+      } catch {}
+
+      return NextResponse.json({
+        success: false,
+        error: 'route_mismatch',
+        message: `ROUTE MISMATCH: This QR code belongs to Route 0${matchedNode.route_id}. Your team is assigned to Route 0${assignedRoute}!`,
+      });
+    }
+
     // 3. Sequence check: If scanned a future node
-    if (matchedNode.id > team.current_stage) {
+    if (matchedNode.stage > currentStage) {
       return NextResponse.json({
         success: false,
         error: 'sequence_violation',
-        nodeId: matchedNode.id,
-        currentStage: team.current_stage,
-        message: `SEQUENCE VIOLATION: Accessing Node 0${matchedNode.id} out of order. You haven't reached this node yet!`,
+        nodeId: matchedNode.stage,
+        currentStage,
+        message: `SEQUENCE VIOLATION: Accessing Node 0${matchedNode.stage} out of order. You haven't reached this node yet!`,
       });
     }
 
     // If scanned a node already completed in the past
-    if (matchedNode.id < team.current_stage) {
+    if (matchedNode.stage < currentStage) {
       return NextResponse.json({
         success: false,
         error: 'already_completed',
-        nodeId: matchedNode.id,
-        currentStage: team.current_stage,
-        message: `NODE 0${matchedNode.id} ALREADY COMPROMISED. CURRENT TARGET: NODE 0${team.current_stage}`,
+        nodeId: matchedNode.stage,
+        currentStage,
+        message: `NODE 0${matchedNode.stage} ALREADY COMPROMISED. CURRENT TARGET: NODE 0${currentStage}`,
       });
     }
 
-    // 4. Exact stage match! (matchedNode.id === team.current_stage)
-    // Check if a question has already been etched for this team at this node
-    let { data: existingActive } = await supabase
-      .from('team_active_challenges')
-      .select(`
-        id,
-        question_id,
-        questions_pool (
-          id,
-          challenge_type,
-          question,
-          options
-        )
-      `)
-      .eq('team_id', team.id)
-      .eq('node_id', matchedNode.id)
-      .maybeSingle();
+    // 4. Exact stage match! Check or etch challenge
+    let challengeData: any = null;
 
-    if (!existingActive) {
-      // Fetch all available questions for this node from the pool
-      const { data: pool, error: poolError } = await supabase
-        .from('questions_pool')
-        .select('id, challenge_type, question, options')
-        .eq('node_id', matchedNode.id);
-
-      if (poolError || !pool || pool.length === 0) {
-        return NextResponse.json({ error: 'Question bank depleted for this node' }, { status: 500 });
-      }
-
-      // Randomly select one question from the pool
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      const chosenQuestion = pool[randomIndex];
-
-      // Etch it permanently in Supabase for this team!
-      const { data: inserted, error: insertError } = await supabase
+    try {
+      let { data: existingActive } = await supabase
         .from('team_active_challenges')
-        .insert({
-          team_id: team.id,
-          node_id: matchedNode.id,
-          question_id: chosenQuestion.id,
-        })
         .select(`
           id,
           question_id,
@@ -148,55 +178,87 @@ export async function POST(req: NextRequest) {
             options
           )
         `)
-        .single();
+        .eq('team_id', team.id)
+        .eq('node_id', matchedNode.id)
+        .maybeSingle();
 
-      if (insertError) {
-        // In case of concurrent scan race condition, fetch the existing one
-        const { data: raceExisting } = await supabase
-          .from('team_active_challenges')
-          .select(`
-            id,
-            question_id,
-            questions_pool (
+      if (!existingActive) {
+        // Fetch questions for this node from pool
+        const { data: pool } = await supabase
+          .from('questions_pool')
+          .select('id, challenge_type, question, options')
+          .eq('node_id', matchedNode.id);
+
+        if (pool && pool.length > 0) {
+          const chosen = pool[Math.floor(Math.random() * pool.length)];
+          const { data: inserted } = await supabase
+            .from('team_active_challenges')
+            .insert({
+              team_id: team.id,
+              node_id: matchedNode.id,
+              question_id: chosen.id,
+            })
+            .select(`
               id,
-              challenge_type,
-              question,
-              options
-            )
-          `)
-          .eq('team_id', team.id)
-          .eq('node_id', matchedNode.id)
-          .single();
-        existingActive = raceExisting;
-      } else {
-        existingActive = inserted;
+              question_id,
+              questions_pool (
+                id,
+                challenge_type,
+                question,
+                options
+              )
+            `)
+            .single();
+
+          existingActive = inserted;
+        }
+      }
+
+      if (existingActive?.questions_pool) {
+        const q = Array.isArray(existingActive.questions_pool) 
+          ? existingActive.questions_pool[0] 
+          : existingActive.questions_pool;
+
+        challengeData = {
+          id: q.id,
+          nodeId: matchedNode.stage,
+          checkpointId: matchedNode.id,
+          type: q.challenge_type,
+          question: q.question,
+          options: q.options,
+        };
+      }
+    } catch (e) {
+      console.warn('team_active_challenges process warning:', e);
+    }
+
+    // Fallback challenge from mock data if DB questions pool is unpopulated
+    if (!challengeData) {
+      const mockNode = MOCK_CHECKPOINTS.find((c) => c.id === matchedNode?.id);
+      if (mockNode?.challenge) {
+        challengeData = mockNode.challenge;
       }
     }
 
-    // Log successful scan in submissions audit
-    await supabase.from('submissions_log').insert({
-      team_id: team.id,
-      node_id: matchedNode.id,
-      submission_type: 'scan',
-      submitted_value: cleanQrHash,
-      is_correct: true,
-    });
-
-    const q = Array.isArray(existingActive?.questions_pool) 
-      ? existingActive?.questions_pool[0] 
-      : existingActive?.questions_pool;
+    // Safely log successful scan in submissions audit
+    try {
+      await supabase.from('submissions_log').insert({
+        team_id: team.id,
+        node_id: matchedNode.id,
+        submission_type: 'scan',
+        submitted_value: cleanQrHash,
+        is_correct: true,
+      });
+    } catch {}
 
     return NextResponse.json({
       success: true,
-      nodeId: matchedNode.id,
+      nodeId: matchedNode.stage,
+      checkpointId: matchedNode.id,
+      stage: matchedNode.stage,
+      routeId: matchedNode.route_id,
       title: matchedNode.title,
-      challenge: q ? {
-        id: q.id,
-        nodeId: matchedNode.id,
-        type: q.challenge_type,
-        question: q.question,
-        options: q.options,
-      } : null,
+      challenge: challengeData,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal Server Error';

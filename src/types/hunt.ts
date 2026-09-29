@@ -15,6 +15,8 @@ export interface TeamProfile {
   members: TeamMember[];
   status?: TeamStatus;
   cooldownUntil?: string | null;
+  assignedRoute?: 1 | 2;
+  assigned_route?: 1 | 2;
 }
 
 export type ChallengeType = 'passcode' | 'mcq' | 'riddle';
@@ -29,17 +31,22 @@ export interface Challenge {
 }
 
 export interface Checkpoint {
-  id: number; // 1 to 12
+  id: number; // 1 to 24 (or stage 1-12)
+  routeId: 1 | 2;
+  route_id?: 1 | 2;
+  stage: number; // 1 to 12
   title: string;
   area: string;
   clue: string;
   qrHash?: string; // Only present in admin views or mock
+  qr_hash?: string;
   qrScanned?: boolean; // Whether the field team has unlocked the QR for this stage
   challenge?: Challenge | null; // The etched challenge for this team
 }
 
 export interface HuntProgress {
   currentStage: number; // 1 to 13 (13 = victory)
+  assignedRoute?: 1 | 2;
   startTime: number | null;
   completedNodes: {
     nodeId: number;
@@ -55,9 +62,11 @@ export interface LeaderboardEntry {
   id: string;
   teamName: string;
   teamLead: string;
+  assignedRoute?: 1 | 2;
   currentStage: number;
   startTime: string | null;
   completedAt: string | null;
   status: TeamStatus;
   elapsedSeconds?: number | null;
 }
+

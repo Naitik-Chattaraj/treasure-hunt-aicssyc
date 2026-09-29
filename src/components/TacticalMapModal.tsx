@@ -1,31 +1,50 @@
 'use client';
 
 import { HuntProgress } from '@/types/hunt';
-import { X, Navigation, MapPin } from 'lucide-react';
+import { X, Navigation } from 'lucide-react';
 
-// Hardcoded arbitrary positions for nodes on our mock map grid
-const NODE_POSITIONS = [
-  { x: 20, y: 30, name: 'Tech Park Gate' },
-  { x: 40, y: 20, name: 'Central Quad' },
-  { x: 70, y: 15, name: 'Science Block' },
-  { x: 80, y: 40, name: 'Robotics Wing' },
-  { x: 60, y: 55, name: 'Main Auditorium' },
-  { x: 30, y: 65, name: 'Old Amphitheatre' },
-  { x: 15, y: 80, name: 'Library Grounds' },
-  { x: 45, y: 85, name: 'Sports Complex' },
-  { x: 75, y: 80, name: 'Innovation Hub' },
-  { x: 85, y: 60, name: 'Cafeteria Plaza' },
-  { x: 50, y: 40, name: 'Clock Tower' },
-  { x: 50, y: 50, name: 'Final Chamber' },
+const ROUTE_1_MAP_NODES = [
+  { x: 18, y: 78, name: 'Hippocrates Hall' },
+  { x: 26, y: 60, name: 'N Block' },
+  { x: 22, y: 35, name: 'Shiva Temple' },
+  { x: 40, y: 22, name: 'BEL Block' },
+  { x: 62, y: 20, name: 'TP Building' },
+  { x: 50, y: 45, name: 'Clock Tower' },
+  { x: 68, y: 46, name: 'UB Building' },
+  { x: 82, y: 38, name: 'Architecture Block' },
+  { x: 84, y: 64, name: 'Law College' },
+  { x: 55, y: 65, name: 'Vendhar Square' },
+  { x: 38, y: 75, name: 'Medical College' },
+  { x: 20, y: 82, name: 'Hippocrates Hall (Final)' },
+];
+
+const ROUTE_2_MAP_NODES = [
+  { x: 16, y: 75, name: 'SRM General Hospital Lawn' },
+  { x: 30, y: 80, name: 'Dental / Pharmacy Block' },
+  { x: 42, y: 70, name: 'Bio-Tech & Life Sciences' },
+  { x: 36, y: 48, name: 'TP Ganesan Auditorium' },
+  { x: 50, y: 45, name: 'Vendhar & Clock Tower' },
+  { x: 42, y: 24, name: 'BEL Block' },
+  { x: 58, y: 32, name: 'Java Green / Main Canteen' },
+  { x: 68, y: 22, name: 'SRM Tech Park' },
+  { x: 70, y: 46, name: 'Central Library / UB' },
+  { x: 82, y: 52, name: 'Post Office & Bank' },
+  { x: 84, y: 66, name: 'School of Law' },
+  { x: 60, y: 80, name: 'FSH (Arts College)' },
 ];
 
 export default function TacticalMapModal({ 
   progress, 
+  assignedRoute,
   onClose 
 }: { 
   progress: HuntProgress; 
-  onClose: () => void;
+  assignedRoute?: 1 | 2;
+  onClose: () => void; 
 }) {
+  const currentRoute: 1 | 2 = assignedRoute || progress.assignedRoute || 1;
+  const nodes = currentRoute === 1 ? ROUTE_1_MAP_NODES : ROUTE_2_MAP_NODES;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono transition-colors">
       <div className="w-full max-w-2xl h-[82vh] bg-cyber-panel cyber-panel-border border-2 border-cyber-blue shadow-[0_0_30px_rgba(5,217,232,0.25)] relative flex flex-col overflow-hidden">
@@ -35,10 +54,21 @@ export default function TacticalMapModal({
           <div className="flex items-center gap-2">
             <Navigation className="w-5 h-5 text-cyber-blue" />
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-cyber-blue tracking-widest uppercase">
-                Treasure Map
-              </h2>
-              <p className="text-[10px] text-cyber-muted">AICSSYC CAMPUS GRID TELEMETRY</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-cyber-blue tracking-widest uppercase">
+                  Tactical Campus Map
+                </h2>
+                <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${
+                  currentRoute === 1 ? 'bg-cyber-cyan text-cyber-dark' : 'bg-purple-500 text-white'
+                }`}>
+                  Route 0{currentRoute}
+                </span>
+              </div>
+              <p className="text-[10px] text-cyber-muted">
+                {currentRoute === 1 
+                  ? 'ROUTE 1 // HIPPOCRATES LOOP (12 SECTORS)' 
+                  : 'ROUTE 2 // HOSPITAL TO ARTS SECTORS (12 SECTORS)'}
+              </p>
             </div>
           </div>
           <button 
@@ -64,14 +94,16 @@ export default function TacticalMapModal({
           <div className="absolute inset-4 border border-cyber-blue/30 pointer-events-none">
             {/* Coordinate markings */}
             <span className="absolute top-1 left-2 text-[9px] text-cyber-blue/70">X: 104.22 // Y: 40.89</span>
-            <span className="absolute bottom-1 right-2 text-[9px] text-cyber-blue/70">CAMPUS SECTOR GRID</span>
+            <span className="absolute bottom-1 right-2 text-[9px] text-cyber-blue/70">
+              CAMPUS GRID // ROUTE 0{currentRoute}
+            </span>
           </div>
 
           <div className="relative w-full h-full">
-            {NODE_POSITIONS.map((pos, idx) => {
-              const nodeId = idx + 1;
-              const isCompleted = progress.completedNodes.some(n => n.nodeId === nodeId);
-              const isCurrent = progress.currentStage === nodeId;
+            {nodes.map((pos, idx) => {
+              const stageId = idx + 1;
+              const isCompleted = progress.completedNodes.some(n => n.nodeId === stageId);
+              const isCurrent = progress.currentStage === stageId;
               
               let styleClasses = 'bg-cyber-darker border-cyber-border text-cyber-muted'; // Locked
               let glowEffect = '';
@@ -86,18 +118,18 @@ export default function TacticalMapModal({
 
               return (
                 <div 
-                  key={nodeId}
+                  key={stageId}
                   className={`group absolute w-8 h-8 -ml-4 -mt-4 border-2 rounded-full flex items-center justify-center text-xs transition-all cursor-pointer ${styleClasses} ${glowEffect}`}
                   style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                 >
-                  {nodeId}
+                  {stageId}
                   {isCurrent && (
                     <div className="absolute inset-0 border-2 border-cyber-yellow rounded-full animate-ping opacity-60"></div>
                   )}
 
                   {/* Tooltip on hover/touch */}
-                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-cyber-cyan px-2 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
-                    Node 0{nodeId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ TARGET' : '🔒'}
+                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-cyber-cyan px-2.5 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
+                    Node 0{stageId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ ACTIVE TARGET' : '🔒'}
                   </div>
                 </div>
               );
@@ -108,7 +140,7 @@ export default function TacticalMapModal({
           <div className="absolute bottom-6 left-6 bg-cyber-panel/90 border border-cyber-border p-2.5 text-[10px] space-y-1.5 shadow-md">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-cyber-yellow shadow-[0_0_6px_rgba(252,238,10,0.8)]"></div> 
-              <span className="font-bold text-cyber-yellow">ACTIVE TARGET (NODE 0{progress.currentStage})</span>
+              <span className="font-bold text-cyber-yellow">ACTIVE TARGET (NODE 0{Math.min(progress.currentStage, 12)})</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-cyber-cyan shadow-[0_0_6px_rgba(0,240,255,0.8)]"></div> 

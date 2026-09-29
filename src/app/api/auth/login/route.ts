@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
         { name: 'Member 3', role: 'Field Navigator', regNo: 'REG-003', phone: '555-0103' },
       ];
 
+      const assignedRoute = Math.random() < 0.5 ? 1 : 2;
+
       const { data: newTeam, error: insertError } = await supabase
         .from('teams')
         .insert({
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
           members: defaultMembers,
           status: 'pending',
           current_stage: 1,
+          assigned_route: assignedRoute,
         })
         .select()
         .single();
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
           teamName: team.team_name,
           teamLead: team.team_lead,
           status: 'pending',
+          assignedRoute: team.assigned_route || 1,
         },
       });
     }
@@ -101,6 +105,7 @@ export async function POST(req: NextRequest) {
         teamLead: team.team_lead,
         members: team.members,
         status: team.status,
+        assignedRoute: team.assigned_route || 1,
       },
     });
 

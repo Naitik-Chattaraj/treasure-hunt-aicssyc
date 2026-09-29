@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
       timestamp: new Date(c.completed_at).getTime(),
     }));
 
+    const assignedRoute = team.assigned_route || 1;
+
     return NextResponse.json({
       team: {
         id: team.id,
@@ -50,9 +52,12 @@ export async function GET(req: NextRequest) {
         teamLead: team.team_lead,
         members: team.members,
         status: team.status,
+        assignedRoute,
+        assigned_route: assignedRoute,
       },
       progress: {
         currentStage: team.current_stage,
+        assignedRoute,
         startTime: team.start_time ? new Date(team.start_time).getTime() : null,
         completedNodes,
         completionToken: team.completion_token,

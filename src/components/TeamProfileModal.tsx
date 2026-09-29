@@ -51,12 +51,19 @@ export default function TeamProfileModal({
         <h2 className="text-2xl font-bold text-cyber-cyan mb-1 tracking-widest uppercase">
           {profile.teamName}
         </h2>
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
           <span className="text-[11px] text-cyber-yellow bg-cyber-yellow/10 border border-cyber-yellow/30 px-2 py-0.5">
             UID: {profile.uid}
           </span>
           <span className="text-[11px] text-cyber-cyan bg-cyber-cyan/10 border border-cyber-cyan/30 px-2 py-0.5">
             LEAD: {profile.teamLead}
+          </span>
+          <span className={`text-[11px] px-2 py-0.5 font-bold uppercase ${
+            (profile.assignedRoute || progress.assignedRoute || 1) === 1
+              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+              : 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+          }`}>
+            ASSIGNED: ROUTE 0{profile.assignedRoute || progress.assignedRoute || 1}
           </span>
         </div>
 

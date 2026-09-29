@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
       .from('checkpoints')
       .select(`
         id,
+        route_id,
+        stage,
         title,
         area,
         clue,
@@ -55,8 +57,8 @@ export async function PUT(req: NextRequest) {
 
     const { id, title, area, clue, qr_hash } = await req.json();
 
-    if (!id || id < 1 || id > 12) {
-      return NextResponse.json({ error: 'Valid checkpoint ID (1-12) required' }, { status: 400 });
+    if (!id || id < 1 || id > 24) {
+      return NextResponse.json({ error: 'Valid checkpoint ID (1-24) required' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();

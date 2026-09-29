@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     // 1. Fetch team
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time')
+      .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route')
       .eq('id', payload.teamId)
       .single();
 
@@ -51,8 +51,22 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // 3. Verify node matches team's current stage
-    if (nodeId !== team.current_stage) {
+    const assignedRoute = team.assigned_route || 1;
+
+    // Fetch the checkpoint for this team's route and current stage
+    const { data: currentCp } = await supabase
+      .from('checkpoints')
+      .select('id, route_id, stage')
+      .eq('route_id', assignedRoute)
+      .eq('stage', team.current_stage)
+      .single();
+
+    if (!currentCp) {
+      return NextResponse.json({ error: 'Checkpoint not found' }, { status: 404 });
+    }
+
+    // 3. Verify node matches team's current stage (or checkpoint id)
+    if (nodeId !== team.current_stage && nodeId !== currentCp.id) {
       return NextResponse.json({
         error: 'stage_mismatch',
         message: `Invalid node submission. Your current target is Node 0${team.current_stage}`,
@@ -71,7 +85,7 @@ export async function POST(req: NextRequest) {
         )
       `)
       .eq('team_id', team.id)
-      .eq('node_id', nodeId)
+      .eq('node_id', currentCp.id)
       .maybeSingle();
 
     if (challengeError || !activeChallenge || !activeChallenge.questions_pool) {

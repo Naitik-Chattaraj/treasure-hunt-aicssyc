@@ -34,6 +34,7 @@ interface AdminTeam {
   team_lead: string;
   status: 'pending' | 'approved' | 'rejected';
   current_stage: number;
+  assigned_route?: 1 | 2;
   start_time: string | null;
   completed_at: string | null;
   completion_token: string | null;
@@ -52,6 +53,8 @@ interface QuestionPoolItem {
 
 interface AdminCheckpoint {
   id: number;
+  route_id?: 1 | 2;
+  stage?: number;
   title: string;
   area: string;
   clue: string;
@@ -62,6 +65,7 @@ interface AdminCheckpoint {
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints'>('teams');
+  const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,6 +150,24 @@ export default function AdminDashboard() {
       }
     } catch {
       alert('Failed to update team authorization status.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdateTeamRoute = async (teamId: string, newRoute: 1 | 2) => {
+    setActionLoading(teamId);
+    try {
+      const res = await fetch('/api/admin/teams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, assignedRoute: newRoute }),
+      });
+      if (res.ok) {
+        await fetchDashboardData(true);
+      }
+    } catch {
+      alert('Failed to reassign team route.');
     } finally {
       setActionLoading(null);
     }
@@ -398,7 +420,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Checkpoints & Question Bank Vault (12 Nodes)</span>
+            <span>Checkpoints & Question Bank Vault (24 Nodes / 2 Routes)</span>
           </button>
         </div>
 
@@ -428,6 +450,22 @@ export default function AdminDashboard() {
                       <div className="text-xs text-gray-300 space-y-1">
                         <div><strong className="text-gray-400">Lead:</strong> {team.team_lead}</div>
                         <div><strong className="text-gray-400">Operatives:</strong> {team.members?.length || 4} members</div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <strong className="text-gray-400 text-[10px] uppercase">Route:</strong>
+                          <select
+                            value={team.assigned_route || 1}
+                            onChange={(e) => handleUpdateTeamRoute(team.id, Number(e.target.value) as 1 | 2)}
+                            disabled={actionLoading === team.id}
+                            className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border cursor-pointer ${
+                              (team.assigned_route || 1) === 1
+                                ? 'bg-cyan-950/80 text-cyan-400 border-cyan-700'
+                                : 'bg-purple-950/80 text-purple-400 border-purple-700'
+                            }`}
+                          >
+                            <option value={1} className="bg-gray-900 text-cyan-400">Route 1 (Hippocrates)</option>
+                            <option value={2} className="bg-gray-900 text-purple-400">Route 2 (Hospital)</option>
+                          </select>
+                        </div>
                         <div className="text-[10px] text-gray-500">Registered: {new Date(team.created_at).toLocaleTimeString()}</div>
                       </div>
 
@@ -471,6 +509,7 @@ export default function AdminDashboard() {
                       <th className="p-3">UID</th>
                       <th className="p-3">Team Name</th>
                       <th className="p-3">Team Lead</th>
+                      <th className="p-3">Assigned Route</th>
                       <th className="p-3">Status</th>
                       <th className="p-3">Current Progress</th>
                       <th className="p-3">Start Time</th>
@@ -483,6 +522,21 @@ export default function AdminDashboard() {
                         <td className="p-3 text-cyber-cyan font-bold">{t.uid}</td>
                         <td className="p-3 text-foreground font-bold">{t.team_name}</td>
                         <td className="p-3 text-gray-300">{t.team_lead}</td>
+                        <td className="p-3">
+                          <select
+                            value={t.assigned_route || 1}
+                            onChange={(e) => handleUpdateTeamRoute(t.id, Number(e.target.value) as 1 | 2)}
+                            disabled={actionLoading === t.id}
+                            className={`px-2 py-1 text-[11px] font-bold uppercase rounded border cursor-pointer ${
+                              (t.assigned_route || 1) === 1
+                                ? 'bg-cyan-950/80 text-cyan-400 border-cyan-700'
+                                : 'bg-purple-950/80 text-purple-400 border-purple-700'
+                            }`}
+                          >
+                            <option value={1} className="bg-gray-900 text-cyan-400">Route 1 (Hippocrates)</option>
+                            <option value={2} className="bg-gray-900 text-purple-400">Route 2 (Hospital)</option>
+                          </select>
+                        </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
                             t.status === 'approved'
@@ -556,24 +610,68 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-pink flex items-center gap-2">
                   <KeyRound className="w-4 h-4" />
-                  Checkpoint Coordinates, Location Clues & Question Banks
+                  Checkpoint Coordinates, Location Clues & Question Banks (2 Routes // 24 Nodes)
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  You can add multiple questions per node. Upon QR scan, one random question is picked and etched in Supabase for each team. Once solved, the clue for the next location is presented.
+                  Teams are randomly assigned to Route 1 or Route 2. You can filter by route below and customize physical clues, areas, and question pools.
                 </p>
+              </div>
+
+              {/* Route Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setCheckpointRouteFilter(1)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+                    checkpointRouteFilter === 1
+                      ? 'bg-cyan-500 text-black border-cyan-400 font-extrabold'
+                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-cyan-400'
+                  }`}
+                >
+                  Route 1 (12 Nodes)
+                </button>
+                <button
+                  onClick={() => setCheckpointRouteFilter(2)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+                    checkpointRouteFilter === 2
+                      ? 'bg-purple-500 text-white border-purple-400 font-extrabold'
+                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-purple-400'
+                  }`}
+                >
+                  Route 2 (12 Nodes)
+                </button>
+                <button
+                  onClick={() => setCheckpointRouteFilter('all')}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+                    checkpointRouteFilter === 'all'
+                      ? 'bg-yellow-400 text-black border-yellow-300 font-extrabold'
+                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-yellow-400'
+                  }`}
+                >
+                  All 24 Nodes
+                </button>
               </div>
             </div>
 
             <div className="space-y-6">
-              {checkpoints.map((cp) => {
+              {checkpoints
+                .filter((cp) => {
+                  const r = cp.route_id || (cp.id <= 12 ? 1 : 2);
+                  if (checkpointRouteFilter === 'all') return true;
+                  return r === checkpointRouteFilter;
+                })
+                .map((cp) => {
                 const pool = cp.questions_pool || [];
+                const routeNumber = cp.route_id || (cp.id <= 12 ? 1 : 2);
+                const stageNumber = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
                 return (
                   <div key={cp.id} className="bg-cyber-panel border-2 border-cyber-border hover:border-cyber-pink/60 transition-colors p-4 sm:p-5 relative shadow-md">
                     {/* Node Header */}
                     <div className="flex flex-wrap justify-between items-center gap-2 border-b border-cyber-border pb-3 mb-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs bg-cyber-pink text-white font-bold px-2.5 py-1 uppercase tracking-wider">
-                          NODE 0{cp.id}
+                        <span className={`text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${
+                          routeNumber === 1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
+                        }`}>
+                          ROUTE 0{routeNumber} // NODE 0{stageNumber}
                         </span>
                         <div>
                           <h3 className="font-bold text-foreground text-base sm:text-lg">{cp.title}</h3>

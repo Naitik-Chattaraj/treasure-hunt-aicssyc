@@ -83,24 +83,40 @@ export default function HuntHUD() {
   const processScanCode = async (rawCode: string) => {
     setScanNotice(null);
 
-    // Extract code if a full URL was scanned
+    // Extract code if a full URL or query string was scanned
     let cleanCode = rawCode.trim();
-    if (cleanCode.includes('?code=')) {
-      cleanCode = cleanCode.split('?code=')[1].split('&')[0];
-    } else if (cleanCode.includes('?qr=')) {
-      cleanCode = cleanCode.split('?qr=')[1].split('&')[0];
-    }
+    try {
+      if (cleanCode.startsWith('http://') || cleanCode.startsWith('https://')) {
+        const url = new URL(cleanCode);
+        cleanCode = url.searchParams.get('code') || 
+                    url.searchParams.get('qr') || 
+                    url.searchParams.get('hash') || 
+                    url.searchParams.get('token') || 
+                    cleanCode;
+      } else if (cleanCode.includes('?code=')) {
+        cleanCode = cleanCode.split('?code=')[1].split('&')[0];
+      } else if (cleanCode.includes('?qr=')) {
+        cleanCode = cleanCode.split('?qr=')[1].split('&')[0];
+      } else if (cleanCode.includes('?token=')) {
+        cleanCode = cleanCode.split('?token=')[1].split('&')[0];
+      }
+    } catch {}
 
     const result = await api.scanQr(cleanCode);
 
     if (result.success && result.nodeId) {
       setScannedNode(result.nodeId);
-      // Reload checkpoint to retrieve the etched question
+      if (result.challenge) {
+        setActiveCheckpoint((prev) => prev ? { ...prev, qrScanned: true, challenge: result.challenge } : null);
+      }
+      // Reload checkpoint to sync with server state
       await loadData(true);
       setShowChallenge(true);
       setManualCode('');
       setScanNotice(`QR VERIFIED: Node 0${result.nodeId} challenge unlocked for Base Decoders!`);
       setTimeout(() => setScanNotice(null), 5000);
+    } else if (result.error === 'route_mismatch') {
+      alert(`🚫 ROUTE MISMATCH:\n\n${result.message || 'This QR code belongs to a different route! Verify your route target.'}`);
     } else if (result.error === 'already_completed') {
       alert(`⚠️ CHECKPOINT ALREADY BREACHED: Node 0${result.nodeId} was already completed. Your current target is Node 0${result.currentStage || progress?.currentStage || 1}.`);
     } else if (result.error === 'sequence_violation' && result.nodeId) {
@@ -159,6 +175,14 @@ export default function HuntHUD() {
             <User className="w-3.5 h-3.5" />
             <span className="truncate max-w-[110px] sm:max-w-[160px]">{profile.teamName}</span>
           </button>
+
+          <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${
+            (profile.assignedRoute || progress.assignedRoute || 1) === 1
+              ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
+              : 'bg-purple-500/15 border-purple-400 text-purple-400'
+          }`}>
+            ROUTE 0{profile.assignedRoute || progress.assignedRoute || 1}
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -338,7 +362,13 @@ export default function HuntHUD() {
 
       {/* Modals */}
       {showProfile && <TeamProfileModal profile={profile} progress={progress} onClose={() => setShowProfile(false)} />}
-      {showMap && <TacticalMapModal progress={progress} onClose={() => setShowMap(false)} />}
+      {showMap && (
+        <TacticalMapModal 
+          progress={progress} 
+          assignedRoute={profile.assignedRoute || progress.assignedRoute || 1} 
+          onClose={() => setShowMap(false)} 
+        />
+      )}
       {showScanner && <QRScannerModal onScan={handleScanResult} onClose={() => setShowScanner(false)} />}
       
       {showChallenge && activeCheckpoint?.challenge && (

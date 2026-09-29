@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
+import { ROUTE_1_CHECKPOINTS, ROUTE_2_CHECKPOINTS, MOCK_CHECKPOINTS } from '@/lib/mock-data';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
-import { ArrowLeft, Printer, Copy, Check, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Printer, Copy, Check, Compass, Layers } from 'lucide-react';
 
 export default function TestQRPage() {
+  const [selectedRoute, setSelectedRoute] = useState<'route1' | 'route2' | 'all'>('route1');
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const handleCopy = (id: number, text: string) => {
@@ -15,9 +16,18 @@ export default function TestQRPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const displayedCheckpoints = 
+    selectedRoute === 'route1' 
+      ? ROUTE_1_CHECKPOINTS 
+      : selectedRoute === 'route2' 
+      ? ROUTE_2_CHECKPOINTS 
+      : MOCK_CHECKPOINTS;
+
   return (
     <main className="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8 font-mono">
       <div className="max-w-6xl mx-auto">
+        
+        {/* Navigation & Print Controls */}
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-gray-800 pb-4 print:hidden">
           <Link 
             href="/hunt" 
@@ -27,80 +37,175 @@ export default function TestQRPage() {
             Back to Hunt HUD
           </Link>
           
-          <button 
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold uppercase transition-colors cursor-pointer shadow"
-          >
-            <Printer className="w-4 h-4" />
-            Print All 12 QR Codes
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold uppercase transition-colors cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+            >
+              <Printer className="w-4 h-4" />
+              {selectedRoute === 'route1' 
+                ? 'Print Route 1 (12 QR Codes)' 
+                : selectedRoute === 'route2' 
+                ? 'Print Route 2 (12 QR Codes)' 
+                : 'Print All (24 QR Codes)'}
+            </button>
+          </div>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-cyan-400">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-1">
+            <Compass className="w-4 h-4" />
+            <span>Dual Route Architecture</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">
             AICSSYC 2026 // Physical QR Checkpoints Sheet
           </h1>
           <p className="text-gray-400 text-xs leading-relaxed max-w-3xl">
-            Each QR code contains a unique 64-character SHA-256 token. When scanned on campus by Field Scouts (or when the token is typed manually into the Base Station input), the server verifies sequence order and permanently etches a random challenge for the team.
+            Two separate 12-checkpoint campus routes are deployed simultaneously. Teams are randomly assigned to either Route 1 or Route 2. Scanning a QR code verifies that the code matches the team&apos;s assigned route and current stage sequence before unlocking challenges.
           </p>
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_CHECKPOINTS.map(cp => (
-            <div key={cp.id} className="border border-gray-700 p-5 flex flex-col items-center bg-gray-800/80 rounded shadow-md relative">
-              <div className="flex justify-between w-full items-center mb-3">
-                <span className="text-xs bg-cyan-500 text-black px-2 py-0.5 font-bold uppercase">
-                  NODE 0{cp.id}
-                </span>
-                <span className="text-[11px] text-yellow-400 font-bold uppercase">{cp.area}</span>
-              </div>
-              
-              <h2 className="text-sm font-bold mb-3 text-white text-center">{cp.title}</h2>
-              
-              {/* QR Code with mandatory ISO quiet zone margin & large high-contrast block size */}
-              <div className="bg-white p-4 border-2 border-white shadow-xl mb-4 rounded-xl flex items-center justify-center">
-                <QRCodeSVG 
-                  value={cp.qrHash || ''} 
-                  size={200} 
-                  level="M"
-                  includeMargin={true}
-                  marginSize={4}
-                />
-              </div>
-              
-              <div className="w-full text-left text-xs bg-gray-900/90 p-3 border border-gray-700/80 rounded space-y-2">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold">SHA-256 Token:</span>
-                    <button
-                      onClick={() => handleCopy(cp.id, cp.qrHash || '')}
-                      className="text-[10px] text-cyan-400 hover:text-white flex items-center gap-1 cursor-pointer bg-gray-800 px-2 py-0.5 border border-gray-700"
-                    >
-                      {copiedId === cp.id ? (
-                        <>
-                          <Check className="w-3 h-3 text-green-400" />
-                          <span className="text-green-400">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy Token</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <code className="text-[10px] text-yellow-300 break-all block bg-black/60 p-1.5 border border-gray-800 font-mono">
-                    {cp.qrHash}
-                  </code>
-                </div>
 
-                <div className="text-[11px] text-gray-400 pt-1 border-t border-gray-800">
-                  <span className="text-[10px] text-gray-500 uppercase font-bold block">Physical Clue:</span>
-                  <span className="text-gray-300 text-xs">{cp.clue}</span>
+        {/* Route Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-gray-800 pb-4 print:hidden">
+          <button
+            onClick={() => setSelectedRoute('route1')}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
+              selectedRoute === 'route1'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-cyan-500/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Route 1: Hippocrates Loop (12 QR Codes)
+          </button>
+
+          <button
+            onClick={() => setSelectedRoute('route2')}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
+              selectedRoute === 'route2'
+                ? 'bg-purple-500 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-purple-500/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            Route 2: Hospital to Arts Loop (12 QR Codes)
+          </button>
+
+          <button
+            onClick={() => setSelectedRoute('all')}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
+              selectedRoute === 'all'
+                ? 'bg-yellow-400 text-black border-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-yellow-400/50'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            All Routes (24 QR Codes)
+          </button>
+        </div>
+
+        {/* Route Banner */}
+        <div className="mb-6 p-3 bg-gray-800/60 border border-gray-700 text-xs flex flex-wrap justify-between items-center gap-2">
+          <div>
+            <span className="text-gray-400 font-bold uppercase">Displaying: </span>
+            <span className="font-bold text-white uppercase">
+              {selectedRoute === 'route1' && 'Route 1 // Hippocrates Hall to Hippocrates Hall (12 Nodes)'}
+              {selectedRoute === 'route2' && 'Route 2 // SRM Hospital to FSH Arts College (12 Nodes)'}
+              {selectedRoute === 'all' && 'All Routes // 24 Checkpoints (12 for Route 1, 12 for Route 2)'}
+            </span>
+          </div>
+          <span className="text-[11px] text-cyan-400 font-mono bg-cyan-950/60 border border-cyan-800 px-2 py-0.5">
+            {displayedCheckpoints.length} QR Codes Active
+          </span>
+        </div>
+        
+        {/* QR Code Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayedCheckpoints.map(cp => {
+            const isRoute1 = cp.routeId === 1;
+            return (
+              <div 
+                key={cp.id} 
+                className={`border p-5 flex flex-col items-center rounded shadow-md relative transition-all ${
+                  isRoute1 
+                    ? 'border-cyan-500/40 bg-gray-800/90 shadow-[0_4px_20px_rgba(0,240,255,0.06)]' 
+                    : 'border-purple-500/40 bg-gray-800/90 shadow-[0_4px_20px_rgba(168,85,247,0.06)]'
+                }`}
+              >
+                {/* Header row */}
+                <div className="flex justify-between w-full items-center mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider ${
+                      isRoute1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
+                    }`}>
+                      ROUTE 0{cp.routeId}
+                    </span>
+                    <span className="text-[10px] bg-black/60 text-yellow-300 border border-gray-700 px-1.5 py-0.5 font-bold uppercase">
+                      NODE 0{cp.stage}
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] text-gray-400 font-mono uppercase">
+                    ID #{cp.id.toString().padStart(2, '0')}
+                  </span>
+                </div>
+                
+                <h2 className="text-sm font-bold mb-1 text-white text-center min-h-[2.5rem] flex items-center justify-center">
+                  {cp.title}
+                </h2>
+
+                <div className="text-[11px] text-yellow-400/90 font-bold uppercase text-center mb-3">
+                  {cp.area}
+                </div>
+                
+                {/* QR Code with mandatory ISO quiet zone margin & large high-contrast block size */}
+                <div className="bg-white p-4 border-4 border-white shadow-2xl mb-4 rounded-xl flex items-center justify-center">
+                  <QRCodeSVG 
+                    value={cp.qrHash || ''} 
+                    size={200} 
+                    level="M"
+                    includeMargin={true}
+                    marginSize={4}
+                  />
+                </div>
+                
+                {/* Card Metadata Details */}
+                <div className="w-full text-left text-xs bg-gray-900/90 p-3 border border-gray-700/80 rounded space-y-2">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] text-gray-400 uppercase font-bold">SHA-256 Token:</span>
+                      <button
+                        onClick={() => handleCopy(cp.id, cp.qrHash || '')}
+                        className="text-[10px] text-cyan-400 hover:text-white flex items-center gap-1 cursor-pointer bg-gray-800 px-2 py-0.5 border border-gray-700 transition-colors"
+                        title="Copy SHA-256 token to clipboard"
+                      >
+                        {copiedId === cp.id ? (
+                          <>
+                            <Check className="w-3 h-3 text-green-400" />
+                            <span className="text-green-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Token</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <code className="text-[10px] text-yellow-300 break-all block bg-black/70 p-1.5 border border-gray-800 font-mono leading-tight">
+                      {cp.qrHash}
+                    </code>
+                  </div>
+
+                  <div className="text-[11px] text-gray-400 pt-1 border-t border-gray-800">
+                    <span className="text-[10px] text-gray-500 uppercase font-bold block">Physical Clue:</span>
+                    <span className="text-gray-300 text-xs leading-relaxed">{cp.clue}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </main>
