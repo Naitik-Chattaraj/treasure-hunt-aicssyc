@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
 import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
@@ -22,17 +22,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'QR hash missing' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
+    const primaryRoute: 1 | 2 = payload.assignedRoute === 2 ? 2 : 1;
+    let teamDb = getSupabaseAdmin(primaryRoute);
+
+    if (!teamDb) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // 1. Fetch team info with select('*') so it never fails on schema discrepancies
-    const { data: team, error: teamError } = await supabase
+    // 1. Fetch team info from their route database
+    let { data: team, error: teamError } = await teamDb
       .from('teams')
       .select('*')
       .eq('id', payload.teamId)
-      .single();
+      .maybeSingle();
+
+    if (!team && isRoute2Configured()) {
+      const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);
+      if (altDb) {
+        const { data: altTeam } = await altDb
+          .from('teams')
+          .select('*')
+          .eq('id', payload.teamId)
+          .maybeSingle();
+        if (altTeam) {
+          team = altTeam;
+          teamDb = altDb;
+        }
+      }
+    }
 
     if (teamError || !team) {
       console.error('API /hunt/scan: Team error:', teamError);
@@ -74,10 +91,10 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    const assignedRoute: 1 | 2 = (team.assigned_route === 2 || team.assignedRoute === 2) ? 2 : 1;
+    const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
     const currentStage: number = team.current_stage || 1;
 
-    // 2. Find matching checkpoint by QR hash (case-insensitive) in database or mock fallback
+    // 2. Find matching checkpoint by QR hash (case-insensitive) in team's route database
     let matchedNode: {
       id: number;
       route_id: number;
@@ -88,7 +105,7 @@ export async function POST(req: NextRequest) {
     } | null = null;
 
     try {
-      const { data: dbNode } = await supabase
+      const { data: dbNode } = await teamDb
         .from('checkpoints')
         .select('*')
         .ilike('qr_hash', cleanQrHash)
@@ -97,7 +114,7 @@ export async function POST(req: NextRequest) {
       if (dbNode) {
         matchedNode = {
           id: dbNode.id,
-          route_id: dbNode.route_id || 1,
+          route_id: dbNode.route_id || assignedRoute,
           stage: dbNode.stage || dbNode.id,
           title: dbNode.title,
           area: dbNode.area,
@@ -105,28 +122,70 @@ export async function POST(req: NextRequest) {
         };
       }
     } catch (e) {
-      console.warn('DB QR lookup warning:', e);
+      console.warn('DB QR lookup warning in team database:', e);
     }
 
-    // Fallback to MOCK_CHECKPOINTS for hash match if DB table is unpopulated or missing hash
+    // If NOT found in team's database, check if it belongs to the OTHER route
     if (!matchedNode) {
-      const mockMatch = MOCK_CHECKPOINTS.find((c) => c.qrHash?.toLowerCase() === cleanQrHash.toLowerCase());
-      if (mockMatch) {
-        matchedNode = {
-          id: mockMatch.id,
-          route_id: mockMatch.routeId,
-          stage: mockMatch.stage,
-          title: mockMatch.title,
-          area: mockMatch.area,
-          clue: mockMatch.clue,
-        };
+      let otherRouteId: number | null = null;
+
+      if (isRoute2Configured()) {
+        const altRoute: 1 | 2 = assignedRoute === 1 ? 2 : 1;
+        const altDb = getSupabaseAdmin(altRoute);
+        if (altDb) {
+          try {
+            const { data: otherDbNode } = await altDb
+              .from('checkpoints')
+              .select('route_id')
+              .ilike('qr_hash', cleanQrHash)
+              .maybeSingle();
+            if (otherDbNode) {
+              otherRouteId = otherDbNode.route_id || altRoute;
+            }
+          } catch {}
+        }
+      }
+
+      if (!otherRouteId) {
+        const mockMatch = MOCK_CHECKPOINTS.find((c) => c.qrHash?.toLowerCase() === cleanQrHash.toLowerCase());
+        if (mockMatch && mockMatch.routeId !== assignedRoute) {
+          otherRouteId = mockMatch.routeId;
+        } else if (mockMatch && mockMatch.routeId === assignedRoute) {
+          matchedNode = {
+            id: mockMatch.id,
+            route_id: mockMatch.routeId,
+            stage: mockMatch.stage,
+            title: mockMatch.title,
+            area: mockMatch.area,
+            clue: mockMatch.clue,
+          };
+        }
+      }
+
+      if (otherRouteId) {
+        // Log cross-route scan attempt in team's database
+        try {
+          await teamDb.from('submissions_log').insert({
+            team_id: team.id,
+            node_id: currentStage,
+            submission_type: 'scan',
+            submitted_value: cleanQrHash,
+            is_correct: false,
+          });
+        } catch {}
+
+        return NextResponse.json({
+          success: false,
+          error: 'route_mismatch',
+          message: `ROUTE MISMATCH: This QR code belongs to Route 0${otherRouteId}. Your team is assigned to Route 0${assignedRoute}!`,
+        });
       }
     }
 
     if (!matchedNode) {
       // Safely log failed scan
       try {
-        await supabase.from('submissions_log').insert({
+        await teamDb.from('submissions_log').insert({
           team_id: team.id,
           node_id: currentStage,
           submission_type: 'scan',
@@ -139,25 +198,6 @@ export async function POST(req: NextRequest) {
         success: false,
         error: 'invalid_qr',
         message: 'UNKNOWN QR CODE. ACCESS DENIED.',
-      });
-    }
-
-    // Check route match
-    if (matchedNode.route_id !== assignedRoute) {
-      try {
-        await supabase.from('submissions_log').insert({
-          team_id: team.id,
-          node_id: currentStage,
-          submission_type: 'scan',
-          submitted_value: cleanQrHash,
-          is_correct: false,
-        });
-      } catch {}
-
-      return NextResponse.json({
-        success: false,
-        error: 'route_mismatch',
-        message: `ROUTE MISMATCH: This QR code belongs to Route 0${matchedNode.route_id}. Your team is assigned to Route 0${assignedRoute}!`,
       });
     }
 
@@ -183,11 +223,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. Exact stage match! Check or etch challenge
+    // 4. Exact stage match! Check or etch challenge in team's route database
     let challengeData: any = null;
 
     try {
-      let { data: existingActive } = await supabase
+      let { data: existingActive } = await teamDb
         .from('team_active_challenges')
         .select(`
           id,
@@ -204,15 +244,15 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (!existingActive) {
-        // Fetch questions for this node from pool
-        const { data: pool } = await supabase
+        // Fetch questions for this node from team's route pool
+        const { data: pool } = await teamDb
           .from('questions_pool')
           .select('id, challenge_type, question, options')
           .eq('node_id', matchedNode.id);
 
         if (pool && pool.length > 0) {
           const chosen = pool[Math.floor(Math.random() * pool.length)];
-          const { data: inserted } = await supabase
+          const { data: inserted } = await teamDb
             .from('team_active_challenges')
             .insert({
               team_id: team.id,
@@ -263,7 +303,7 @@ export async function POST(req: NextRequest) {
 
     // Safely log successful scan in submissions audit
     try {
-      await supabase.from('submissions_log').insert({
+      await teamDb.from('submissions_log').insert({
         team_id: team.id,
         node_id: matchedNode.id,
         submission_type: 'scan',

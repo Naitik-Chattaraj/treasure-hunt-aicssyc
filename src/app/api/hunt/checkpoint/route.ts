@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
 import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
@@ -15,17 +15,34 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const primaryRoute: 1 | 2 = payload.assignedRoute === 2 ? 2 : 1;
+    let supabase = getSupabaseAdmin(primaryRoute);
+
     if (!supabase) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // 1. Fetch team's profile with select('*') so it never fails on missing columns
-    const { data: team, error: teamError } = await supabase
+    // 1. Fetch team's profile from the route database
+    let { data: team, error: teamError } = await supabase
       .from('teams')
       .select('*')
       .eq('id', payload.teamId)
-      .single();
+      .maybeSingle();
+
+    if (!team && isRoute2Configured()) {
+      const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);
+      if (altDb) {
+        const { data: altTeam } = await altDb
+          .from('teams')
+          .select('*')
+          .eq('id', payload.teamId)
+          .maybeSingle();
+        if (altTeam) {
+          team = altTeam;
+          supabase = altDb;
+        }
+      }
+    }
 
     if (teamError || !team) {
       console.error('API /hunt/checkpoint: Team not found:', teamError);
@@ -62,9 +79,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Hunt already completed' });
     }
 
-    const assignedRoute: 1 | 2 = (team.assigned_route === 2 || team.assignedRoute === 2) ? 2 : 1;
+    const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
 
-    // 2. Fetch checkpoint: try dual-route query, then single-route id query, then mock data fallback
+    // 2. Fetch checkpoint from the team's route database
     let cp: {
       id: number;
       route_id?: number;
@@ -94,17 +111,17 @@ export async function GET(req: NextRequest) {
         const { data: idCp } = await supabase
           .from('checkpoints')
           .select('*')
-          .eq('id', currentStage)
+          .eq('stage', currentStage)
           .maybeSingle();
         if (idCp) {
           cp = idCp;
         }
       } catch (e) {
-        console.warn('DB id checkpoint query warning:', e);
+        console.warn('DB stage checkpoint query warning:', e);
       }
     }
 
-    // Fallback to MOCK_CHECKPOINTS if database checkpoints table is unpopulated or missing route
+    // Fallback to MOCK_CHECKPOINTS if database checkpoints table is unpopulated
     if (!cp) {
       const mockCp = MOCK_CHECKPOINTS.find((c) => c.routeId === assignedRoute && c.stage === currentStage) 
                   || MOCK_CHECKPOINTS.find((c) => c.id === currentStage);
@@ -142,7 +159,7 @@ export async function GET(req: NextRequest) {
             options
           )
         `)
-        .eq('team_id', payload.teamId)
+        .eq('team_id', team.id)
         .eq('node_id', cp.id)
         .maybeSingle();
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
 import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
@@ -22,17 +22,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Node ID and answer required' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const primaryRoute: 1 | 2 = payload.assignedRoute === 2 ? 2 : 1;
+    let supabase = getSupabaseAdmin(primaryRoute);
+
     if (!supabase) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // 1. Fetch team
-    const { data: team, error: teamError } = await supabase
+    // 1. Fetch team from route database
+    let { data: team, error: teamError } = await supabase
       .from('teams')
       .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route, device_id')
       .eq('id', payload.teamId)
-      .single();
+      .maybeSingle();
+
+    if (!team && isRoute2Configured()) {
+      const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);
+      if (altDb) {
+        const { data: altTeam } = await altDb
+          .from('teams')
+          .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route, device_id')
+          .eq('id', payload.teamId)
+          .maybeSingle();
+        if (altTeam) {
+          team = altTeam;
+          supabase = altDb;
+        }
+      }
+    }
 
     if (teamError || !team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
@@ -73,7 +90,7 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    const assignedRoute = team.assigned_route || 1;
+    const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
 
     // Fetch the checkpoint for this team's route and current stage
     let cpId = nodeId;
@@ -147,7 +164,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Log the submission attempt
+    // Log the submission attempt in team's route database
     await supabase.from('submissions_log').insert({
       team_id: team.id,
       node_id: nodeId,
@@ -157,7 +174,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (isMatch) {
-      // Correct!
+      // Correct answer!
       const nextStage = team.current_stage + 1;
       const isVictorious = nextStage > 12;
       const completionToken = isVictorious
@@ -182,7 +199,7 @@ export async function POST(req: NextRequest) {
         completed_at: new Date().toISOString(),
       });
 
-      // Update team record
+      // Update team record in route database
       await supabase
         .from('teams')
         .update({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getBothSupabaseAdmins } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -15,17 +15,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
+    const { db1, db2, isMultiDb } = getBothSupabaseAdmins();
+    if (!db1) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // Check if team already has start_time set
-    const { data: team } = await supabase
+    // Try finding team in DB 1 first
+    let targetDb = db1;
+    let { data: team } = await db1
       .from('teams')
-      .select('start_time')
+      .select('id, start_time')
       .eq('id', teamId)
-      .single();
+      .maybeSingle();
+
+    if (!team && isMultiDb && db2) {
+      // Try finding team in DB 2
+      const { data: team2 } = await db2
+        .from('teams')
+        .select('id, start_time')
+        .eq('id', teamId)
+        .maybeSingle();
+
+      if (team2) {
+        team = team2;
+        targetDb = db2;
+      }
+    }
+
+    if (!team) {
+      return NextResponse.json({ error: 'Team not found in any database' }, { status: 404 });
+    }
 
     const updatePayload: Record<string, unknown> = {
       status,
@@ -33,11 +52,11 @@ export async function POST(req: NextRequest) {
     };
 
     // If approving and timer hasn't started yet, set start_time
-    if (status === 'approved' && !team?.start_time) {
+    if (status === 'approved' && !team.start_time) {
       updatePayload.start_time = new Date().toISOString();
     }
 
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await targetDb
       .from('teams')
       .update(updatePayload)
       .eq('id', teamId)

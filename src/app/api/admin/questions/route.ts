@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getBothSupabaseAdmins, getSupabaseAdmin } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 
 // POST: Add new question to a node's pool
@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required question parameters' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const numNodeId = Number(nodeId);
+    const targetRoute: 1 | 2 = numNodeId <= 12 ? 1 : 2;
+    const supabase = getSupabaseAdmin(targetRoute);
+
     if (!supabase) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
     const { data: newQuestion, error } = await supabase
       .from('questions_pool')
       .insert({
-        node_id: Number(nodeId),
+        node_id: numNodeId,
         challenge_type: challengeType,
         question: question.trim(),
         options: challengeType === 'mcq' && Array.isArray(options) ? options : null,
@@ -58,12 +61,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
+    const { db1, db2, isMultiDb } = getBothSupabaseAdmins();
+    if (!db1) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    const { data: updated, error } = await supabase
+    // Try updating in DB 1 first
+    const { data: updated1, error: error1 } = await db1
       .from('questions_pool')
       .update({
         challenge_type: challengeType,
@@ -73,13 +77,39 @@ export async function PUT(req: NextRequest) {
       })
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (updated1) {
+      return NextResponse.json({ success: true, question: updated1 });
     }
 
-    return NextResponse.json({ success: true, question: updated });
+    // If not found in DB 1 and DB 2 is available, try DB 2
+    if (isMultiDb && db2) {
+      const { data: updated2, error: error2 } = await db2
+        .from('questions_pool')
+        .update({
+          challenge_type: challengeType,
+          question: question.trim(),
+          options: challengeType === 'mcq' && Array.isArray(options) ? options : null,
+          answer: answer.trim(),
+        })
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (updated2) {
+        return NextResponse.json({ success: true, question: updated2 });
+      }
+      if (error2) {
+        return NextResponse.json({ error: error2.message }, { status: 500 });
+      }
+    }
+
+    if (error1) {
+      return NextResponse.json({ error: error1.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ error: 'Question not found' }, { status: 404 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -101,18 +131,36 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Question ID required' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
+    const { db1, db2, isMultiDb } = getBothSupabaseAdmins();
+    if (!db1) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    const { error } = await supabase
+    // Attempt delete on DB 1
+    const { error: error1, count: count1 } = await db1
       .from('questions_pool')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (count1 && count1 > 0) {
+      return NextResponse.json({ success: true, message: 'Question deleted from Route 1 database' });
+    }
+
+    // Attempt delete on DB 2 if applicable
+    if (isMultiDb && db2) {
+      const { error: error2 } = await db2
+        .from('questions_pool')
+        .delete()
+        .eq('id', id);
+
+      if (error2) {
+        return NextResponse.json({ error: error2.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, message: 'Question deleted from Route 2 database' });
+    }
+
+    if (error1) {
+      return NextResponse.json({ error: error1.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Question deleted' });

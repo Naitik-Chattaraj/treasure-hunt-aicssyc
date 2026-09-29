@@ -97,7 +97,14 @@ export default function LeaderboardPage() {
                 <Medal className="w-6 h-6 text-gray-300" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate">{leaderboard[1].teamName}</h3>
+                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
+                  {leaderboard[1].teamName}
+                  {leaderboard[1].assignedRoute && (
+                    <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
+                      R0{leaderboard[1].assignedRoute}
+                    </span>
+                  )}
+                </h3>
                 <div className="text-xs text-gray-400">Lead: {leaderboard[1].teamLead}</div>
               </div>
               <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
@@ -118,7 +125,14 @@ export default function LeaderboardPage() {
                 <Trophy className="w-7 h-7 text-cyber-yellow animate-bounce" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-lg text-cyber-yellow truncate">{leaderboard[0].teamName}</h3>
+                <h3 className="font-bold text-lg text-cyber-yellow truncate flex items-center gap-1.5">
+                  {leaderboard[0].teamName}
+                  {leaderboard[0].assignedRoute && (
+                    <span className="text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-1 py-0.2 font-mono">
+                      R0{leaderboard[0].assignedRoute}
+                    </span>
+                  )}
+                </h3>
                 <div className="text-xs text-gray-300">Lead: {leaderboard[0].teamLead}</div>
               </div>
               <div className="pt-3 border-t border-cyber-yellow/40 flex justify-between text-xs">
@@ -136,7 +150,14 @@ export default function LeaderboardPage() {
                 <Medal className="w-6 h-6 text-amber-500" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate">{leaderboard[2].teamName}</h3>
+                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
+                  {leaderboard[2].teamName}
+                  {leaderboard[2].assignedRoute && (
+                    <span className="text-[9px] bg-amber-500/15 text-amber-500 border border-amber-500/40 px-1 py-0.2 font-mono">
+                      R0{leaderboard[2].assignedRoute}
+                    </span>
+                  )}
+                </h3>
                 <div className="text-xs text-gray-400">Lead: {leaderboard[2].teamLead}</div>
               </div>
               <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
@@ -204,6 +225,11 @@ export default function LeaderboardPage() {
                       <td className="p-4 font-bold text-sm text-foreground">
                         <div className="flex items-center gap-2">
                           <span className={rank === 1 ? 'text-cyber-yellow' : ''}>{team.teamName}</span>
+                          {team.assignedRoute && (
+                            <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
+                              R0{team.assignedRoute}
+                            </span>
+                          )}
                           {isWinner && (
                             <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/50 px-1.5 py-0.2 font-bold uppercase">
                               VICTOR

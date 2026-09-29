@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -14,17 +14,36 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const primaryRoute: 1 | 2 = payload.assignedRoute === 2 ? 2 : 1;
+    let supabase = getSupabaseAdmin(primaryRoute);
+
     if (!supabase) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // Fetch team profile
-    const { data: team, error } = await supabase
+    // Fetch team profile from assigned route database
+    let { data: team, error } = await supabase
       .from('teams')
       .select('*')
       .eq('id', payload.teamId)
-      .single();
+      .maybeSingle();
+
+    // Fallback check on alternate database if not found in primary (handles route migrations or legacy sessions)
+    if (!team && isRoute2Configured()) {
+      const alternateRoute: 1 | 2 = primaryRoute === 1 ? 2 : 1;
+      const altDb = getSupabaseAdmin(alternateRoute);
+      if (altDb) {
+        const { data: altTeam } = await altDb
+          .from('teams')
+          .select('*')
+          .eq('id', payload.teamId)
+          .maybeSingle();
+        if (altTeam) {
+          team = altTeam;
+          supabase = altDb;
+        }
+      }
+    }
 
     if (error || !team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
@@ -55,7 +74,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fetch completions
+    // Fetch completions strictly from this team's route database
     const { data: completions } = await supabase
       .from('hunt_completions')
       .select('node_id, completed_at')
@@ -67,7 +86,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date(c.completed_at).getTime(),
     }));
 
-    const assignedRoute = team.assigned_route || 1;
+    const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
 
     return NextResponse.json({
       team: {
