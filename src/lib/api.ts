@@ -35,7 +35,15 @@ export interface LoginResult {
 }
 
 export const api = {
-  async login(uid: string, teamName: string, teamLead: string, members?: any[], isLoginMode?: boolean): Promise<LoginResult> {
+  async login(
+    uid: string, 
+    teamName: string, 
+    teamLead: string, 
+    members?: any[], 
+    isLoginMode?: boolean,
+    operativeName?: string,
+    operativeRole?: 'Field Scout' | 'Base Decoder'
+  ): Promise<LoginResult> {
     const trimmedUid = uid.trim();
     const trimmedTeam = teamName.trim();
     const trimmedLead = teamLead.trim();
@@ -45,6 +53,9 @@ export const api = {
     } else {
        if (!trimmedTeam || !trimmedLead) return { status: 'rejected', error: 'Missing required credentials' };
     }
+
+    const currentRole: 'Field Scout' | 'Base Decoder' = operativeRole === 'Field Scout' ? 'Field Scout' : 'Base Decoder';
+    const currentName = operativeName?.trim() || (currentRole === 'Base Decoder' ? trimmedLead : 'Field Scout Operative');
 
     if (USE_MOCK) {
       await delay(500);
@@ -71,10 +82,12 @@ export const api = {
         status: 'approved',
         assignedRoute,
         assigned_route: assignedRoute,
+        operativeRole: currentRole,
+        operativeName: currentName,
         members: members && members.length >= 4
           ? members
           : [
-              { name: trimmedLead, role: 'Base Decoder', regNo: trimmedUid, phone: '555-0100' },
+              { name: trimmedLead, role: 'Base Decoder', regNo: trimmedUid || 'REG-101', phone: '555-0100' },
               { name: 'Member 2', role: 'Base Decoder', regNo: 'REG-002', phone: '555-0102' },
               { name: 'Member 3', role: 'Field Scout', regNo: 'REG-003', phone: '555-0103' },
               { name: 'Member 4', role: 'Field Scout', regNo: 'REG-004', phone: '555-0104' },
@@ -108,7 +121,15 @@ export const api = {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: trimmedUid, teamName: trimmedTeam, teamLead: trimmedLead, members, isLoginMode }),
+      body: JSON.stringify({ 
+        uid: trimmedUid, 
+        teamName: trimmedTeam, 
+        teamLead: trimmedLead, 
+        members, 
+        isLoginMode,
+        operativeName: currentName,
+        operativeRole: currentRole,
+      }),
     });
 
     const data = await res.json();

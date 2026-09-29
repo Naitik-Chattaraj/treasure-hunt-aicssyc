@@ -45,10 +45,15 @@ export default function HuntHUD() {
   const [violationNode, setViolationNode] = useState<number | null>(null);
   const [showChallenge, setShowChallenge] = useState(false);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [prevStage, setPrevStage] = useState<number | null>(null);
+  const [stageClearedNotice, setStageClearedNotice] = useState<string | null>(null);
 
   // Manual code entry state (for room team receiving code from field runners)
   const [manualCode, setManualCode] = useState('');
   const [manualSubmitting, setManualSubmitting] = useState(false);
+
+  const isFieldScout = profile?.operativeRole === 'Field Scout';
+  const isBaseDecoder = !isFieldScout;
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -61,6 +66,20 @@ export default function HuntHUD() {
     
     const prog = await api.getProgress();
     if (prog) {
+      // Check if team just advanced stage (Base Decoder solved a question!)
+      setPrevStage((prev) => {
+        if (prev !== null && prog.currentStage > prev) {
+          const nextTarget = Math.min(prog.currentStage, 12);
+          setStageClearedNotice(
+            prof.operativeRole === 'Field Scout'
+              ? `⚡ CHALLENGE CLEARED BY BASE DECODERS! Proceeding to Target Node 0${nextTarget}`
+              : `✓ NODE 0${prev} OVERRIDDEN! Current Objective: Node 0${nextTarget}`
+          );
+          setTimeout(() => setStageClearedNotice(null), 8000);
+        }
+        return prog.currentStage;
+      });
+
       setProgress(prog);
       if (prog.currentStage <= 12) {
         const cp = await api.getCheckpoint(prog.currentStage);
@@ -73,7 +92,8 @@ export default function HuntHUD() {
   useEffect(() => {
     loadData();
     // Auto-poll checkpoint status every 3.5 seconds
-    // This allows the Room Base Decoders' screen to instantly refresh as soon as Field Scouts scan on campus!
+    // This allows the Room Base Decoders' screen to instantly refresh as soon as Field Scouts scan on campus,
+    // and allows Field Scouts on campus to instantly get notified when Base Decoders solve challenges!
     const interval = setInterval(() => {
       loadData(true);
     }, 3500);
@@ -105,22 +125,31 @@ export default function HuntHUD() {
     const result = await api.scanQr(cleanCode);
 
     if (result.success && result.nodeId) {
-      setScannedNode(result.nodeId);
+      const normNode = result.nodeId > 12 ? result.nodeId - 12 : result.nodeId;
+      setScannedNode(normNode);
       if (result.challenge) {
         setActiveCheckpoint((prev) => prev ? { ...prev, qrScanned: true, challenge: result.challenge } : null);
       }
       // Reload checkpoint to sync with server state
       await loadData(true);
-      setShowChallenge(true);
       setManualCode('');
-      setScanNotice(`QR VERIFIED: Node 0${result.nodeId} challenge unlocked for Base Decoders!`);
-      setTimeout(() => setScanNotice(null), 5000);
+
+      if (profile?.operativeRole === 'Field Scout') {
+        setScanNotice(`QR SCAN SUCCESSFUL: Checkpoint Node 0${normNode} verified! Please wait for your Base Decoder teammates to solve the challenge.`);
+      } else {
+        setShowChallenge(true);
+        setScanNotice(`QR VERIFIED: Node 0${normNode} challenge unlocked for Base Decoders!`);
+      }
+      setTimeout(() => setScanNotice(null), 6000);
     } else if (result.error === 'route_mismatch') {
       alert(`🚫 ROUTE MISMATCH:\n\n${result.message || 'This QR code belongs to a different route! Verify your route target.'}`);
     } else if (result.error === 'already_completed') {
-      alert(`⚠️ CHECKPOINT ALREADY BREACHED: Node 0${result.nodeId} was already completed. Your current target is Node 0${result.currentStage || progress?.currentStage || 1}.`);
+      const normNode = result.nodeId ? (result.nodeId > 12 ? result.nodeId - 12 : result.nodeId) : 1;
+      const normCurrent = result.currentStage ? (result.currentStage > 12 ? result.currentStage - 12 : result.currentStage) : (progress?.currentStage || 1);
+      alert(`⚠️ CHECKPOINT ALREADY BREACHED: Node 0${normNode} was already completed. Your current target is Node 0${normCurrent}.`);
     } else if (result.error === 'sequence_violation' && result.nodeId) {
-      setViolationNode(result.nodeId);
+      const normNode = result.nodeId > 12 ? result.nodeId - 12 : result.nodeId;
+      setViolationNode(normNode);
     } else if (result.error === 'cooldown_active') {
       alert(result.message || 'SYSTEM LOCKOUT: Anti-brute-force active.');
     } else {
@@ -159,6 +188,7 @@ export default function HuntHUD() {
     : 0;
 
   const isQrUnlocked = !!activeCheckpoint?.qrScanned;
+  const currentStageDisplay = progress.currentStage;
 
   return (
     <main className="h-[100dvh] max-h-[100dvh] bg-cyber-dark text-foreground flex flex-col relative overflow-hidden font-mono transition-colors">
@@ -173,7 +203,7 @@ export default function HuntHUD() {
             title="View Team Profile & Telemetry"
           >
             <User className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[100px] sm:max-w-[160px]">{profile.teamName}</span>
+            <span className="truncate max-w-[90px] sm:max-w-[140px]">{profile.teamName}</span>
           </button>
 
           <span className={`px-2 py-0.5 sm:py-1 text-[10px] font-bold uppercase tracking-wider border ${
@@ -181,7 +211,17 @@ export default function HuntHUD() {
               ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
               : 'bg-purple-500/15 border-purple-400 text-purple-400'
           }`}>
-            ROUTE 0{profile.assignedRoute || progress.assignedRoute || 1}
+            R-0{profile.assignedRoute || progress.assignedRoute || 1}
+          </span>
+
+          {/* Active Operative Role Badge */}
+          <span className={`hidden xs:flex items-center gap-1 px-2 py-0.5 sm:py-1 text-[10px] font-bold uppercase tracking-wider border ${
+            isFieldScout 
+              ? 'bg-yellow-500/15 border-yellow-400 text-yellow-300'
+              : 'bg-cyan-500/15 border-cyan-400 text-cyan-300'
+          }`}>
+            {isFieldScout ? <Footprints className="w-3 h-3" /> : <BrainCircuit className="w-3 h-3" />}
+            <span>{isFieldScout ? 'FIELD SCOUT' : 'BASE DECODER'}</span>
           </span>
         </div>
 
@@ -190,7 +230,7 @@ export default function HuntHUD() {
           <div className="text-right">
             <div className="text-[9px] sm:text-[10px] text-cyber-muted font-bold tracking-widest uppercase">STAGE</div>
             <div className="text-cyber-yellow font-bold tracking-widest text-sm sm:text-base animate-pulse">
-              NODE {progress.currentStage.toString().padStart(2, '0')}/12
+              NODE {currentStageDisplay.toString().padStart(2, '0')}/12
             </div>
           </div>
         </div>
@@ -198,9 +238,17 @@ export default function HuntHUD() {
 
       {/* Floating Notice Toast */}
       {scanNotice && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-cyber-darker border-2 border-cyber-cyan text-white p-2.5 font-mono text-xs uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-cyber-darker border-2 border-cyber-cyan text-white p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
           <AlertOctagon className="w-4 h-4 text-cyber-cyan shrink-0" />
-          <span>{scanNotice}</span>
+          <span className="leading-tight">{scanNotice}</span>
+        </div>
+      )}
+
+      {/* Stage Cleared Real-time Notification Banner (Sync between Base Decoder & Field Scout) */}
+      {stageClearedNotice && (
+        <div className="fixed top-28 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-green-950/90 border-2 border-green-400 text-green-200 p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(34,197,94,0.5)] backdrop-blur-md animate-pulse">
+          <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 animate-bounce" />
+          <span className="font-bold leading-tight">{stageClearedNotice}</span>
         </div>
       )}
 
@@ -236,16 +284,16 @@ export default function HuntHUD() {
           {/* Active Objective Card */}
           <div className="cyber-panel-border bg-cyber-panel border-l-4 border-cyber-cyan p-4 sm:p-5 relative shadow-lg">
             <div className="absolute top-0 right-0 bg-cyber-cyan text-cyber-dark text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
-              Target Node 0{progress.currentStage}
+              Target Node 0{currentStageDisplay}
             </div>
             
             <div className="flex items-center gap-2 text-cyber-yellow text-xs font-bold uppercase tracking-widest mt-1">
               <Crosshair className="w-4 h-4 text-cyber-cyan" />
-              <span>{activeCheckpoint?.area || `Sector 0${progress.currentStage}`}</span>
+              <span>{activeCheckpoint?.area || `Sector 0${currentStageDisplay}`}</span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-bold text-foreground mt-2 mb-2">
-              {activeCheckpoint?.title || `Node 0${progress.currentStage}`}
+              {activeCheckpoint?.title || `Node 0${currentStageDisplay}`}
             </h2>
             
             {/* Clue box for field runners */}
@@ -256,24 +304,43 @@ export default function HuntHUD() {
               {activeCheckpoint?.clue}
             </div>
 
-            {/* Stage Status Indicator */}
+            {/* Stage Status Indicator: Role-Differentiated */}
             {isQrUnlocked ? (
-              <div className="p-3 bg-green-500/10 border border-green-500/50 text-green-400 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-400" />
-                  <span className="font-bold">QR Token Authenticated!</span>
+              <div className="p-3 bg-green-500/10 border border-green-500/50 text-green-400 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                    <span className="font-bold">Checkpoint QR Verified!</span>
+                  </div>
+                  {isBaseDecoder && (
+                    <button
+                      onClick={() => setShowChallenge(true)}
+                      className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer"
+                    >
+                      Open Challenge
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => setShowChallenge(true)}
-                  className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer"
-                >
-                  Open Challenge
-                </button>
+
+                {isFieldScout ? (
+                  <div className="text-[11px] text-cyber-yellow bg-cyber-darker/90 p-2.5 border border-cyber-yellow/40 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping shrink-0"></div>
+                    <span>QR verified. Please wait for your Base Decoder teammates in the room to solve the challenge.</span>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-gray-300">
+                    Field team has secured this node. Decode the question now to unlock Node 0{Math.min(currentStageDisplay + 1, 12)}!
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-2.5 bg-cyber-darker border border-cyber-border text-xs text-cyber-muted flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
-                <span>Challenge locked. Field Scouts must scan or transmit the checkpoint code.</span>
+                <span>
+                  {isFieldScout 
+                    ? `Navigate to the location and scan Node 0${currentStageDisplay} QR code.`
+                    : `Challenge locked. Awaiting Field Scouts to locate and scan Node 0${currentStageDisplay} on campus.`}
+                </span>
               </div>
             )}
           </div>
@@ -305,8 +372,8 @@ export default function HuntHUD() {
             </span>
           </div>
 
-          {/* Manual Code Input Box (For Base Room Decoders receiving code from Field Scouts) */}
-          {!isQrUnlocked && (
+          {/* Manual Code Input Box (Only for Base Decoders in Room) */}
+          {isBaseDecoder && !isQrUnlocked && (
             <div className="bg-cyber-panel border border-cyber-border p-3.5 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1.5">
@@ -338,24 +405,43 @@ export default function HuntHUD() {
         </div>
       </div>
 
-      {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, no y-axis overflow) */}
+      {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, role-tailored) */}
       <div className="shrink-0 p-3 sm:p-4 bg-cyber-panel/95 border-t border-cyber-cyan/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
-        {isQrUnlocked ? (
-          <button
-            onClick={() => setShowChallenge(true)}
-            className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
-          >
-            <BrainCircuit className="w-5 h-5 animate-pulse" />
-            SOLVE ETCHED QUESTION
-          </button>
+        {isFieldScout ? (
+          /* Field Scout View */
+          isQrUnlocked ? (
+            <div className="w-full flex items-center justify-center gap-3 bg-cyber-darker border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-ping"></div>
+              <span>CHECKPOINT SECURED // WAITING FOR BASE DECODE</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowScanner(true)}
+              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
+            >
+              <ScanLine className="w-5 h-5 animate-pulse" />
+              Scan Checkpoint QR Code
+            </button>
+          )
         ) : (
-          <button
-            onClick={() => setShowScanner(true)}
-            className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
-          >
-            <ScanLine className="w-5 h-5 animate-pulse" />
-            Scan Checkpoint QR Code
-          </button>
+          /* Base Decoder View */
+          isQrUnlocked ? (
+            <button
+              onClick={() => setShowChallenge(true)}
+              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
+            >
+              <BrainCircuit className="w-5 h-5 animate-pulse" />
+              SOLVE ETCHED QUESTION
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowScanner(true)}
+              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
+            >
+              <ScanLine className="w-4 h-4 animate-pulse" />
+              AWAITING FIELD SCOUT SCAN (OR SCAN DIRECTLY)
+            </button>
+          )
         )}
       </div>
 
@@ -381,8 +467,8 @@ export default function HuntHUD() {
 
       {violationNode && (
         <SequenceViolationModal 
-          violationNode={violationNode} 
-          currentNode={progress.currentStage} 
+          violationNode={violationNode > 12 ? violationNode - 12 : violationNode} 
+          currentNode={progress.currentStage > 12 ? progress.currentStage - 12 : progress.currentStage} 
           onClose={() => setViolationNode(null)} 
         />
       )}

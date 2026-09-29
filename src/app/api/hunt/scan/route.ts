@@ -39,10 +39,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    if (team.device_id && team.device_id !== payload.deviceId) {
-      const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
-      response.cookies.delete('team_session');
-      return response;
+    if (team.device_id && payload.deviceId) {
+      let isSessionValid = true;
+      if (team.device_id.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(team.device_id);
+          const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
+          if (parsed[roleKey] && parsed[roleKey] !== payload.deviceId) {
+            isSessionValid = false;
+          }
+        } catch {}
+      } else if (team.device_id !== payload.deviceId) {
+        isSessionValid = false;
+      }
+
+      if (!isSessionValid) {
+        const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
+        response.cookies.delete('team_session');
+        return response;
+      }
     }
 
     if (team.status !== 'approved') {

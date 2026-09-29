@@ -8,6 +8,8 @@ export interface TeamJWTPayload {
   teamId: string;
   uid: string;
   teamName: string;
+  operativeName?: string;
+  operativeRole?: 'Field Scout' | 'Base Decoder';
   deviceId?: string;
 }
 
@@ -27,6 +29,8 @@ export async function verifyTeamToken(token: string): Promise<TeamJWTPayload | n
       teamId: payload.teamId as string,
       uid: payload.uid as string,
       teamName: payload.teamName as string,
+      operativeName: payload.operativeName as string | undefined,
+      operativeRole: payload.operativeRole as ('Field Scout' | 'Base Decoder') | undefined,
       deviceId: payload.deviceId as string | undefined,
     };
   } catch {

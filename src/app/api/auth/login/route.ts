@@ -4,7 +4,7 @@ import { signTeamToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
-    const { uid, teamName, teamLead, members, isLoginMode } = await req.json();
+    const { uid, teamName, teamLead, members, isLoginMode, operativeName, operativeRole } = await req.json();
     const supabase = getSupabaseAdmin();
     if (!supabase) {
       return NextResponse.json(
@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INCORRECT TEAM NAME FOR THIS ACCESS CODE.' }, { status: 401 });
       }
       team = existingTeam;
-
 
     } else {
       // Registration Mode
@@ -95,6 +94,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Determine current operative info
+    const currentOperativeRole: 'Field Scout' | 'Base Decoder' = operativeRole === 'Field Scout' ? 'Field Scout' : 'Base Decoder';
+    const currentOperativeName = operativeName?.trim() || (currentOperativeRole === 'Base Decoder' ? team.team_lead : 'Field Scout Operative');
+
     // 3. Check status
     if (team.status === 'pending') {
       return NextResponse.json({
@@ -102,11 +105,13 @@ export async function POST(req: NextRequest) {
         message: 'Your registration is submitted and awaiting administrative approval.',
         team: {
           id: team.id,
-          uid: team.uid, // returning this so the frontend can poll, but we won't show it.
+          uid: team.uid,
           teamName: team.team_name,
           teamLead: team.team_lead,
           status: 'pending',
           assignedRoute: team.assigned_route || 1,
+          operativeRole: currentOperativeRole,
+          operativeName: currentOperativeName,
         },
       });
     }
@@ -118,23 +123,36 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // 4. Team is approved - generate deviceId, update DB, sign JWT
+    // 4. Team is approved - generate deviceId, update DB with dual session map, sign JWT
     const deviceId = crypto.randomUUID();
-    
+    let deviceMap: Record<string, string> = {};
+    try {
+      if (team.device_id && typeof team.device_id === 'string' && team.device_id.startsWith('{')) {
+        deviceMap = JSON.parse(team.device_id);
+      } else if (team.device_id) {
+        deviceMap = { decoder: team.device_id };
+      }
+    } catch {}
+
+    const roleKey = currentOperativeRole === 'Field Scout' ? 'scout' : 'decoder';
+    deviceMap[roleKey] = deviceId;
+    const serializedDeviceMap = JSON.stringify(deviceMap);
+
     const { error: deviceError } = await supabase
       .from('teams')
-      .update({ device_id: deviceId })
+      .update({ device_id: serializedDeviceMap })
       .eq('id', team.id);
 
     if (deviceError) {
       console.error('Failed to update device ID:', deviceError);
-      // Proceed anyway, but device tracking might be inconsistent
     }
 
     const token = await signTeamToken({
       teamId: team.id,
       uid: team.uid,
       teamName: team.team_name,
+      operativeName: currentOperativeName,
+      operativeRole: currentOperativeRole,
       deviceId,
     });
 
@@ -148,6 +166,8 @@ export async function POST(req: NextRequest) {
         members: team.members,
         status: team.status,
         assignedRoute: team.assigned_route || 1,
+        operativeRole: currentOperativeRole,
+        operativeName: currentOperativeName,
       },
     });
 

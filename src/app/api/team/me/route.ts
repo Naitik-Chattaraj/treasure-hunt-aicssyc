@@ -30,15 +30,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Enforce single device session
-    if (team.device_id && team.device_id !== payload.deviceId) {
-      // Clear the cookie to log them out
-      const response = NextResponse.json(
-        { error: 'Session expired: logged in from another device' },
-        { status: 401 }
-      );
-      response.cookies.delete('team_session');
-      return response;
+    // Enforce role-based device session (up to 1 scout + 1 decoder)
+    if (team.device_id && payload.deviceId) {
+      let isSessionValid = true;
+      if (team.device_id.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(team.device_id);
+          const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
+          if (parsed[roleKey] && parsed[roleKey] !== payload.deviceId) {
+            isSessionValid = false;
+          }
+        } catch {}
+      } else if (team.device_id !== payload.deviceId) {
+        isSessionValid = false;
+      }
+
+      if (!isSessionValid) {
+        const response = NextResponse.json(
+          { error: 'Session expired: logged in from another device' },
+          { status: 401 }
+        );
+        response.cookies.delete('team_session');
+        return response;
+      }
     }
 
     // Fetch completions
@@ -65,6 +79,8 @@ export async function GET(req: NextRequest) {
         status: team.status,
         assignedRoute,
         assigned_route: assignedRoute,
+        operativeRole: payload.operativeRole || 'Base Decoder',
+        operativeName: payload.operativeName || team.team_lead,
       },
       progress: {
         currentStage: team.current_stage,

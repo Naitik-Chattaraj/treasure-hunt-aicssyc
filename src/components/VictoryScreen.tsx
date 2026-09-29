@@ -16,20 +16,21 @@ export default function VictoryScreen({
   const [elapsed, setElapsed] = useState<string>('');
 
   useEffect(() => {
-    // Fire celebratory confetti sequence
-    const duration = 4000;
+    // Fire celebratory confetti sequence for 5 seconds on mount
+    const duration = 5000;
     const end = Date.now() + duration;
+    let animationFrameId: number;
 
     const frame = () => {
       confetti({
-        particleCount: 6,
+        particleCount: 5,
         angle: 60,
         spread: 55,
         origin: { x: 0 },
         colors: ['#00F0FF', '#FCEE0A', '#FF003C']
       });
       confetti({
-        particleCount: 6,
+        particleCount: 5,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
@@ -37,15 +38,25 @@ export default function VictoryScreen({
       });
 
       if (Date.now() < end) {
-        requestAnimationFrame(frame);
+        animationFrameId = requestAnimationFrame(frame);
       }
     };
+
     frame();
 
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      confetti.reset();
+    };
+  }, []);
+
+  useEffect(() => {
     // Calculate final elapsed time
-    if (progress.startTime) {
+    if (progress?.startTime) {
       const finalTime = progress.completedNodes[progress.completedNodes.length - 1]?.timestamp || Date.now();
-      const diff = Math.floor((finalTime - progress.startTime) / 1000);
+      const diff = Math.max(0, Math.floor((finalTime - progress.startTime) / 1000));
       const h = Math.floor(diff / 3600).toString().padStart(2, '0');
       const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
       const s = (diff % 60).toString().padStart(2, '0');

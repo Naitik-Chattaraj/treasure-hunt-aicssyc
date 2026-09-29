@@ -106,6 +106,8 @@ export default function ChallengeModal({
   const challenge = checkpoint.challenge;
   if (!challenge) return null;
 
+  const stageNum = checkpoint.stage || (checkpoint.id <= 12 ? checkpoint.id : checkpoint.id - 12);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors">
       <div className={`w-full max-w-md bg-cyber-panel cyber-panel-border border-t-2 border-b-2 ${cleared ? 'border-cyber-yellow' : 'border-cyber-pink'} p-6 sm:p-8 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
@@ -136,7 +138,7 @@ export default function ChallengeModal({
           <>
             <div className="bg-cyber-darker border border-cyber-border p-4 mb-5 relative">
               <div className="absolute top-0 left-0 bg-cyber-pink text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
-                NODE 0{checkpoint.id} CHALLENGE
+                NODE 0{stageNum} CHALLENGE
               </div>
               <p className="mt-3 text-sm text-foreground leading-relaxed font-sans">{challenge.question}</p>
             </div>
@@ -240,7 +242,7 @@ export default function ChallengeModal({
           <div className="text-center space-y-3 py-4 animate-pulse">
             <div className="flex items-center justify-center gap-2 text-cyber-yellow font-bold text-sm">
               <ShieldCheck className="w-5 h-5" />
-              <span>NODE 0{checkpoint.id} BREACHED!</span>
+              <span>NODE 0{stageNum} BREACHED!</span>
             </div>
             <p className="text-xs text-cyber-muted">Updating telemetry & unlocking next coordinate...</p>
           </div>

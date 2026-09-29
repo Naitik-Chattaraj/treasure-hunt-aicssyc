@@ -33,6 +33,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import AdminQRScannerModal from '@/components/AdminQRScannerModal';
 import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
 import AdminQRGeneratorTab from '@/components/AdminQRGeneratorTab';
+import AdminTeamSquadModal from '@/components/AdminTeamSquadModal';
 
 interface AdminTeam {
   id: string;
@@ -108,6 +109,7 @@ export default function AdminDashboard() {
   // QR Scanner Modal and Question Block QR Generator Modal states
   const [showAdminScanner, setShowAdminScanner] = useState(false);
   const [qrModalCheckpoint, setQrModalCheckpoint] = useState<AdminCheckpoint | null>(null);
+  const [squadModalTeam, setSquadModalTeam] = useState<AdminTeam | null>(null);
 
   const handleRegenerateToken = async (checkpointId: number, newHash: string) => {
     const cp = checkpoints.find(c => c.id === checkpointId);
@@ -517,7 +519,14 @@ export default function AdminDashboard() {
                     <div key={team.id} className="bg-cyber-darker border border-cyber-yellow/60 p-4 space-y-3 relative">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-bold text-base text-foreground">{team.team_name}</div>
+                          <button
+                            onClick={() => setSquadModalTeam(team)}
+                            className="font-bold text-base text-foreground hover:text-cyber-yellow text-left transition-colors cursor-pointer flex items-center gap-1.5"
+                            title="Inspect Team Squad Members"
+                          >
+                            <span>{team.team_name}</span>
+                            <Users className="w-3.5 h-3.5 text-cyber-yellow" />
+                          </button>
                           <div className="text-xs text-cyber-yellow">Access Code: {team.uid}</div>
                         </div>
                         <span className="text-[10px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-2 py-0.5 uppercase font-bold">
@@ -527,7 +536,15 @@ export default function AdminDashboard() {
 
                       <div className="text-xs text-gray-300 space-y-1">
                         <div><strong className="text-gray-400">Lead:</strong> {team.team_lead}</div>
-                        <div><strong className="text-gray-400">Operatives:</strong> {team.members?.length || 4} members</div>
+                        <div className="flex items-center justify-between">
+                          <span><strong className="text-gray-400">Operatives:</strong> {team.members?.length || 4} members</span>
+                          <button
+                            onClick={() => setSquadModalTeam(team)}
+                            className="text-[10px] text-cyber-cyan hover:underline uppercase font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            View Squad →
+                          </button>
+                        </div>
                         <div className="flex items-center gap-2 pt-1">
                           <strong className="text-gray-400 text-[10px] uppercase">Route:</strong>
                           <select
@@ -587,6 +604,7 @@ export default function AdminDashboard() {
                       <th className="p-3">Access Code</th>
                       <th className="p-3">Team Name</th>
                       <th className="p-3">Team Lead</th>
+                      <th className="p-3">Squad Roster</th>
                       <th className="p-3">Assigned Route</th>
                       <th className="p-3">Status</th>
                       <th className="p-3">Current Progress</th>
@@ -598,8 +616,26 @@ export default function AdminDashboard() {
                     {teams.map((t) => (
                       <tr key={t.id} className="hover:bg-cyber-darker/60 transition-colors">
                         <td className="p-3 text-cyber-cyan font-bold">{t.uid}</td>
-                        <td className="p-3 text-foreground font-bold">{t.team_name}</td>
+                        <td className="p-3 font-bold">
+                          <button
+                            onClick={() => setSquadModalTeam(t)}
+                            className="text-foreground hover:text-cyber-cyan transition-colors text-left cursor-pointer flex items-center gap-1.5"
+                            title="Click to view all team members & positions"
+                          >
+                            <span>{t.team_name}</span>
+                          </button>
+                        </td>
                         <td className="p-3 text-gray-300">{t.team_lead}</td>
+                        <td className="p-3">
+                          <button
+                            onClick={() => setSquadModalTeam(t)}
+                            className="px-2.5 py-1 bg-cyber-darker hover:bg-cyber-panel border border-cyber-cyan/40 hover:border-cyber-cyan text-cyber-cyan text-[11px] font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            title="Inspect full operative roster (Base Decoders & Field Scouts)"
+                          >
+                            <Users className="w-3.5 h-3.5 text-cyber-yellow" />
+                            <span>{t.members?.length || 4} Operatives</span>
+                          </button>
+                        </td>
                         <td className="p-3">
                           <select
                             value={t.assigned_route || 1}
@@ -642,34 +678,43 @@ export default function AdminDashboard() {
                           {t.start_time ? new Date(t.start_time).toLocaleTimeString() : 'Not started'}
                         </td>
                         <td className="p-3 text-right">
-                          {t.status === 'pending' ? (
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => handleApproveReject(t.id, 'approved')}
-                              className="px-2 py-1 bg-green-500/20 text-green-400 border border-green-500 hover:bg-green-500 hover:text-black font-bold text-[10px] uppercase"
+                              onClick={() => setSquadModalTeam(t)}
+                              className="px-2 py-1 bg-cyber-darker text-cyber-cyan border border-cyber-cyan/40 hover:border-cyber-cyan font-bold text-[10px] uppercase cursor-pointer"
+                              title="Inspect Squad"
                             >
-                              Approve
+                              Inspect
                             </button>
-                          ) : t.status === 'approved' ? (
-                            <button
-                              onClick={() => handleApproveReject(t.id, 'rejected')}
-                              className="px-2 py-1 text-cyber-pink border border-cyber-pink/40 hover:border-cyber-pink font-bold text-[10px] uppercase"
-                            >
-                              Revoke
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleApproveReject(t.id, 'approved')}
-                              className="px-2 py-1 text-green-400 border border-green-500/40 hover:border-green-500 font-bold text-[10px] uppercase"
-                            >
-                              Re-Approve
-                            </button>
-                          )}
+                            {t.status === 'pending' ? (
+                              <button
+                                onClick={() => handleApproveReject(t.id, 'approved')}
+                                className="px-2 py-1 bg-green-500/20 text-green-400 border border-green-500 hover:bg-green-500 hover:text-black font-bold text-[10px] uppercase cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                            ) : t.status === 'approved' ? (
+                              <button
+                                onClick={() => handleApproveReject(t.id, 'rejected')}
+                                className="px-2 py-1 text-cyber-pink border border-cyber-pink/40 hover:border-cyber-pink font-bold text-[10px] uppercase cursor-pointer"
+                              >
+                                Revoke
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleApproveReject(t.id, 'approved')}
+                                className="px-2 py-1 text-green-400 border border-green-500/40 hover:border-green-500 font-bold text-[10px] uppercase cursor-pointer"
+                              >
+                                Re-Approve
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {teams.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-gray-500">
+                        <td colSpan={9} className="p-8 text-center text-gray-500">
                           No teams registered yet.
                         </td>
                       </tr>
@@ -1139,6 +1184,23 @@ export default function AdminDashboard() {
           checkpoint={qrModalCheckpoint}
           onClose={() => setQrModalCheckpoint(null)}
           onRegenerateToken={handleRegenerateToken}
+        />
+      )}
+
+      {/* Admin Team Squad Inspection Modal */}
+      {squadModalTeam && (
+        <AdminTeamSquadModal
+          team={squadModalTeam}
+          onClose={() => setSquadModalTeam(null)}
+          onApproveReject={async (teamId, status) => {
+            await handleApproveReject(teamId, status);
+            setSquadModalTeam(prev => prev && prev.id === teamId ? { ...prev, status } : prev);
+          }}
+          onUpdateRoute={async (teamId, newRoute) => {
+            await handleUpdateTeamRoute(teamId, newRoute);
+            setSquadModalTeam(prev => prev && prev.id === teamId ? { ...prev, assigned_route: newRoute } : prev);
+          }}
+          actionLoading={actionLoading}
         />
       )}
     </main>

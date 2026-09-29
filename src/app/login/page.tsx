@@ -4,7 +4,21 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Terminal, Lock, AlertCircle, ShieldCheck, Clock, RefreshCw, ShieldAlert, Users, Plus, Trash2 } from 'lucide-react';
+import { 
+  Terminal, 
+  Lock, 
+  AlertCircle, 
+  ShieldCheck, 
+  Clock, 
+  RefreshCw, 
+  ShieldAlert, 
+  Users, 
+  Plus, 
+  Trash2, 
+  BrainCircuit, 
+  Footprints,
+  UserCheck
+} from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { TeamMember } from '@/types/hunt';
 
@@ -14,6 +28,8 @@ export default function LoginPage() {
   const [teamLead, setTeamLead] = useState('');
   const [uid, setUid] = useState(''); // 6-digit code
   const [isLoginMode, setIsLoginMode] = useState(false);
+  const [operativeName, setOperativeName] = useState('');
+  const [operativeRole, setOperativeRole] = useState<'Base Decoder' | 'Field Scout'>('Base Decoder');
   
   // 4 to 5 members
   const [members, setMembers] = useState<TeamMember[]>([
@@ -49,25 +65,25 @@ export default function LoginPage() {
         next[0].name = teamLead;
         return next;
       });
+      if (!operativeName) {
+        setOperativeName(teamLead);
+      }
     }
-  }, [teamLead, isLoginMode]);
+  }, [teamLead, isLoginMode, operativeName]);
 
   // Auto-poll when pending approval
   useEffect(() => {
     if (!pendingApproval) return;
 
     const interval = setInterval(async () => {
-      // In registration, we pass the teamName and teamLead. We don't have the UID yet (it's hidden from user).
-      const res = await api.login('', teamName.trim(), teamLead.trim(), members, false);
+      const res = await api.login('', teamName.trim(), teamLead.trim(), members, false, operativeName.trim(), operativeRole);
       if (res.status === 'approved') {
         router.push('/hunt');
-      } else if (res.status === 'pending' && res.team?.uid) {
-        // If we get the uid back in the response, we might store it, but wait for approval.
       }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [pendingApproval, teamName, teamLead, members, router]);
+  }, [pendingApproval, teamName, teamLead, members, operativeName, operativeRole, router]);
 
   const validateField = (name: string, value: string): string => {
     const trimmed = value.trim();
@@ -86,13 +102,18 @@ export default function LoginPage() {
       if (trimmed.length !== 6) return 'Access Code must be exactly 6 characters.';
       if (!/^[A-Za-z0-9]+$/.test(trimmed)) return 'Access Code must be alphanumeric.';
     }
+    if (name === 'operativeName' && isLoginMode) {
+      if (!trimmed) return 'Operative Name is required.';
+      if (trimmed.length < 2) return 'Operative Name must be at least 2 characters.';
+    }
     return '';
   };
 
-  const handleChange = (field: 'teamName' | 'teamLead' | 'uid', value: string) => {
+  const handleChange = (field: 'teamName' | 'teamLead' | 'uid' | 'operativeName', value: string) => {
     if (field === 'teamName') setTeamName(value);
     if (field === 'teamLead') setTeamLead(value);
     if (field === 'uid') setUid(value);
+    if (field === 'operativeName') setOperativeName(value);
 
     if (touched[field]) {
       const err = validateField(field, value);
@@ -101,9 +122,9 @@ export default function LoginPage() {
     if (authError) setAuthError('');
   };
 
-  const handleBlur = (field: 'teamName' | 'teamLead' | 'uid') => {
+  const handleBlur = (field: 'teamName' | 'teamLead' | 'uid' | 'operativeName') => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    const val = field === 'teamName' ? teamName : field === 'teamLead' ? teamLead : uid;
+    const val = field === 'teamName' ? teamName : field === 'teamLead' ? teamLead : field === 'uid' ? uid : operativeName;
     const err = validateField(field, val);
     setFieldErrors(prev => ({ ...prev, [field]: err }));
   };
@@ -124,7 +145,7 @@ export default function LoginPage() {
   const handleManualCheck = async () => {
     setCheckingStatus(true);
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, isLoginMode);
+      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, isLoginMode, operativeName.trim(), operativeRole);
       if (res.status === 'approved') {
         router.push('/hunt');
       } else if (res.status === 'rejected') {
@@ -144,20 +165,22 @@ export default function LoginPage() {
     const errTeam = validateField('teamName', teamName);
     const errLead = validateField('teamLead', teamLead);
     const errUid = validateField('uid', uid);
+    const errOperative = validateField('operativeName', operativeName);
 
-    setTouched({ teamName: true, teamLead: true, uid: true });
+    setTouched({ teamName: true, teamLead: true, uid: true, operativeName: true });
     setFieldErrors({
       teamName: errTeam,
       teamLead: errLead,
       uid: errUid,
+      operativeName: errOperative,
     });
 
     if (!isLoginMode && (errTeam || errLead)) {
       setAuthError('PLEASE RESOLVE VALIDATION ERRORS BEFORE PROCEEDING.');
       return;
     }
-    if (isLoginMode && (errTeam || errUid)) {
-      setAuthError('PLEASE ENTER A VALID TEAM NAME AND 6-DIGIT ACCESS CODE.');
+    if (isLoginMode && (errTeam || errUid || errOperative)) {
+      setAuthError('PLEASE COMPLETE ALL REQUIRED CREDENTIALS & OPERATIVE INFO.');
       return;
     }
 
@@ -185,8 +208,20 @@ export default function LoginPage() {
       phone: m.phone.trim(),
     }));
 
+    const finalOperativeName = isLoginMode 
+      ? operativeName.trim() 
+      : (operativeName.trim() || teamLead.trim());
+
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), finalMembers, isLoginMode);
+      const res = await api.login(
+        uid.trim(), 
+        teamName.trim(), 
+        teamLead.trim(), 
+        finalMembers, 
+        isLoginMode,
+        finalOperativeName,
+        operativeRole
+      );
       
       if (res.status === 'approved') {
         router.push('/hunt');
@@ -386,100 +421,236 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Operatives Roster Collapsible */}
-            {!isLoginMode && (
-              <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => setShowMembers(!showMembers)}
-                className="w-full flex items-center justify-between text-xs text-cyber-cyan bg-cyber-darker border border-cyber-border p-2.5 hover:border-cyber-cyan transition-colors"
-              >
-                <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
-                  <Users className="w-4 h-4 text-cyber-yellow" />
-                  Squad Roster ({members.length} Operatives)
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  {showMembers ? 'COLLAPSE ▲' : 'CONFIGURE ▼'}
-                </span>
-              </button>
-
-              {showMembers && (
-                <div className="mt-2 p-3 bg-cyber-darker border border-cyber-border/70 space-y-2.5 text-xs">
-                  <p className="text-[10px] text-gray-400 mb-2">
-                    Min 4, max 5 operatives. 2 Base Decoders in Room + 2-3 Field Scouts on Campus.
-                  </p>
-                  {members.map((m, idx) => (
-                    <div key={idx} className="flex flex-col gap-2 items-start border-b border-cyber-border/50 pb-3 mb-2">
-                      <div className="flex w-full gap-2 items-center">
-                        <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
-                        <input
-                          type="text"
-                          placeholder={`Operative ${idx + 1} Name`}
-                          value={m.name}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
-                          }}
-                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan"
-                        />
-                        <select
-                          value={m.role}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
-                          }}
-                          className="bg-cyber-panel border border-cyber-border px-2 py-1.5 text-[11px] text-cyber-yellow outline-none"
-                        >
-                          <option value="Base Decoder">Base Decoder</option>
-                          <option value="Field Scout">Field Scout</option>
-                        </select>
-                        {members.length > 4 && idx >= 4 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMember(idx)}
-                            className="text-cyber-pink hover:text-white p-1 ml-auto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex w-full gap-2 pl-6">
-                        <input
-                          type="text"
-                          placeholder="Reg No (e.g. IEEE/College)"
-                          value={m.regNo}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
-                          }}
-                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Phone No."
-                          value={m.phone}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
-                          }}
-                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                  {members.length < 5 && (
-                    <button
-                      type="button"
-                      onClick={handleAddMember}
-                      className="w-full border border-dashed border-cyber-yellow/60 text-cyber-yellow hover:bg-cyber-yellow/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
-                    >
-                      <Plus className="w-3 h-3" /> Add 5th Operative
-                    </button>
+            {/* Operative Name & Role Assignment on this Device */}
+            {isLoginMode && (
+              <div className="space-y-3 pt-1 border-t border-cyber-border/60">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                      Your Operative Handle / Name
+                    </label>
+                    {touched.operativeName && !fieldErrors.operativeName && operativeName.trim() && (
+                      <span className="text-[10px] text-green-500 flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> VALID
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. Alex Mercer"
+                    value={operativeName}
+                    onChange={e => handleChange('operativeName', e.target.value)}
+                    onBlur={() => handleBlur('operativeName')}
+                    className={`w-full bg-cyber-darker border ${
+                      fieldErrors.operativeName ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
+                    } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                  />
+                  {touched.operativeName && fieldErrors.operativeName && (
+                    <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      {fieldErrors.operativeName}
+                    </p>
                   )}
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-cyber-cyan font-bold tracking-wider mb-1.5">
+                    Assigned Device Position
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOperativeRole('Base Decoder')}
+                      className={`p-2.5 border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                        operativeRole === 'Base Decoder'
+                          ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                          : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-cyan/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <BrainCircuit className={`w-4 h-4 ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-gray-400'}`} />
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.2 border ${
+                          operativeRole === 'Base Decoder' ? 'bg-cyber-cyan text-cyber-dark border-cyber-cyan' : 'border-gray-700 text-gray-500'
+                        }`}>
+                          Room
+                        </span>
+                      </div>
+                      <div>
+                        <div className={`text-xs font-bold ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-foreground'}`}>
+                          Base Decoder
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                          Solves questions in room
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOperativeRole('Field Scout')}
+                      className={`p-2.5 border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                        operativeRole === 'Field Scout'
+                          ? 'bg-cyber-yellow/15 border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.25)]'
+                          : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-yellow/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <Footprints className={`w-4 h-4 ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-gray-400'}`} />
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.2 border ${
+                          operativeRole === 'Field Scout' ? 'bg-cyber-yellow text-cyber-dark border-cyber-yellow' : 'border-gray-700 text-gray-500'
+                        }`}>
+                          Campus
+                        </span>
+                      </div>
+                      <div>
+                        <div className={`text-xs font-bold ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-foreground'}`}>
+                          Field Scout
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                          Scans QR codes on field
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Operatives Roster Collapsible for Registration */}
+            {!isLoginMode && (
+              <div className="pt-1 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMembers(!showMembers)}
+                  className="w-full flex items-center justify-between text-xs text-cyber-cyan bg-cyber-darker border border-cyber-border p-2.5 hover:border-cyber-cyan transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                    <Users className="w-4 h-4 text-cyber-yellow" />
+                    Squad Roster ({members.length} Operatives)
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    {showMembers ? 'COLLAPSE ▲' : 'CONFIGURE ▼'}
+                  </span>
+                </button>
+
+                {showMembers && (
+                  <div className="p-3 bg-cyber-darker border border-cyber-border/70 space-y-2.5 text-xs">
+                    <p className="text-[10px] text-gray-400 mb-2">
+                      Min 4, max 5 operatives. 2 Base Decoders in Room + 2-3 Field Scouts on Campus.
+                    </p>
+                    {members.map((m, idx) => (
+                      <div key={idx} className="flex flex-col gap-2 items-start border-b border-cyber-border/50 pb-3 mb-2">
+                        <div className="flex w-full gap-2 items-center">
+                          <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
+                          <input
+                            type="text"
+                            placeholder={`Operative ${idx + 1} Name`}
+                            value={m.name}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
+                            }}
+                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan"
+                          />
+                          <select
+                            value={m.role}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
+                            }}
+                            className="bg-cyber-panel border border-cyber-border px-2 py-1.5 text-[11px] text-cyber-yellow outline-none"
+                          >
+                            <option value="Base Decoder">Base Decoder</option>
+                            <option value="Field Scout">Field Scout</option>
+                          </select>
+                          {members.length > 4 && idx >= 4 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(idx)}
+                              className="text-cyber-pink hover:text-white p-1 ml-auto cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex w-full gap-2 pl-6">
+                          <input
+                            type="text"
+                            placeholder="Reg No (e.g. IEEE/College)"
+                            value={m.regNo}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
+                            }}
+                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Phone No."
+                            value={m.phone}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
+                            }}
+                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                    {members.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={handleAddMember}
+                        className="w-full border border-dashed border-cyber-yellow/60 text-cyber-yellow hover:bg-cyber-yellow/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add 5th Operative
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Device active role for registration */}
+                <div className="p-3 bg-cyber-darker border border-cyber-border">
+                  <label className="block text-[11px] uppercase text-cyber-cyan font-bold tracking-wider mb-2 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-cyber-yellow" />
+                    This Device Role:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOperativeRole('Base Decoder');
+                        setOperativeName(teamLead || 'Team Lead');
+                      }}
+                      className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        operativeRole === 'Base Decoder'
+                          ? 'bg-cyber-cyan text-cyber-dark border-cyber-cyan shadow-[0_0_10px_rgba(0,240,255,0.3)] font-extrabold'
+                          : 'bg-cyber-panel border-cyber-border text-gray-400 hover:border-cyber-cyan'
+                      }`}
+                    >
+                      <BrainCircuit className="w-3.5 h-3.5" />
+                      Base Decoder
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOperativeRole('Field Scout');
+                        setOperativeName(members[2]?.name || 'Field Scout');
+                      }}
+                      className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        operativeRole === 'Field Scout'
+                          ? 'bg-cyber-yellow text-cyber-dark border-cyber-yellow shadow-[0_0_10px_rgba(252,238,10,0.3)] font-extrabold'
+                          : 'bg-cyber-panel border-cyber-border text-gray-400 hover:border-cyber-yellow'
+                      }`}
+                    >
+                      <Footprints className="w-3.5 h-3.5" />
+                      Field Scout
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             <button

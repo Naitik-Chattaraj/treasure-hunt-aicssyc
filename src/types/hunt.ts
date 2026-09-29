@@ -17,6 +17,8 @@ export interface TeamProfile {
   cooldownUntil?: string | null;
   assignedRoute?: 1 | 2;
   assigned_route?: 1 | 2;
+  operativeRole?: 'Field Scout' | 'Base Decoder';
+  operativeName?: string;
 }
 
 export type ChallengeType = 'passcode' | 'mcq' | 'riddle' | 'code';
