@@ -32,6 +32,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
 import AdminQRScannerModal from '@/components/AdminQRScannerModal';
 import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
+import AdminQRGeneratorTab from '@/components/AdminQRGeneratorTab';
 
 interface AdminTeam {
   id: string;
@@ -70,7 +71,7 @@ interface AdminCheckpoint {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints' | 'qr-generator'>('qr-generator');
   const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
@@ -373,6 +374,19 @@ export default function AdminDashboard() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'qr-generator'
+                ? 'bg-cyber-yellow text-black border border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.5)] font-extrabold'
+                : 'bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-black'
+            }`}
+            title="Open Interactive Question Block QR Code Studio"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>QR CODE GENERATOR</span>
+          </button>
+
+          <button
             onClick={() => setShowAdminScanner(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
             title="Scan Physical Checkpoint QR Code to Inspect Question Block"
@@ -446,7 +460,20 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-cyber-border gap-2">
+        <div className="flex flex-wrap border-b border-cyber-border gap-2">
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+              activeTab === 'qr-generator'
+                ? 'border-cyber-yellow text-cyber-yellow bg-cyber-panel shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-foreground'
+            }`}
+          >
+            <QrCode className="w-4 h-4 text-cyber-yellow animate-pulse" />
+            <span>QR Code Generator & Stickers</span>
+            <span className="text-[9px] bg-cyber-yellow text-black font-extrabold px-1.5 py-0.2 rounded">STUDIO</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('teams')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
@@ -471,6 +498,16 @@ export default function AdminDashboard() {
             <span>Checkpoints & Question Bank Vault (24 Nodes / 2 Routes)</span>
           </button>
         </div>
+
+        {/* Tab 0: QR Code Generator & Studio */}
+        {activeTab === 'qr-generator' && (
+          <AdminQRGeneratorTab
+            checkpoints={checkpoints}
+            onRefresh={() => fetchDashboardData(true)}
+            onRegenerateToken={handleRegenerateToken}
+            onOpenQuestionModal={handleOpenAddQuestion}
+          />
+        )}
 
         {/* Tab 1: Teams & Approvals */}
         {activeTab === 'teams' && (
@@ -696,6 +733,14 @@ export default function AdminDashboard() {
                   }`}
                 >
                   All 24 Nodes
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('qr-generator')}
+                  className="px-3 py-1.5 bg-cyber-yellow hover:bg-white text-black text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(252,238,10,0.3)] ml-auto"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Open QR Code Studio &rarr;</span>
                 </button>
               </div>
             </div>
