@@ -1,15 +1,20 @@
 export interface TeamMember {
   name: string;
-  role: string;
+  role: 'Field Scout' | 'Base Decoder' | string;
   regNo: string;
   phone: string;
 }
 
+export type TeamStatus = 'pending' | 'approved' | 'rejected';
+
 export interface TeamProfile {
+  id?: string;
   teamName: string;
   teamLead: string;
   uid: string;
   members: TeamMember[];
+  status?: TeamStatus;
+  cooldownUntil?: string | null;
 }
 
 export type ChallengeType = 'passcode' | 'mcq' | 'riddle';
@@ -20,7 +25,7 @@ export interface Challenge {
   type: ChallengeType;
   question: string;
   options?: string[]; // Only for mcq
-  answer: string; // The correct answer hash or raw string
+  answer?: string; // Hidden from participant, only present in admin views
 }
 
 export interface Checkpoint {
@@ -28,8 +33,9 @@ export interface Checkpoint {
   title: string;
   area: string;
   clue: string;
-  qrHash: string; // the string expected from the QR code
-  challenge: Challenge;
+  qrHash?: string; // Only present in admin views or mock
+  qrScanned?: boolean; // Whether the field team has unlocked the QR for this stage
+  challenge?: Challenge | null; // The etched challenge for this team
 }
 
 export interface HuntProgress {
@@ -40,4 +46,18 @@ export interface HuntProgress {
     timestamp: number;
   }[];
   completionToken: string | null;
+  cooldownUntil?: number | null; // epoch timestamp in ms
+  wrongAttempts?: number;
+  qrScannedForCurrentStage?: boolean;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  teamName: string;
+  teamLead: string;
+  currentStage: number;
+  startTime: string | null;
+  completedAt: string | null;
+  status: TeamStatus;
+  elapsedSeconds?: number | null;
 }

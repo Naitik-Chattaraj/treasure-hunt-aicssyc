@@ -1,44 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Checkpoint } from '@/types/hunt';
-import { Terminal, LockOpen, X, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Terminal, LockOpen, X, AlertTriangle, ShieldCheck, Timer } from 'lucide-react';
 import { api } from '@/lib/api';
 
 export default function ChallengeModal({ 
   checkpoint, 
   onSuccess,
-  onClose
+  onClose,
+  initialCooldown = 0,
 }: { 
   checkpoint: Checkpoint;
   onSuccess: () => void;
   onClose: () => void;
+  initialCooldown?: number;
 }) {
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [cleared, setCleared] = useState(false);
+  const [cooldown, setCooldown] = useState(initialCooldown);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown(c => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answer.trim()) return;
+    if (!answer.trim() || cooldown > 0) return;
 
     setLoading(true);
     setError(false);
+    setErrorMessage('');
     
-    const isCorrect = await api.solveChallenge(checkpoint.id, answer.trim());
-    
-    if (isCorrect) {
-      setCleared(true);
-      setTimeout(() => {
-        onSuccess();
-      }, 1800);
-    } else {
+    try {
+      const res = await api.solveChallenge(checkpoint.id, answer.trim());
+      
+      if (res.success) {
+        setCleared(true);
+        setTimeout(() => {
+          onSuccess();
+        }, 1800);
+      } else {
+        setError(true);
+        setErrorMessage(res.message || 'INCORRECT KEY/ANSWER.');
+        if (res.cooldownSeconds) {
+          setCooldown(res.cooldownSeconds);
+        }
+        setTimeout(() => setError(false), 800);
+      }
+    } catch {
       setError(true);
+      setErrorMessage('NETWORK ERROR COMMUNICATING WITH VALIDATION MATRIX.');
+    } finally {
       setLoading(false);
-      setTimeout(() => setError(false), 500);
     }
   };
+
+  const challenge = checkpoint.challenge;
+  if (!challenge) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors">
@@ -72,20 +98,27 @@ export default function ChallengeModal({
               <div className="absolute top-0 left-0 bg-cyber-pink text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
                 NODE 0{checkpoint.id} CHALLENGE
               </div>
-              <p className="mt-3 text-sm text-foreground leading-relaxed font-sans">{checkpoint.challenge.question}</p>
+              <p className="mt-3 text-sm text-foreground leading-relaxed font-sans">{challenge.question}</p>
             </div>
 
             {error && (
               <div className="bg-cyber-pink/15 border border-cyber-pink text-cyber-pink px-3 py-2 mb-4 text-xs flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>INCORRECT KEY/ANSWER. TRY AGAIN.</span>
+                <span>{errorMessage || 'INCORRECT KEY/ANSWER. TRY AGAIN.'}</span>
+              </div>
+            )}
+
+            {cooldown > 0 && (
+              <div className="bg-cyber-yellow/15 border border-cyber-yellow text-cyber-yellow px-3 py-2 mb-4 text-xs flex items-center gap-2">
+                <Timer className="w-4 h-4 shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
+                <span>SECURITY COOLDOWN: Wait {cooldown}s before retrying.</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {checkpoint.challenge.type === 'mcq' && checkpoint.challenge.options ? (
+              {challenge.type === 'mcq' && challenge.options ? (
                 <div className="space-y-2">
-                  {checkpoint.challenge.options.map(opt => (
+                  {challenge.options.map(opt => (
                     <label 
                       key={opt} 
                       className={`block border p-3 cursor-pointer transition-all ${
@@ -98,6 +131,7 @@ export default function ChallengeModal({
                         type="radio" 
                         name="answer" 
                         value={opt} 
+                        disabled={cooldown > 0}
                         onChange={e => setAnswer(e.target.value)}
                         className="hidden"
                       />
@@ -110,11 +144,12 @@ export default function ChallengeModal({
                   <input
                     type="text"
                     value={answer}
+                    disabled={cooldown > 0}
                     onChange={e => setAnswer(e.target.value)}
                     className={`w-full bg-cyber-darker border ${
                       error ? 'border-cyber-pink' : 'border-cyber-border'
-                    } focus:border-cyber-cyan text-foreground px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold`}
-                    placeholder="ENTER OVERRIDE PASSCODE"
+                    } focus:border-cyber-cyan text-foreground px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold disabled:opacity-50`}
+                    placeholder={cooldown > 0 ? `LOCKED (${cooldown}s)` : "ENTER OVERRIDE PASSCODE"}
                     required
                   />
                 </div>
@@ -122,10 +157,10 @@ export default function ChallengeModal({
 
               <button
                 type="submit"
-                disabled={loading || !answer}
+                disabled={loading || !answer || cooldown > 0}
                 className="w-full cyber-button-border bg-cyber-pink hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.3)]"
               >
-                {loading ? 'VALIDATING...' : 'SUBMIT SOLUTION'}
+                {loading ? 'VALIDATING...' : cooldown > 0 ? `LOCKED (${cooldown}s)` : 'SUBMIT SOLUTION'}
               </button>
             </form>
           </>
