@@ -32,6 +32,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
 import AdminQRScannerModal from '@/components/AdminQRScannerModal';
 import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
+import AdminQRGeneratorTab from '@/components/AdminQRGeneratorTab';
 
 interface AdminTeam {
   id: string;
@@ -70,7 +71,7 @@ interface AdminCheckpoint {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints' | 'qr-generator'>('teams');
   const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
@@ -353,11 +354,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-hidden transition-colors">
+    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-clip transition-colors">
       <div className="overlay-scanlines"></div>
 
-      {/* Top Admin Header */}
-      <header className="z-10 bg-cyber-panel border-b border-cyber-pink/50 p-4 flex flex-wrap justify-between items-center gap-4 shadow-[0_0_20px_rgba(255,0,60,0.15)]">
+      {/* Top Admin Header (Fixed on Top) */}
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_25px_rgba(0,0,0,0.85)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 border-2 border-cyber-pink flex items-center justify-center bg-cyber-darker text-cyber-pink shadow-[0_0_10px_rgba(255,0,60,0.3)]">
             <Radio className="w-5 h-5 animate-pulse" />
@@ -372,6 +373,19 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'qr-generator'
+                ? 'bg-cyber-yellow text-black border border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.5)] font-extrabold'
+                : 'bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-black'
+            }`}
+            title="Open Interactive Question Block QR Code Studio"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>QR CODE GENERATOR</span>
+          </button>
+
           <button
             onClick={() => setShowAdminScanner(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
@@ -413,6 +427,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
+      {/* Top Navbar Spacer to prevent fixed header from overlapping content */}
+      <div className="h-28 sm:h-24 md:h-20 shrink-0 pointer-events-none" aria-hidden="true" />
+
       {/* Main Container */}
       <div className="flex-1 p-4 sm:p-6 z-10 max-w-7xl w-full mx-auto space-y-6">
         {/* KPI Cards */}
@@ -446,16 +463,16 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-cyber-border gap-2">
+        <div className="flex flex-wrap border-b border-cyber-border gap-2">
           <button
             onClick={() => setActiveTab('teams')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'teams'
-                ? 'border-cyber-cyan text-cyber-cyan bg-cyber-panel'
+                ? 'border-cyber-cyan text-cyber-cyan bg-cyber-panel shadow-[0_4px_12px_rgba(0,240,255,0.15)] font-extrabold'
                 : 'border-transparent text-gray-400 hover:text-foreground'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-cyber-cyan" />
             <span>Fleet Telemetry & Approvals ({pendingTeams.length} Pending)</span>
           </button>
 
@@ -463,12 +480,25 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('checkpoints')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'checkpoints'
-                ? 'border-cyber-pink text-cyber-pink bg-cyber-panel'
+                ? 'border-cyber-pink text-cyber-pink bg-cyber-panel shadow-[0_4px_12px_rgba(255,0,60,0.15)] font-extrabold'
                 : 'border-transparent text-gray-400 hover:text-foreground'
             }`}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-4 h-4 text-cyber-pink" />
             <span>Checkpoints & Question Bank Vault (24 Nodes / 2 Routes)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+              activeTab === 'qr-generator'
+                ? 'border-cyber-yellow text-cyber-yellow bg-cyber-panel shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-foreground'
+            }`}
+          >
+            <QrCode className="w-4 h-4 text-cyber-yellow" />
+            <span>QR Code Generator & Stickers</span>
+            <span className="text-[9px] bg-cyber-yellow text-black font-extrabold px-1.5 py-0.2 rounded">STUDIO</span>
           </button>
         </div>
 
@@ -697,6 +727,14 @@ export default function AdminDashboard() {
                 >
                   All 24 Nodes
                 </button>
+
+                <button
+                  onClick={() => setActiveTab('qr-generator')}
+                  className="px-3 py-1.5 bg-cyber-yellow hover:bg-white text-black text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(252,238,10,0.3)] ml-auto"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Open QR Code Studio &rarr;</span>
+                </button>
               </div>
             </div>
 
@@ -861,6 +899,16 @@ export default function AdminDashboard() {
               })}
             </div>
           </div>
+        )}
+
+        {/* Tab 3: QR Code Generator & Studio */}
+        {activeTab === 'qr-generator' && (
+          <AdminQRGeneratorTab
+            checkpoints={checkpoints}
+            onRefresh={() => fetchDashboardData(true)}
+            onRegenerateToken={handleRegenerateToken}
+            onOpenQuestionModal={handleOpenAddQuestion}
+          />
         )}
       </div>
 
