@@ -71,7 +71,7 @@ interface AdminCheckpoint {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints' | 'qr-generator'>('qr-generator');
+  const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints' | 'qr-generator'>('teams');
   const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
@@ -357,8 +357,8 @@ export default function AdminDashboard() {
     <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-clip transition-colors">
       <div className="overlay-scanlines"></div>
 
-      {/* Top Admin Header (Fixed / Sticky on Top) */}
-      <header className="sticky top-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.7)]">
+      {/* Top Admin Header (Fixed on Top) */}
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_25px_rgba(0,0,0,0.85)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 border-2 border-cyber-pink flex items-center justify-center bg-cyber-darker text-cyber-pink shadow-[0_0_10px_rgba(255,0,60,0.3)]">
             <Radio className="w-5 h-5 animate-pulse" />
@@ -427,6 +427,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
+      {/* Top Navbar Spacer to prevent fixed header from overlapping content */}
+      <div className="h-28 sm:h-24 md:h-20 shrink-0 pointer-events-none" aria-hidden="true" />
+
       {/* Main Container */}
       <div className="flex-1 p-4 sm:p-6 z-10 max-w-7xl w-full mx-auto space-y-6">
         {/* KPI Cards */}
@@ -462,27 +465,14 @@ export default function AdminDashboard() {
         {/* Tab Navigation */}
         <div className="flex flex-wrap border-b border-cyber-border gap-2">
           <button
-            onClick={() => setActiveTab('qr-generator')}
-            className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-              activeTab === 'qr-generator'
-                ? 'border-cyber-yellow text-cyber-yellow bg-cyber-panel shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
-                : 'border-transparent text-gray-400 hover:text-foreground'
-            }`}
-          >
-            <QrCode className="w-4 h-4 text-cyber-yellow animate-pulse" />
-            <span>QR Code Generator & Stickers</span>
-            <span className="text-[9px] bg-cyber-yellow text-black font-extrabold px-1.5 py-0.2 rounded">STUDIO</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('teams')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'teams'
-                ? 'border-cyber-cyan text-cyber-cyan bg-cyber-panel'
+                ? 'border-cyber-cyan text-cyber-cyan bg-cyber-panel shadow-[0_4px_12px_rgba(0,240,255,0.15)] font-extrabold'
                 : 'border-transparent text-gray-400 hover:text-foreground'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-cyber-cyan" />
             <span>Fleet Telemetry & Approvals ({pendingTeams.length} Pending)</span>
           </button>
 
@@ -490,24 +480,27 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('checkpoints')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'checkpoints'
-                ? 'border-cyber-pink text-cyber-pink bg-cyber-panel'
+                ? 'border-cyber-pink text-cyber-pink bg-cyber-panel shadow-[0_4px_12px_rgba(255,0,60,0.15)] font-extrabold'
                 : 'border-transparent text-gray-400 hover:text-foreground'
             }`}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-4 h-4 text-cyber-pink" />
             <span>Checkpoints & Question Bank Vault (24 Nodes / 2 Routes)</span>
           </button>
-        </div>
 
-        {/* Tab 0: QR Code Generator & Studio */}
-        {activeTab === 'qr-generator' && (
-          <AdminQRGeneratorTab
-            checkpoints={checkpoints}
-            onRefresh={() => fetchDashboardData(true)}
-            onRegenerateToken={handleRegenerateToken}
-            onOpenQuestionModal={handleOpenAddQuestion}
-          />
-        )}
+          <button
+            onClick={() => setActiveTab('qr-generator')}
+            className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+              activeTab === 'qr-generator'
+                ? 'border-cyber-yellow text-cyber-yellow bg-cyber-panel shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-foreground'
+            }`}
+          >
+            <QrCode className="w-4 h-4 text-cyber-yellow" />
+            <span>QR Code Generator & Stickers</span>
+            <span className="text-[9px] bg-cyber-yellow text-black font-extrabold px-1.5 py-0.2 rounded">STUDIO</span>
+          </button>
+        </div>
 
         {/* Tab 1: Teams & Approvals */}
         {activeTab === 'teams' && (
@@ -906,6 +899,16 @@ export default function AdminDashboard() {
               })}
             </div>
           </div>
+        )}
+
+        {/* Tab 3: QR Code Generator & Studio */}
+        {activeTab === 'qr-generator' && (
+          <AdminQRGeneratorTab
+            checkpoints={checkpoints}
+            onRefresh={() => fetchDashboardData(true)}
+            onRegenerateToken={handleRegenerateToken}
+            onOpenQuestionModal={handleOpenAddQuestion}
+          />
         )}
       </div>
 
