@@ -161,22 +161,22 @@ export default function HuntHUD() {
   const isQrUnlocked = !!activeCheckpoint?.qrScanned;
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col relative overflow-hidden font-mono transition-colors">
+    <main className="h-[100dvh] max-h-[100dvh] bg-cyber-dark text-foreground flex flex-col relative overflow-hidden font-mono transition-colors">
       <div className="overlay-scanlines"></div>
       
       {/* Top Header */}
-      <header className="z-10 bg-cyber-panel border-b border-cyber-cyan/40 p-3 sm:p-4 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
+      <header className="shrink-0 z-10 bg-cyber-panel border-b border-cyber-cyan/40 p-2.5 sm:p-4 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setShowProfile(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-cyber-dark transition-colors cyber-button-border text-xs sm:text-sm font-bold cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-cyber-dark transition-colors cyber-button-border text-xs sm:text-sm font-bold cursor-pointer"
             title="View Team Profile & Telemetry"
           >
             <User className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[110px] sm:max-w-[160px]">{profile.teamName}</span>
+            <span className="truncate max-w-[100px] sm:max-w-[160px]">{profile.teamName}</span>
           </button>
 
-          <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${
+          <span className={`px-2 py-0.5 sm:py-1 text-[10px] font-bold uppercase tracking-wider border ${
             (profile.assignedRoute || progress.assignedRoute || 1) === 1
               ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
               : 'bg-purple-500/15 border-purple-400 text-purple-400'
@@ -185,7 +185,7 @@ export default function HuntHUD() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
           <div className="text-right">
             <div className="text-[9px] sm:text-[10px] text-cyber-muted font-bold tracking-widest uppercase">STAGE</div>
@@ -198,17 +198,16 @@ export default function HuntHUD() {
 
       {/* Floating Notice Toast */}
       {scanNotice && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-cyber-darker border-2 border-cyber-cyan text-white p-3 font-mono text-xs uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
-          <AlertOctagon className="w-5 h-5 text-cyber-cyan shrink-0" />
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-cyber-darker border-2 border-cyber-cyan text-white p-2.5 font-mono text-xs uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
+          <AlertOctagon className="w-4 h-4 text-cyber-cyan shrink-0" />
           <span>{scanNotice}</span>
         </div>
       )}
 
-      {/* Main HUD Area */}
-      <div className="flex-1 p-4 flex flex-col z-10 max-w-lg w-full mx-auto justify-between space-y-4">
-        
+      {/* Middle Scrollable Content Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-2.5 sm:py-3 space-y-3 sm:space-y-4 max-w-lg w-full mx-auto">
         {/* Active Stage Container */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           
           {/* Phase Status Banner (Field Scout vs Base Decoder) */}
           <div className={`p-3 border text-xs flex items-center justify-between shadow-md ${
@@ -295,9 +294,9 @@ export default function HuntHUD() {
               <div>
                 <div className="text-xs font-bold text-cyber-cyan group-hover:text-cyber-yellow transition-colors flex items-center gap-1.5 uppercase tracking-wider">
                   <Compass className="w-3.5 h-3.5" />
-                  Tactical Campus Map
+                  Treasure Map
                 </div>
-                <p className="text-[11px] text-cyber-muted">Tap to view full campus node layout</p>
+                <p className="text-[11px] text-cyber-muted">Tap to view treasure hunt route map</p>
               </div>
             </div>
 
@@ -337,27 +336,27 @@ export default function HuntHUD() {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Action Buttons (Bottom area) */}
-        <div className="space-y-3 pt-4 mb-2">
-          {isQrUnlocked ? (
-            <button
-              onClick={() => setShowChallenge(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-4 text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer"
-            >
-              <BrainCircuit className="w-5 h-5 animate-pulse" />
-              SOLVE ETCHED QUESTION
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-4 text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer"
-            >
-              <ScanLine className="w-5 h-5 animate-pulse" />
-              Scan Checkpoint QR Code
-            </button>
-          )}
-        </div>
+      {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, no y-axis overflow) */}
+      <div className="shrink-0 p-3 sm:p-4 bg-cyber-panel/95 border-t border-cyber-cyan/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
+        {isQrUnlocked ? (
+          <button
+            onClick={() => setShowChallenge(true)}
+            className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
+          >
+            <BrainCircuit className="w-5 h-5 animate-pulse" />
+            SOLVE ETCHED QUESTION
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowScanner(true)}
+            className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
+          >
+            <ScanLine className="w-5 h-5 animate-pulse" />
+            Scan Checkpoint QR Code
+          </button>
+        )}
       </div>
 
       {/* Modals */}

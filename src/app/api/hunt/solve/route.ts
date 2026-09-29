@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { verifyTeamToken } from '@/lib/auth';
+import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,19 +55,28 @@ export async function POST(req: NextRequest) {
     const assignedRoute = team.assigned_route || 1;
 
     // Fetch the checkpoint for this team's route and current stage
-    const { data: currentCp } = await supabase
-      .from('checkpoints')
-      .select('id, route_id, stage')
-      .eq('route_id', assignedRoute)
-      .eq('stage', team.current_stage)
-      .single();
+    let cpId = nodeId;
+    try {
+      const { data: currentCp } = await supabase
+        .from('checkpoints')
+        .select('id, route_id, stage')
+        .eq('route_id', assignedRoute)
+        .eq('stage', team.current_stage)
+        .maybeSingle();
 
-    if (!currentCp) {
-      return NextResponse.json({ error: 'Checkpoint not found' }, { status: 404 });
+      if (currentCp) {
+        cpId = currentCp.id;
+      }
+    } catch {}
+
+    if (!cpId) {
+      const mockCp = MOCK_CHECKPOINTS.find((c) => c.routeId === assignedRoute && c.stage === team.current_stage)
+                  || MOCK_CHECKPOINTS.find((c) => c.id === team.current_stage);
+      if (mockCp) cpId = mockCp.id;
     }
 
     // 3. Verify node matches team's current stage (or checkpoint id)
-    if (nodeId !== team.current_stage && nodeId !== currentCp.id) {
+    if (nodeId !== team.current_stage && nodeId !== cpId) {
       return NextResponse.json({
         error: 'stage_mismatch',
         message: `Invalid node submission. Your current target is Node 0${team.current_stage}`,
@@ -74,32 +84,47 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Fetch the specific etched question assigned to this team
-    const { data: activeChallenge, error: challengeError } = await supabase
-      .from('team_active_challenges')
-      .select(`
-        id,
-        question_id,
-        questions_pool (
-          id,
-          answer
-        )
-      `)
-      .eq('team_id', team.id)
-      .eq('node_id', currentCp.id)
-      .maybeSingle();
+    let isMatch = false;
+    let activeChallengeId: string | null = null;
 
-    if (challengeError || !activeChallenge || !activeChallenge.questions_pool) {
-      return NextResponse.json({
-        error: 'challenge_not_unlocked',
-        message: 'QR code must be scanned on campus before submitting answers!',
-      }, { status: 400 });
+    try {
+      const { data: activeChallenge } = await supabase
+        .from('team_active_challenges')
+        .select(`
+          id,
+          question_id,
+          questions_pool (
+            id,
+            answer
+          )
+        `)
+        .eq('team_id', team.id)
+        .eq('node_id', cpId)
+        .maybeSingle();
+
+      if (activeChallenge && activeChallenge.questions_pool) {
+        const q = Array.isArray(activeChallenge.questions_pool) 
+          ? activeChallenge.questions_pool[0] 
+          : activeChallenge.questions_pool;
+        isMatch = q.answer.trim().toLowerCase() === cleanAnswer.toLowerCase();
+        activeChallengeId = activeChallenge.id;
+      }
+    } catch (e) {
+      console.warn('team_active_challenges lookup warning:', e);
     }
 
-    const q = Array.isArray(activeChallenge.questions_pool) 
-      ? activeChallenge.questions_pool[0] 
-      : activeChallenge.questions_pool;
-
-    const isMatch = q.answer.trim().toLowerCase() === cleanAnswer.toLowerCase();
+    // Fallback if challenge was served from MOCK_CHECKPOINTS
+    if (!activeChallengeId) {
+      const mockCp = MOCK_CHECKPOINTS.find((c) => c.id === cpId || (c.stage === team.current_stage && c.routeId === assignedRoute));
+      if (mockCp && mockCp.challenge && mockCp.challenge.answer) {
+        isMatch = mockCp.challenge.answer.trim().toLowerCase() === cleanAnswer.toLowerCase();
+      } else {
+        return NextResponse.json({
+          error: 'challenge_not_unlocked',
+          message: 'QR code must be scanned on campus before submitting answers!',
+        }, { status: 400 });
+      }
+    }
 
     // Log the submission attempt
     await supabase.from('submissions_log').insert({
@@ -118,14 +143,16 @@ export async function POST(req: NextRequest) {
         ? `WIN-${Date.now().toString(16).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
         : null;
 
-      // Mark etched challenge as solved
-      await supabase
-        .from('team_active_challenges')
-        .update({
-          is_solved: true,
-          solved_at: new Date().toISOString(),
-        })
-        .eq('id', activeChallenge.id);
+      // Mark etched challenge as solved if tracked in DB
+      if (activeChallengeId) {
+        await supabase
+          .from('team_active_challenges')
+          .update({
+            is_solved: true,
+            solved_at: new Date().toISOString(),
+          })
+          .eq('id', activeChallengeId);
+      }
 
       // Record completed node in hunt completions
       await supabase.from('hunt_completions').upsert({

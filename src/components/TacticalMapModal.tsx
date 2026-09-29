@@ -56,7 +56,7 @@ export default function TacticalMapModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-cyber-blue tracking-widest uppercase">
-                  Tactical Campus Map
+                  Treasure Map
                 </h2>
                 <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${
                   currentRoute === 1 ? 'bg-cyber-cyan text-cyber-dark' : 'bg-purple-500 text-white'

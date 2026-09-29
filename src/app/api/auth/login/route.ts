@@ -37,10 +37,11 @@ export async function POST(req: NextRequest) {
 
     // 2. If team does not exist, create new team in 'pending' status
     if (!team) {
-      const defaultMembers = Array.isArray(members) && members.length > 0 ? members : [
-        { name: trimmedLead, role: 'Team Lead', regNo: trimmedUid, phone: '555-0100' },
-        { name: 'Member 2', role: 'Cryptanalyst', regNo: 'REG-002', phone: '555-0102' },
-        { name: 'Member 3', role: 'Field Navigator', regNo: 'REG-003', phone: '555-0103' },
+      const defaultMembers = Array.isArray(members) && members.length >= 4 ? members : [
+        { name: trimmedLead, role: 'Base Decoder', regNo: trimmedUid, phone: '555-0100' },
+        { name: 'Member 2', role: 'Base Decoder', regNo: 'REG-002', phone: '555-0102' },
+        { name: 'Member 3', role: 'Field Scout', regNo: 'REG-003', phone: '555-0103' },
+        { name: 'Member 4', role: 'Field Scout', regNo: 'REG-004', phone: '555-0104' },
       ];
 
       const assignedRoute = Math.random() < 0.5 ? 1 : 2;

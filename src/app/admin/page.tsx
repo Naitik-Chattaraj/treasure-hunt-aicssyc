@@ -23,9 +23,15 @@ import {
   HelpCircle,
   Footprints,
   Copy,
-  Check
+  Check,
+  Camera,
+  QrCode,
+  Printer
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
+import AdminQRScannerModal from '@/components/AdminQRScannerModal';
+import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
 
 interface AdminTeam {
   id: string;
@@ -97,6 +103,39 @@ export default function AdminDashboard() {
     answer: '',
   });
   const [questionSaveStatus, setQuestionSaveStatus] = useState<string | null>(null);
+
+  // QR Scanner Modal and Question Block QR Generator Modal states
+  const [showAdminScanner, setShowAdminScanner] = useState(false);
+  const [qrModalCheckpoint, setQrModalCheckpoint] = useState<AdminCheckpoint | null>(null);
+
+  const handleRegenerateToken = async (checkpointId: number, newHash: string) => {
+    const cp = checkpoints.find(c => c.id === checkpointId);
+    if (!cp) return;
+
+    try {
+      const res = await fetch('/api/admin/checkpoints', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: checkpointId,
+          title: cp.title,
+          area: cp.area,
+          clue: cp.clue,
+          qr_hash: newHash,
+        }),
+      });
+
+      if (res.ok) {
+        await fetchDashboardData(true);
+        setQrModalCheckpoint(prev => prev && prev.id === checkpointId ? { ...prev, qr_hash: newHash } : null);
+      } else {
+        const data = await res.json();
+        alert(`Failed to regenerate QR token: ${data.error || 'Server error'}`);
+      }
+    } catch {
+      alert('Network error regenerating QR token');
+    }
+  };
 
   const fetchDashboardData = async (silent = false) => {
     if (!silent) setRefreshing(true);
@@ -333,6 +372,15 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowAdminScanner(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
+            title="Scan Physical Checkpoint QR Code to Inspect Question Block"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>SCAN / VERIFY QR</span>
+          </button>
+
           <Link
             href="/leaderboard"
             target="_blank"
@@ -708,25 +756,43 @@ export default function AdminDashboard() {
                         <p className="leading-relaxed text-gray-200">{cp.clue}</p>
                       </div>
 
-                      {/* QR Hash */}
-                      <div className="bg-cyber-darker p-3.5 border border-cyber-border/70 text-xs">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-gray-400 text-[10px] uppercase font-bold">QR SHA-256 Token:</span>
+                      {/* Visual QR Code & Token Block */}
+                      <div className="bg-cyber-darker p-3.5 border border-cyber-border/70 text-xs flex flex-col sm:flex-row items-center gap-3">
+                        {/* Rendered QR Code Thumbnail */}
+                        <div 
+                          onClick={() => setQrModalCheckpoint(cp)}
+                          className="bg-white p-2 border-2 border-white rounded shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                          title="Click to view & print high-res QR sticker"
+                        >
+                          <QRCodeSVG value={cp.qr_hash} size={72} level="M" />
+                        </div>
+
+                        <div className="flex-1 w-full space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">QR Code Token:</span>
+                            <button
+                              onClick={() => handleCopyHash(cp.qr_hash)}
+                              className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer bg-cyber-panel px-1.5 py-0.5 border border-cyber-border"
+                            >
+                              {copiedHash === cp.qr_hash ? (
+                                <Check className="w-3 h-3 text-green-400" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                              <span>{copiedHash === cp.qr_hash ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                          </div>
+                          <code className="text-[10px] text-cyber-yellow break-all block font-mono bg-black/60 p-1.5 border border-cyber-border/40">
+                            {cp.qr_hash}
+                          </code>
                           <button
-                            onClick={() => handleCopyHash(cp.qr_hash)}
-                            className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer"
+                            onClick={() => setQrModalCheckpoint(cp)}
+                            className="text-[10px] text-cyber-cyan hover:text-white hover:underline flex items-center gap-1 cursor-pointer font-bold uppercase mt-1"
                           >
-                            {copiedHash === cp.qr_hash ? (
-                              <Check className="w-3 h-3 text-green-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                            <span>{copiedHash === cp.qr_hash ? 'Copied!' : 'Copy'}</span>
+                            <QrCode className="w-3 h-3 text-cyber-yellow" />
+                            View, Print & Download QR Sticker &rarr;
                           </button>
                         </div>
-                        <code className="text-[10px] text-cyber-yellow break-all block font-mono bg-black/50 p-1.5 border border-cyber-border/40">
-                          {cp.qr_hash}
-                        </code>
                       </div>
                     </div>
 
@@ -1003,6 +1069,29 @@ export default function AdminDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Admin QR Scanner & Physical Sticker Verifier Modal */}
+      {showAdminScanner && (
+        <AdminQRScannerModal
+          checkpoints={checkpoints}
+          onClose={() => setShowAdminScanner(false)}
+          onSelectCheckpoint={(cp) => {
+            const r = cp.route_id || (cp.id <= 12 ? 1 : 2);
+            setCheckpointRouteFilter(r);
+            setActiveTab('checkpoints');
+            handleStartEdit(cp);
+          }}
+        />
+      )}
+
+      {/* Question Block QR Code Generator, Print & Download Modal */}
+      {qrModalCheckpoint && (
+        <QuestionBlockQRModal
+          checkpoint={qrModalCheckpoint}
+          onClose={() => setQrModalCheckpoint(null)}
+          onRegenerateToken={handleRegenerateToken}
+        />
       )}
     </main>
   );
