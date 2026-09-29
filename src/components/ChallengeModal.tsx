@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Checkpoint } from '@/types/hunt';
-import { Terminal, LockOpen, X, AlertTriangle, ShieldCheck, Timer } from 'lucide-react';
+import { Terminal, LockOpen, X, AlertTriangle, ShieldCheck, Timer, Play } from 'lucide-react';
 import { api } from '@/lib/api';
+import CodeMirror from '@uiw/react-codemirror';
+import { javascript } from '@codemirror/lang-javascript';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 export default function ChallengeModal({ 
   checkpoint, 
@@ -22,6 +25,43 @@ export default function ChallengeModal({
   const [loading, setLoading] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [cooldown, setCooldown] = useState(initialCooldown);
+  const [terminalOutput, setTerminalOutput] = useState('');
+  const [runningCode, setRunningCode] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const runCode = async () => {
+    if (!answer.trim() || runningCode || cooldown > 0) return;
+    setRunningCode(true);
+    setTerminalOutput('Executing...\n');
+    try {
+      const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: 'javascript',
+          version: '18.15.0',
+          files: [{ content: answer }]
+        })
+      });
+      const data = await res.json();
+      if (data.run) {
+        setTerminalOutput(data.run.output || data.run.stderr || 'Execution finished with no output.');
+      } else {
+        setTerminalOutput('Failed to execute code.');
+      }
+    } catch (err) {
+      setTerminalOutput('Network error connecting to execution matrix.');
+    } finally {
+      setRunningCode(false);
+    }
+  };
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -138,6 +178,36 @@ export default function ChallengeModal({
                       <span className="text-sm">{opt}</span>
                     </label>
                   ))}
+                </div>
+              ) : challenge.type === 'code' ? (
+                <div className="space-y-4">
+                  <div className="border border-cyber-border overflow-hidden">
+                    <CodeMirror
+                      value={answer}
+                      height="200px"
+                      theme={oneDark}
+                      extensions={[javascript({ jsx: true })]}
+                      onChange={(value) => setAnswer(value)}
+                      editable={cooldown <= 0}
+                      className="text-sm text-left"
+                    />
+                  </div>
+                  {!isMobile && (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={runCode}
+                        disabled={runningCode || !answer || cooldown > 0}
+                        className="w-full flex items-center justify-center gap-2 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black font-bold py-2 uppercase tracking-widest transition-colors disabled:opacity-50"
+                      >
+                        <Play className="w-4 h-4" />
+                        {runningCode ? 'RUNNING...' : 'RUN CODE (LOCAL TERMINAL)'}
+                      </button>
+                      <div className="bg-black border border-cyber-border p-3 min-h-[100px] max-h-[150px] overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap text-left">
+                        {terminalOutput || '> Output will appear here...'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>

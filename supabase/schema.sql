@@ -77,7 +77,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.questions_pool (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     node_id INTEGER NOT NULL REFERENCES public.checkpoints(id) ON DELETE CASCADE,
-    challenge_type TEXT NOT NULL CHECK (challenge_type IN ('passcode', 'mcq', 'riddle')),
+    challenge_type TEXT NOT NULL CHECK (challenge_type IN ('passcode', 'mcq', 'riddle', 'code')),
     question TEXT NOT NULL,
     options JSONB, -- For MCQ options
     answer TEXT NOT NULL, -- Secret answer verified strictly on server
@@ -376,7 +376,8 @@ DELETE FROM public.questions_pool;
 INSERT INTO public.questions_pool (node_id, challenge_type, question, options, answer) VALUES
 (1, 'passcode', 'Enter the initialization code etched onto the Hippocrates Hall foyer terminal.', NULL, 'HIPPOCRATES2026'),
 (1, 'mcq', 'Which protocol provides secure encrypted terminal communication over an insecure network?', '["Telnet", "SSH", "FTP", "HTTP"]'::jsonb, 'SSH'),
-(1, 'riddle', 'I have keys but no locks. I have space but no room. You can enter, but you cannot go outside. What am I?', NULL, 'keyboard');
+(1, 'riddle', 'I have keys but no locks. I have space but no room. You can enter, but you cannot go outside. What am I?', NULL, 'keyboard'),
+(1, 'code', 'Write a javascript function called getSecret that returns the string "42".', NULL, 'function getSecret() { return "42"; }');
 
 INSERT INTO public.questions_pool (node_id, challenge_type, question, options, answer) VALUES
 (2, 'mcq', 'Which network topology connects every node to a central hub switch in academic server grids?', '["Star", "Ring", "Bus", "Mesh"]'::jsonb, 'Star'),

@@ -518,7 +518,7 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-bold text-base text-foreground">{team.team_name}</div>
-                          <div className="text-xs text-cyber-yellow">UID: {team.uid}</div>
+                          <div className="text-xs text-cyber-yellow">Access Code: {team.uid}</div>
                         </div>
                         <span className="text-[10px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-2 py-0.5 uppercase font-bold">
                           Pending
@@ -584,7 +584,7 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-xs font-mono">
                   <thead className="bg-cyber-darker text-gray-400 uppercase tracking-wider border-b border-cyber-border">
                     <tr>
-                      <th className="p-3">UID</th>
+                      <th className="p-3">Access Code</th>
                       <th className="p-3">Team Name</th>
                       <th className="p-3">Team Lead</th>
                       <th className="p-3">Assigned Route</th>

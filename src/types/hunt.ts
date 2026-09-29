@@ -19,7 +19,7 @@ export interface TeamProfile {
   assigned_route?: 1 | 2;
 }
 
-export type ChallengeType = 'passcode' | 'mcq' | 'riddle';
+export type ChallengeType = 'passcode' | 'mcq' | 'riddle' | 'code';
 
 export interface Challenge {
   id: string;

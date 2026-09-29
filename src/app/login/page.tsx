@@ -12,7 +12,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [teamName, setTeamName] = useState('');
   const [teamLead, setTeamLead] = useState('');
-  const [uid, setUid] = useState('');
+  const [uid, setUid] = useState(''); // 6-digit code
+  const [isLoginMode, setIsLoginMode] = useState(false);
   
   // 4 to 5 members
   const [members, setMembers] = useState<TeamMember[]>([
@@ -42,29 +43,31 @@ export default function LoginPage() {
 
   // Keep member[0] synchronized with team lead name
   useEffect(() => {
-    if (teamLead) {
+    if (!isLoginMode && teamLead) {
       setMembers(prev => {
         const next = [...prev];
         next[0].name = teamLead;
-        if (uid) next[0].regNo = uid;
         return next;
       });
     }
-  }, [teamLead, uid]);
+  }, [teamLead, isLoginMode]);
 
   // Auto-poll when pending approval
   useEffect(() => {
     if (!pendingApproval) return;
 
     const interval = setInterval(async () => {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members);
+      // In registration, we pass the teamName and teamLead. We don't have the UID yet (it's hidden from user).
+      const res = await api.login('', teamName.trim(), teamLead.trim(), members, false);
       if (res.status === 'approved') {
         router.push('/hunt');
+      } else if (res.status === 'pending' && res.team?.uid) {
+        // If we get the uid back in the response, we might store it, but wait for approval.
       }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [pendingApproval, uid, teamName, teamLead, members, router]);
+  }, [pendingApproval, teamName, teamLead, members, router]);
 
   const validateField = (name: string, value: string): string => {
     const trimmed = value.trim();
@@ -73,15 +76,15 @@ export default function LoginPage() {
       if (trimmed.length < 3) return 'Team Name must be at least 3 characters.';
       if (trimmed.length > 35) return 'Team Name cannot exceed 35 characters.';
     }
-    if (name === 'teamLead') {
+    if (name === 'teamLead' && !isLoginMode) {
       if (!trimmed) return 'Team Lead Name is required.';
       if (trimmed.length < 2) return 'Team Lead Name must be at least 2 characters.';
       if (!/^[a-zA-Z\s.'-]+$/.test(trimmed)) return 'Only letters, spaces, and hyphens allowed.';
     }
-    if (name === 'uid') {
-      if (!trimmed) return 'Unique Identification ID is required.';
-      if (trimmed.length < 4) return 'UID must be at least 4 characters.';
-      if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) return 'UID must be alphanumeric (e.g. AICSSYC-2026-XXXX).';
+    if (name === 'uid' && isLoginMode) {
+      if (!trimmed) return '6-Digit Access Code is required.';
+      if (trimmed.length !== 6) return 'Access Code must be exactly 6 characters.';
+      if (!/^[A-Za-z0-9]+$/.test(trimmed)) return 'Access Code must be alphanumeric.';
     }
     return '';
   };
@@ -121,7 +124,7 @@ export default function LoginPage() {
   const handleManualCheck = async () => {
     setCheckingStatus(true);
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members);
+      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, isLoginMode);
       if (res.status === 'approved') {
         router.push('/hunt');
       } else if (res.status === 'rejected') {
@@ -149,14 +152,26 @@ export default function LoginPage() {
       uid: errUid,
     });
 
-    if (errTeam || errLead || errUid) {
+    if (!isLoginMode && (errTeam || errLead)) {
       setAuthError('PLEASE RESOLVE VALIDATION ERRORS BEFORE PROCEEDING.');
       return;
     }
-
-    if (members.length < 4 || members.length > 5) {
-      setAuthError('TEAM PROTOCOL: TEAMS MUST CONSIST OF EXACTLY 4 OR 5 OPERATIVES.');
+    if (isLoginMode && (errTeam || errUid)) {
+      setAuthError('PLEASE ENTER A VALID TEAM NAME AND 6-DIGIT ACCESS CODE.');
       return;
+    }
+
+    if (!isLoginMode) {
+      if (members.length < 4 || members.length > 5) {
+        setAuthError('TEAM PROTOCOL: TEAMS MUST CONSIST OF EXACTLY 4 OR 5 OPERATIVES.');
+        return;
+      }
+      for (const m of members) {
+        if (!m.regNo.trim() || !m.phone.trim()) {
+           setAuthError('ALL OPERATIVES MUST PROVIDE REGISTRATION NUMBER AND PHONE.');
+           return;
+        }
+      }
     }
 
     setLoading(true);
@@ -166,12 +181,12 @@ export default function LoginPage() {
     const finalMembers = members.map((m, i) => ({
       name: m.name.trim() || (i === 0 ? teamLead.trim() : `Operative ${i + 1}`),
       role: m.role,
-      regNo: m.regNo.trim() || `REG-00${i + 1}`,
-      phone: m.phone.trim() || '555-0100',
+      regNo: m.regNo.trim(),
+      phone: m.phone.trim(),
     }));
 
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), finalMembers);
+      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), finalMembers, isLoginMode);
       
       if (res.status === 'approved') {
         router.push('/hunt');
@@ -231,10 +246,10 @@ export default function LoginPage() {
                 AUTHORIZATION PENDING
               </h2>
               <p className="text-xs text-gray-300 leading-relaxed mt-2">
-                Team <span className="text-cyber-yellow font-bold">{teamName}</span> (<span className="text-gray-400">{uid}</span>) has been queued for verification.
+                Team <span className="text-cyber-yellow font-bold">{teamName}</span> has been queued for verification.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
-                Mission Control must grant clearance before the Tactical HUD unlocks. This terminal will auto-refresh.
+                Mission Control must grant clearance. Once approved, the admin will provide a <strong className="text-cyber-cyan">6-digit access code</strong> to your team. You will use this code to login.
               </p>
             </div>
 
@@ -248,106 +263,132 @@ export default function LoginPage() {
             </button>
 
             <button
-              onClick={() => setPendingApproval(false)}
+              onClick={() => {
+                setPendingApproval(false);
+                setIsLoginMode(true);
+              }}
               className="text-xs text-gray-400 hover:text-cyber-cyan transition-colors underline cursor-pointer"
             >
-              Back to registration credentials
+              Back to login (I have my access code)
             </button>
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-4 font-mono" noValidate>
-            {/* Team Name */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
-                  Team Name
-                </label>
-                {touched.teamName && !fieldErrors.teamName && teamName.trim() && (
-                  <span className="text-[10px] text-green-500 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> VALID
-                  </span>
+          <>
+            <div className="flex w-full mb-6 border-b border-cyber-border">
+              <button
+                type="button"
+                className={`flex-1 py-2 text-sm font-bold tracking-widest uppercase transition-colors ${!isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                onClick={() => { setIsLoginMode(false); setAuthError(''); }}
+              >
+                REGISTER
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-2 text-sm font-bold tracking-widest uppercase transition-colors ${isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                onClick={() => { setIsLoginMode(true); setAuthError(''); }}
+              >
+                LOGIN
+              </button>
+            </div>
+            
+            <form onSubmit={handleLogin} className="space-y-4 font-mono" noValidate>
+              {/* Team Name */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                    Team Name
+                  </label>
+                  {touched.teamName && !fieldErrors.teamName && teamName.trim() && (
+                    <span className="text-[10px] text-green-500 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> VALID
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. CYBER_PUNKS_01"
+                  value={teamName}
+                  onChange={e => handleChange('teamName', e.target.value)}
+                  onBlur={() => handleBlur('teamName')}
+                  className={`w-full bg-cyber-darker border ${
+                    fieldErrors.teamName ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
+                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                />
+                {touched.teamName && fieldErrors.teamName && (
+                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    {fieldErrors.teamName}
+                  </p>
                 )}
               </div>
-              <input
-                type="text"
-                placeholder="e.g. CYBER_PUNKS_01"
-                value={teamName}
-                onChange={e => handleChange('teamName', e.target.value)}
-                onBlur={() => handleBlur('teamName')}
-                className={`w-full bg-cyber-darker border ${
-                  fieldErrors.teamName ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
-              />
-              {touched.teamName && fieldErrors.teamName && (
-                <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
-                  {fieldErrors.teamName}
-                </p>
-              )}
-            </div>
 
             {/* Team Lead */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
-                  Team Lead (Base Decoder)
-                </label>
-                {touched.teamLead && !fieldErrors.teamLead && teamLead.trim() && (
-                  <span className="text-[10px] text-green-500 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> VALID
-                  </span>
+            {!isLoginMode && (
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                    Team Lead (Base Decoder)
+                  </label>
+                  {touched.teamLead && !fieldErrors.teamLead && teamLead.trim() && (
+                    <span className="text-[10px] text-green-500 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> VALID
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. Alex Mercer"
+                  value={teamLead}
+                  onChange={e => handleChange('teamLead', e.target.value)}
+                  onBlur={() => handleBlur('teamLead')}
+                  className={`w-full bg-cyber-darker border ${
+                    fieldErrors.teamLead ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
+                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                />
+                {touched.teamLead && fieldErrors.teamLead && (
+                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    {fieldErrors.teamLead}
+                  </p>
                 )}
               </div>
-              <input
-                type="text"
-                placeholder="e.g. Alex Mercer"
-                value={teamLead}
-                onChange={e => handleChange('teamLead', e.target.value)}
-                onBlur={() => handleBlur('teamLead')}
-                className={`w-full bg-cyber-darker border ${
-                  fieldErrors.teamLead ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
-              />
-              {touched.teamLead && fieldErrors.teamLead && (
-                <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
-                  {fieldErrors.teamLead}
-                </p>
-              )}
-            </div>
+            )}
 
             {/* Unique Identification ID (UID) */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
-                  Unique Identification ID (UID)
-                </label>
-                {touched.uid && !fieldErrors.uid && uid.trim() && (
-                  <span className="text-[10px] text-green-500 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> VALID
-                  </span>
+            {isLoginMode && (
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                    6-Digit Access Code
+                  </label>
+                  {touched.uid && !fieldErrors.uid && uid.trim() && (
+                    <span className="text-[10px] text-green-500 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> VALID
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. A1B2C3"
+                  value={uid}
+                  onChange={e => handleChange('uid', e.target.value.toUpperCase())}
+                  onBlur={() => handleBlur('uid')}
+                  className={`w-full bg-cyber-darker border ${
+                    fieldErrors.uid ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
+                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500 uppercase`}
+                />
+                {touched.uid && fieldErrors.uid && (
+                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    {fieldErrors.uid}
+                  </p>
                 )}
               </div>
-              <input
-                type="text"
-                placeholder="e.g. AICSSYC-2026-9041"
-                value={uid}
-                onChange={e => handleChange('uid', e.target.value)}
-                onBlur={() => handleBlur('uid')}
-                className={`w-full bg-cyber-darker border ${
-                  fieldErrors.uid ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
-              />
-              {touched.uid && fieldErrors.uid && (
-                <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
-                  {fieldErrors.uid}
-                </p>
-              )}
-            </div>
+            )}
 
             {/* Operatives Roster Collapsible */}
-            <div className="pt-1">
+            {!isLoginMode && (
+              <div className="pt-1">
               <button
                 type="button"
                 onClick={() => setShowMembers(!showMembers)}
@@ -368,38 +409,62 @@ export default function LoginPage() {
                     Min 4, max 5 operatives. 2 Base Decoders in Room + 2-3 Field Scouts on Campus.
                   </p>
                   {members.map((m, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
-                      <input
-                        type="text"
-                        placeholder={`Operative ${idx + 1} Name`}
-                        value={m.name}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
-                        }}
-                        className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1 text-foreground text-xs outline-none focus:border-cyber-cyan"
-                      />
-                      <select
-                        value={m.role}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
-                        }}
-                        className="bg-cyber-panel border border-cyber-border px-2 py-1 text-[11px] text-cyber-yellow outline-none"
-                      >
-                        <option value="Base Decoder">Base Decoder</option>
-                        <option value="Field Scout">Field Scout</option>
-                      </select>
-                      {members.length > 4 && idx >= 4 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(idx)}
-                          className="text-cyber-pink hover:text-white p-1"
+                    <div key={idx} className="flex flex-col gap-2 items-start border-b border-cyber-border/50 pb-3 mb-2">
+                      <div className="flex w-full gap-2 items-center">
+                        <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
+                        <input
+                          type="text"
+                          placeholder={`Operative ${idx + 1} Name`}
+                          value={m.name}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
+                          }}
+                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan"
+                        />
+                        <select
+                          value={m.role}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
+                          }}
+                          className="bg-cyber-panel border border-cyber-border px-2 py-1.5 text-[11px] text-cyber-yellow outline-none"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                          <option value="Base Decoder">Base Decoder</option>
+                          <option value="Field Scout">Field Scout</option>
+                        </select>
+                        {members.length > 4 && idx >= 4 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(idx)}
+                            className="text-cyber-pink hover:text-white p-1 ml-auto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex w-full gap-2 pl-6">
+                        <input
+                          type="text"
+                          placeholder="Reg No (e.g. IEEE/College)"
+                          value={m.regNo}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
+                          }}
+                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Phone No."
+                          value={m.phone}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
+                          }}
+                          className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                        />
+                      </div>
                     </div>
                   ))}
 
@@ -415,6 +480,7 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
+            )}
 
             <button
               type="submit"
@@ -424,6 +490,7 @@ export default function LoginPage() {
               {loading ? 'TRANSMITTING CREDENTIALS...' : 'INITIALIZE LINK'}
             </button>
           </form>
+          </>
         )}
 
         <div className="mt-6 pt-4 border-t border-cyber-border/40 text-center">

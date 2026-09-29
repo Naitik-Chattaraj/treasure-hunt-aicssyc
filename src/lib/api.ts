@@ -35,13 +35,15 @@ export interface LoginResult {
 }
 
 export const api = {
-  async login(uid: string, teamName: string, teamLead: string, members?: any[]): Promise<LoginResult> {
+  async login(uid: string, teamName: string, teamLead: string, members?: any[], isLoginMode?: boolean): Promise<LoginResult> {
     const trimmedUid = uid.trim();
     const trimmedTeam = teamName.trim();
     const trimmedLead = teamLead.trim();
 
-    if (!trimmedUid || !trimmedTeam || !trimmedLead) {
-      return { status: 'rejected', error: 'Missing required credentials' };
+    if (isLoginMode) {
+       if (!trimmedUid || !trimmedTeam) return { status: 'rejected', error: 'Missing team name or 6-digit access code' };
+    } else {
+       if (!trimmedTeam || !trimmedLead) return { status: 'rejected', error: 'Missing required credentials' };
     }
 
     if (USE_MOCK) {
@@ -61,10 +63,11 @@ export const api = {
         }
       }
 
+      const mockUid = trimmedUid || Math.random().toString(36).substring(2, 8).toUpperCase();
       const activeTeam: TeamProfile = {
         teamName: trimmedTeam,
         teamLead: trimmedLead,
-        uid: trimmedUid,
+        uid: mockUid,
         status: 'approved',
         assignedRoute,
         assigned_route: assignedRoute,
@@ -105,7 +108,7 @@ export const api = {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: trimmedUid, teamName: trimmedTeam, teamLead: trimmedLead, members }),
+      body: JSON.stringify({ uid: trimmedUid, teamName: trimmedTeam, teamLead: trimmedLead, members, isLoginMode }),
     });
 
     const data = await res.json();

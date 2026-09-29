@@ -4,16 +4,7 @@ import { signTeamToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
-    const { uid, teamName, teamLead, members } = await req.json();
-
-    const trimmedUid = uid?.trim();
-    const trimmedTeam = teamName?.trim();
-    const trimmedLead = teamLead?.trim();
-
-    if (!trimmedUid || !trimmedTeam || !trimmedLead) {
-      return NextResponse.json({ error: 'Missing required credentials' }, { status: 400 });
-    }
-
+    const { uid, teamName, teamLead, members, isLoginMode } = await req.json();
     const supabase = getSupabaseAdmin();
     if (!supabase) {
       return NextResponse.json(
@@ -22,49 +13,86 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Check if team already exists by UID
-    const { data: existingTeam, error: fetchError } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('uid', trimmedUid)
-      .maybeSingle();
+    let team = null;
 
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
-    }
-
-    let team = existingTeam;
-
-    // 2. If team does not exist, create new team in 'pending' status
-    if (!team) {
-      const defaultMembers = Array.isArray(members) && members.length >= 4 ? members : [
-        { name: trimmedLead, role: 'Base Decoder', regNo: trimmedUid, phone: '555-0100' },
-        { name: 'Member 2', role: 'Base Decoder', regNo: 'REG-002', phone: '555-0102' },
-        { name: 'Member 3', role: 'Field Scout', regNo: 'REG-003', phone: '555-0103' },
-        { name: 'Member 4', role: 'Field Scout', regNo: 'REG-004', phone: '555-0104' },
-      ];
-
-      const assignedRoute = Math.random() < 0.5 ? 1 : 2;
-
-      const { data: newTeam, error: insertError } = await supabase
-        .from('teams')
-        .insert({
-          uid: trimmedUid,
-          team_name: trimmedTeam,
-          team_lead: trimmedLead,
-          members: defaultMembers,
-          status: 'pending',
-          current_stage: 1,
-          assigned_route: assignedRoute,
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 });
+    if (isLoginMode) {
+      const trimmedUid = uid?.trim();
+      const trimmedTeam = teamName?.trim();
+      if (!trimmedUid || !trimmedTeam) {
+        return NextResponse.json({ error: 'Missing team name or 6-digit access code' }, { status: 400 });
       }
 
-      team = newTeam;
+      const { data: existingTeam, error: fetchError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('uid', trimmedUid)
+        .maybeSingle();
+
+      if (fetchError) {
+        return NextResponse.json({ error: fetchError.message }, { status: 500 });
+      }
+
+      if (!existingTeam) {
+        return NextResponse.json({ error: 'INVALID CODE. TEAM NOT FOUND.' }, { status: 404 });
+      }
+
+      if (existingTeam.team_name.trim().toLowerCase() !== trimmedTeam.toLowerCase()) {
+        return NextResponse.json({ error: 'INCORRECT TEAM NAME FOR THIS ACCESS CODE.' }, { status: 401 });
+      }
+      team = existingTeam;
+
+
+    } else {
+      // Registration Mode
+      const trimmedTeam = teamName?.trim();
+      const trimmedLead = teamLead?.trim();
+
+      if (!trimmedTeam || !trimmedLead) {
+        return NextResponse.json({ error: 'Missing required credentials' }, { status: 400 });
+      }
+
+      // Check if team name already exists to prevent duplicate registrations
+      const { data: existingTeamByName } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('team_name', trimmedTeam)
+        .maybeSingle();
+
+      if (existingTeamByName) {
+        // If they are just polling, return the pending status
+        if (existingTeamByName.team_lead === trimmedLead) {
+           team = existingTeamByName;
+        } else {
+           return NextResponse.json({ error: 'Team name already registered.' }, { status: 400 });
+        }
+      } else {
+        // Create a unique 6-digit alphanumeric code
+        const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+        let generatedUid = generateCode();
+
+        const defaultMembers = Array.isArray(members) && members.length >= 4 ? members : [];
+        const assignedRoute = Math.random() < 0.5 ? 1 : 2;
+
+        const { data: newTeam, error: insertError } = await supabase
+          .from('teams')
+          .insert({
+            uid: generatedUid,
+            team_name: trimmedTeam,
+            team_lead: trimmedLead,
+            members: defaultMembers,
+            status: 'pending',
+            current_stage: 1,
+            assigned_route: assignedRoute,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
+
+        team = newTeam;
+      }
     }
 
     // 3. Check status
@@ -74,7 +102,7 @@ export async function POST(req: NextRequest) {
         message: 'Your registration is submitted and awaiting administrative approval.',
         team: {
           id: team.id,
-          uid: team.uid,
+          uid: team.uid, // returning this so the frontend can poll, but we won't show it.
           teamName: team.team_name,
           teamLead: team.team_lead,
           status: 'pending',
