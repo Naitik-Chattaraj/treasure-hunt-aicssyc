@@ -354,11 +354,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-hidden transition-colors">
+    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-clip transition-colors">
       <div className="overlay-scanlines"></div>
 
-      {/* Top Admin Header */}
-      <header className="z-10 bg-cyber-panel border-b border-cyber-pink/50 p-4 flex flex-wrap justify-between items-center gap-4 shadow-[0_0_20px_rgba(255,0,60,0.15)]">
+      {/* Top Admin Header (Fixed / Sticky on Top) */}
+      <header className="sticky top-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.7)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 border-2 border-cyber-pink flex items-center justify-center bg-cyber-darker text-cyber-pink shadow-[0_0_10px_rgba(255,0,60,0.3)]">
             <Radio className="w-5 h-5 animate-pulse" />
