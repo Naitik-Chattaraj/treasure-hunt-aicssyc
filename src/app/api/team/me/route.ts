@@ -30,6 +30,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
+    // Enforce single device session
+    if (team.device_id && team.device_id !== payload.deviceId) {
+      // Clear the cookie to log them out
+      const response = NextResponse.json(
+        { error: 'Session expired: logged in from another device' },
+        { status: 401 }
+      );
+      response.cookies.delete('team_session');
+      return response;
+    }
+
     // Fetch completions
     const { data: completions } = await supabase
       .from('hunt_completions')

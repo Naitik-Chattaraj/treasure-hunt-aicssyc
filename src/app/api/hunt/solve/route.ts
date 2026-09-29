@@ -30,12 +30,18 @@ export async function POST(req: NextRequest) {
     // 1. Fetch team
     const { data: team, error: teamError } = await supabase
       .from('teams')
-      .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route')
+      .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route, device_id')
       .eq('id', payload.teamId)
       .single();
 
     if (teamError || !team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    }
+
+    if (team.device_id && team.device_id !== payload.deviceId) {
+      const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
+      response.cookies.delete('team_session');
+      return response;
     }
 
     if (team.status !== 'approved') {

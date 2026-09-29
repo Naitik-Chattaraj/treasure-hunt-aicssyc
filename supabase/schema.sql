@@ -22,12 +22,16 @@ CREATE TABLE IF NOT EXISTS public.teams (
     cooldown_until TIMESTAMPTZ,
     wrong_attempts INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    device_id TEXT
 );
 
 -- Ensure assigned_route exists if table was previously created
 ALTER TABLE public.teams 
     ADD COLUMN IF NOT EXISTS assigned_route INTEGER NOT NULL DEFAULT 1 CHECK (assigned_route IN (1, 2));
+
+ALTER TABLE public.teams
+    ADD COLUMN IF NOT EXISTS device_id TEXT;
 
 -- 3. CHECKPOINTS TABLE (24 Physical Nodes on Campus with SHA-256 QR Hashes across 2 Routes)
 CREATE TABLE IF NOT EXISTS public.checkpoints (

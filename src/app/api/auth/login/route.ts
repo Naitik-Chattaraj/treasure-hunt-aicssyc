@@ -90,11 +90,24 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // 4. Team is approved - sign JWT and set HTTP-only cookie
+    // 4. Team is approved - generate deviceId, update DB, sign JWT
+    const deviceId = crypto.randomUUID();
+    
+    const { error: deviceError } = await supabase
+      .from('teams')
+      .update({ device_id: deviceId })
+      .eq('id', team.id);
+
+    if (deviceError) {
+      console.error('Failed to update device ID:', deviceError);
+      // Proceed anyway, but device tracking might be inconsistent
+    }
+
     const token = await signTeamToken({
       teamId: team.id,
       uid: team.uid,
       teamName: team.team_name,
+      deviceId,
     });
 
     const response = NextResponse.json({

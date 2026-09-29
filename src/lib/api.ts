@@ -148,8 +148,15 @@ export const api = {
 
     try {
       const res = await fetch('/api/team/me');
-      if (!res.ok) return null;
       const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
+          if (typeof window !== 'undefined') {
+            alert('Your session has expired because your team logged in from another device. Only one device can be active at a time.');
+          }
+        }
+        return null;
+      }
       return data.team || null;
     } catch {
       return null;

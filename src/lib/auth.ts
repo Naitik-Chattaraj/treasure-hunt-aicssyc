@@ -8,6 +8,7 @@ export interface TeamJWTPayload {
   teamId: string;
   uid: string;
   teamName: string;
+  deviceId?: string;
 }
 
 export async function signTeamToken(payload: TeamJWTPayload): Promise<string> {
@@ -26,6 +27,7 @@ export async function verifyTeamToken(token: string): Promise<TeamJWTPayload | n
       teamId: payload.teamId as string,
       uid: payload.uid as string,
       teamName: payload.teamName as string,
+      deviceId: payload.deviceId as string | undefined,
     };
   } catch {
     return null;

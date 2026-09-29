@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
+    if (team.device_id && team.device_id !== payload.deviceId) {
+      const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
+      response.cookies.delete('team_session');
+      return response;
+    }
+
     if (team.status !== 'approved') {
       return NextResponse.json({ error: 'Team not approved' }, { status: 403 });
     }
