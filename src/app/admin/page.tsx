@@ -375,18 +375,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setActiveTab('qr-generator')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'qr-generator'
-                ? 'bg-cyber-yellow text-black border border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.5)] font-extrabold'
-                : 'bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-black'
-            }`}
-            title="QR Code Generator"
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>QR CODE GENERATOR</span>
-          </button>
+       
 
           <button
             onClick={() => setShowAdminScanner(true)}
@@ -394,7 +383,7 @@ export default function AdminDashboard() {
             title="Scan & Verify QR"
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>SCAN / VERIFY QR</span>
+            <span>VERIFY QR</span>
           </button>
 
           <Link
@@ -404,7 +393,7 @@ export default function AdminDashboard() {
             title="Live Leaderboard"
           >
             <Trophy className="w-3.5 h-3.5" />
-            <span>LIVE LEADERBOARD</span>
+            <span>LEADERBOARD</span>
             <ExternalLink className="w-3 h-3 ml-1" />
           </Link>
 
