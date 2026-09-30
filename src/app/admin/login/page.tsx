@@ -29,10 +29,10 @@ export default function AdminLoginPage() {
       if (res.ok && data.success) {
         router.push('/admin');
       } else {
-        setError(data.error || 'INVALID ADMINISTRATIVE OVERRIDE KEY.');
+        setError(data.error || 'Incorrect password.');
       }
     } catch {
-      setError('CONNECTION FAILURE: UNABLE TO CONTACT MISSION CONTROL SERVER.');
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
           MISSION CONTROL
         </h1>
         <p className="text-center text-[11px] tracking-widest text-gray-400 mb-6">
-          COMMAND & TELEMETRY ACCESS // ADMIN ONLY
+          ADMIN ACCESS
         </p>
 
         {error && (
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="text-xs uppercase text-cyber-pink font-bold tracking-wider block mb-1">
-              Command Access Key
+              Admin Password
             </label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-cyber-pink/70 absolute left-3 top-3.5" />
@@ -78,13 +78,13 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="ENTER ADMIN PASSCODE"
+                placeholder="Enter password"
                 className="w-full bg-cyber-darker border border-cyber-border focus:border-cyber-pink text-foreground pl-10 pr-4 py-3 outline-none text-sm tracking-widest focus:shadow-[0_0_10px_rgba(255,0,60,0.25)] transition-all placeholder:text-gray-600"
                 required
               />
             </div>
             <p className="text-[10px] text-gray-500 mt-1">
-              Protected via bcrypt cryptographic hash verification.
+              Secure access
             </p>
           </div>
 
@@ -93,8 +93,8 @@ export default function AdminLoginPage() {
             disabled={loading}
             className="w-full cyber-button-border bg-cyber-pink hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all mt-4 disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(255,0,60,0.3)] flex items-center justify-center gap-2"
           >
-            <Terminal className="w-4 h-4" />
-            {loading ? 'AUTHENTICATING OVERRIDE...' : 'AUTHORIZE ADMIN LINK'}
+            <Lock className="w-4 h-4" />
+            {loading ? 'Verifying...' : 'AUTHORIZE ADMIN LINK'}
           </button>
         </form>
 
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
             href="/login"
             className="text-xs text-gray-400 hover:text-cyber-cyan transition-colors"
           >
-            ← Return to Participant Terminal
+            ← Participant Login
           </a>
         </div>
       </div>

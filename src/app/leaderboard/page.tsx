@@ -63,19 +63,19 @@ export default function LeaderboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-cyber-yellow uppercase cyber-glitch-text">
-                LIVE MISSION LEADERBOARD
+                LIVE LEADERBOARD
               </h1>
               <span className="text-[10px] bg-cyber-yellow/20 border border-cyber-yellow text-cyber-yellow px-2 py-0.5 font-bold uppercase animate-pulse">
                 REALTIME
               </span>
             </div>
-            <p className="text-xs text-gray-400">AICSSYC TREASURE HUNT 2026 // PUBLIC DISPLAY FEED</p>
+            <p className="text-xs text-gray-400">AICSSYC TREASURE HUNT 2026</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST TELEMETRY SYNC</div>
+            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST UPDATED</div>
             <div className="text-xs text-cyber-cyan font-bold">
               {lastUpdated.toLocaleTimeString()}
             </div>
@@ -118,7 +118,7 @@ export default function LeaderboardPage() {
             {/* Rank 1 (Gold) */}
             <div className="order-1 md:order-2 bg-cyber-panel border-2 border-cyber-yellow p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(252,238,10,0.25)] -mt-2">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-yellow text-cyber-dark font-bold text-[10px] uppercase px-3 py-0.5 tracking-widest shadow-md flex items-center gap-1">
-                <Trophy className="w-3 h-3" /> FLEET LEADER
+                <Trophy className="w-3 h-3" /> LEADER
               </div>
               <div className="flex justify-between items-start mt-1">
                 <span className="text-2xl font-bold text-cyber-yellow">#01</span>
@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
               </div>
               <div className="pt-3 border-t border-cyber-yellow/40 flex justify-between text-xs">
                 <span className="text-cyber-yellow font-bold text-sm">
-                  {leaderboard[0].currentStage > 12 ? '🏆 CITADEL CLEARED' : `NODE 0${leaderboard[0].currentStage}/12`}
+                  {leaderboard[0].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[0].currentStage}/12`}
                 </span>
                 <span className="text-white font-bold text-sm">{formatElapsed(leaderboard[0].startTime, leaderboard[0].completedAt)}</span>
               </div>
@@ -175,11 +175,11 @@ export default function LeaderboardPage() {
           <div className="p-4 border-b border-cyber-border flex justify-between items-center bg-cyber-darker/60">
             <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-yellow flex items-center gap-2">
               <Zap className="w-4 h-4 text-cyber-yellow" />
-              Active Standings ({leaderboard.length} Approved Teams)
+              Standings ({leaderboard.length} Teams)
             </h2>
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <Clock className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>Ranked by Nodes Breached & Total Elapsed Time</span>
+              <span>Ranked by progress & time</span>
             </div>
           </div>
 
@@ -250,7 +250,7 @@ export default function LeaderboardPage() {
                           />
                         </div>
                         <div className="text-[10px] text-gray-500 mt-1">
-                          {isWinner ? '12/12 Cleared' : `${team.currentStage - 1}/12 Breached`}
+                          {isWinner ? '12/12 Cleared' : `${team.currentStage - 1}/12 Cleared`}
                         </div>
                       </td>
 
@@ -275,7 +275,7 @@ export default function LeaderboardPage() {
                 {leaderboard.length === 0 && !loading && (
                   <tr>
                     <td colSpan={6} className="p-10 text-center text-gray-500 font-mono">
-                      No approved teams currently active in the hunt. Teams will appear here once cleared by Mission Control.
+                      No active teams yet. Teams appear here once approved by organizers.
                     </td>
                   </tr>
                 )}

@@ -349,7 +349,7 @@ export default function AdminDashboard() {
       <main className="min-h-screen bg-cyber-dark text-foreground flex items-center justify-center font-mono">
         <div className="flex items-center gap-3 text-cyber-cyan animate-pulse">
           <RefreshCw className="w-6 h-6 animate-spin" />
-          <span className="tracking-widest text-sm uppercase">ESTABLISHING ENCRYPTED MISSION CONTROL LINK...</span>
+          <span className="tracking-widest text-sm uppercase">Loading dashboard...</span>
         </div>
       </main>
     );
@@ -357,20 +357,20 @@ export default function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-clip transition-colors">
-      <div className="overlay-scanlines"></div>
+      <div className="overlay-scanlines opacity-50 duration-1000"></div>
 
       {/* Top Admin Header (Fixed on Top) */}
       <header className="fixed top-0 left-0 right-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_25px_rgba(0,0,0,0.85)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 border-2 border-cyber-pink flex items-center justify-center bg-cyber-darker text-cyber-pink shadow-[0_0_10px_rgba(255,0,60,0.3)]">
-            <Radio className="w-5 h-5 animate-pulse" />
+            <Radio className="w-5 h-5 animate-[pulse_3s_ease-in-out_infinite]" />
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold tracking-widest text-cyber-pink uppercase flex items-center gap-2">
               MISSION CONTROL TERMINAL
-              <span className="text-[10px] bg-cyber-pink text-white px-2 py-0.5 font-bold">ADMIN ACTIVE</span>
+              <span className="text-[10px] bg-cyber-pink text-white px-2 py-0.5 font-bold rounded">ADMIN</span>
             </h1>
-            <p className="text-[11px] text-gray-400">AICSSYC TREASURE HUNT 2026 // SYSTEM LEVEL 0</p>
+            <p className="text-[11px] text-gray-400">AICSSYC TREASURE HUNT 2026</p>
           </div>
         </div>
 
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                 ? 'bg-cyber-yellow text-black border border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.5)] font-extrabold'
                 : 'bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-black'
             }`}
-            title="Open Interactive Question Block QR Code Studio"
+            title="QR Code Generator"
           >
             <QrCode className="w-3.5 h-3.5" />
             <span>QR CODE GENERATOR</span>
@@ -391,7 +391,7 @@ export default function AdminDashboard() {
           <button
             onClick={() => setShowAdminScanner(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
-            title="Scan Physical Checkpoint QR Code to Inspect Question Block"
+            title="Scan & Verify QR"
           >
             <Camera className="w-3.5 h-3.5" />
             <span>SCAN / VERIFY QR</span>
@@ -401,7 +401,7 @@ export default function AdminDashboard() {
             href="/leaderboard"
             target="_blank"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-cyber-dark text-xs font-bold transition-all"
-            title="Open Secret Live Leaderboard in New Tab"
+            title="Live Leaderboard"
           >
             <Trophy className="w-3.5 h-3.5" />
             <span>LIVE LEADERBOARD</span>
@@ -433,34 +433,34 @@ export default function AdminDashboard() {
       <div className="h-28 sm:h-24 md:h-20 shrink-0 pointer-events-none" aria-hidden="true" />
 
       {/* Main Container */}
-      <div className="flex-1 p-4 sm:p-6 z-10 max-w-7xl w-full mx-auto space-y-6">
+      <div className="flex-1 p-6 sm:p-8 z-10 max-w-7xl w-full mx-auto space-y-8">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-cyber-panel border border-cyber-border p-4 shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
             <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TOTAL REGISTRATIONS</div>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground mt-1">{teams.length}</div>
-            <div className="text-[10px] text-gray-500 mt-1">Teams in database</div>
+            <div className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{teams.length}</div>
+            <div className="text-[10px] text-gray-500 mt-1">Registered</div>
           </div>
 
-          <div className={`bg-cyber-panel border ${pendingTeams.length > 0 ? 'border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.2)]' : 'border-cyber-border'} p-4`}>
+          <div className={`bg-cyber-panel border rounded-sm ${pendingTeams.length > 0 ? 'border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.2)]' : 'border-cyber-border'} p-5`}>
             <div className="text-[10px] text-cyber-yellow uppercase font-bold tracking-wider flex items-center justify-between">
               <span>PENDING APPROVAL</span>
               {pendingTeams.length > 0 && <span className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping"></span>}
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-cyber-yellow mt-1">{pendingTeams.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Awaiting admin clearance</div>
+            <div className="text-2xl sm:text-3xl font-bold text-cyber-yellow mt-2">{pendingTeams.length}</div>
+            <div className="text-[10px] text-gray-400 mt-1">Need approval</div>
           </div>
 
-          <div className="bg-cyber-panel border border-cyber-border p-4 shadow-sm">
+          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
             <div className="text-[10px] text-cyber-cyan uppercase font-bold tracking-wider">ACTIVE IN FIELD</div>
-            <div className="text-2xl sm:text-3xl font-bold text-cyber-cyan mt-1">{activeHunting.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Hunting Nodes 1-12</div>
+            <div className="text-2xl sm:text-3xl font-bold text-cyber-cyan mt-2">{activeHunting.length}</div>
+            <div className="text-[10px] text-gray-400 mt-1">Currently playing</div>
           </div>
 
-          <div className="bg-cyber-panel border border-cyber-border p-4 shadow-sm">
-            <div className="text-[10px] text-green-400 uppercase font-bold tracking-wider">FINAL CITADEL CLEARED</div>
-            <div className="text-2xl sm:text-3xl font-bold text-green-400 mt-1">{finishedTeams.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Completed Hunt</div>
+          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
+            <div className="text-[10px] text-green-400 uppercase font-bold tracking-wider">HUNT COMPLETED</div>
+            <div className="text-2xl sm:text-3xl font-bold text-green-400 mt-2">{finishedTeams.length}</div>
+            <div className="text-[10px] text-gray-400 mt-1">Finished</div>
           </div>
         </div>
 
@@ -475,7 +475,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Users className="w-4 h-4 text-cyber-cyan" />
-            <span>Fleet Telemetry & Approvals ({pendingTeams.length} Pending)</span>
+            <span>Teams & Approvals ({pendingTeams.length} Pending)</span>
           </button>
 
           <button
@@ -487,7 +487,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Layers className="w-4 h-4 text-cyber-pink" />
-            <span>Checkpoints & Question Bank Vault (24 Nodes / 2 Routes)</span>
+            <span>Checkpoints & Questions</span>
           </button>
 
           <button
@@ -506,12 +506,12 @@ export default function AdminDashboard() {
 
         {/* Tab 1: Teams & Approvals */}
         {activeTab === 'teams' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {pendingTeams.length > 0 && (
-              <div className="bg-cyber-panel border-2 border-cyber-yellow p-4 sm:p-5 shadow-[0_0_20px_rgba(252,238,10,0.15)]">
-                <div className="flex items-center gap-2 text-cyber-yellow text-sm font-bold uppercase tracking-wider mb-4">
-                  <AlertTriangle className="w-5 h-5 shrink-0 animate-pulse" />
-                  <span>ACTION REQUIRED: {pendingTeams.length} Team(s) Queued for Clearance</span>
+              <div className="bg-cyber-panel border-2 border-cyber-yellow p-5 sm:p-6 shadow-[0_0_20px_rgba(252,238,10,0.15)] rounded-sm">
+                <div className="flex items-center gap-2 text-cyber-yellow text-sm font-bold uppercase tracking-wider mb-5">
+                  <AlertTriangle className="w-5 h-5 shrink-0 animate-[pulse_2s_ease-in-out_infinite]" />
+                  <span>{pendingTeams.length} Team(s) Pending Approval</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -589,11 +589,11 @@ export default function AdminDashboard() {
             )}
 
             {/* All Teams Roster Table */}
-            <div className="bg-cyber-panel border border-cyber-border overflow-hidden">
-              <div className="p-4 border-b border-cyber-border flex justify-between items-center">
+            <div className="bg-cyber-panel border border-cyber-border overflow-hidden rounded-sm">
+              <div className="p-5 border-b border-cyber-border flex justify-between items-center">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-cyan flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  All Participant Teams ({teams.length})
+                  All Teams ({teams.length})
                 </h2>
               </div>
 
@@ -601,22 +601,22 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-xs font-mono">
                   <thead className="bg-cyber-darker text-gray-400 uppercase tracking-wider border-b border-cyber-border">
                     <tr>
-                      <th className="p-3">Access Code</th>
-                      <th className="p-3">Team Name</th>
-                      <th className="p-3">Team Lead</th>
-                      <th className="p-3">Squad Roster</th>
-                      <th className="p-3">Assigned Route</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Current Progress</th>
-                      <th className="p-3">Start Time</th>
-                      <th className="p-3 text-right">Actions</th>
+                      <th className="px-4 py-3">Access Code</th>
+                      <th className="px-4 py-3">Team Name</th>
+                      <th className="px-4 py-3">Team Lead</th>
+                      <th className="px-4 py-3">Team</th>
+                      <th className="px-4 py-3">Assigned Route</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Current Progress</th>
+                      <th className="px-4 py-3">Start Time</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-cyber-border/50">
                     {teams.map((t) => (
                       <tr key={t.id} className="hover:bg-cyber-darker/60 transition-colors">
-                        <td className="p-3 text-cyber-cyan font-bold">{t.uid}</td>
-                        <td className="p-3 font-bold">
+                        <td className="px-4 py-3 text-cyber-cyan font-bold">{t.uid}</td>
+                        <td className="px-4 py-3 font-bold">
                           <button
                             onClick={() => setSquadModalTeam(t)}
                             className="text-foreground hover:text-cyber-cyan transition-colors text-left cursor-pointer flex items-center gap-1.5"
@@ -625,8 +625,8 @@ export default function AdminDashboard() {
                             <span>{t.team_name}</span>
                           </button>
                         </td>
-                        <td className="p-3 text-gray-300">{t.team_lead}</td>
-                        <td className="p-3">
+                        <td className="px-4 py-3 text-gray-300">{t.team_lead}</td>
+                        <td className="px-4 py-3">
                           <button
                             onClick={() => setSquadModalTeam(t)}
                             className="px-2.5 py-1 bg-cyber-darker hover:bg-cyber-panel border border-cyber-cyan/40 hover:border-cyber-cyan text-cyber-cyan text-[11px] font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
@@ -636,7 +636,7 @@ export default function AdminDashboard() {
                             <span>{t.members?.length || 4} Operatives</span>
                           </button>
                         </td>
-                        <td className="p-3">
+                        <td className="px-4 py-3">
                           <select
                             value={t.assigned_route || 1}
                             onChange={(e) => handleUpdateTeamRoute(t.id, Number(e.target.value) as 1 | 2)}
@@ -651,7 +651,7 @@ export default function AdminDashboard() {
                             <option value={2} className="bg-gray-900 text-purple-400">Route 2 (Hospital)</option>
                           </select>
                         </td>
-                        <td className="p-3">
+                        <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
                             t.status === 'approved'
                               ? 'bg-green-500/10 text-green-400 border-green-500/40'
@@ -662,7 +662,7 @@ export default function AdminDashboard() {
                             {t.status}
                           </span>
                         </td>
-                        <td className="p-3">
+                        <td className="px-4 py-3">
                           {t.current_stage > 12 ? (
                             <span className="text-green-400 font-bold flex items-center gap-1">
                               <Trophy className="w-3.5 h-3.5" />
@@ -674,37 +674,41 @@ export default function AdminDashboard() {
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-gray-400">
+                        <td className="px-4 py-3 text-gray-400">
                           {t.start_time ? new Date(t.start_time).toLocaleTimeString() : 'Not started'}
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => setSquadModalTeam(t)}
-                              className="px-2 py-1 bg-cyber-darker text-cyber-cyan border border-cyber-cyan/40 hover:border-cyber-cyan font-bold text-[10px] uppercase cursor-pointer"
+                              className="px-2 py-1 flex items-center gap-1 bg-cyber-darker text-cyber-cyan border border-cyber-cyan/40 hover:border-cyber-cyan font-bold text-[10px] uppercase cursor-pointer"
                               title="Inspect Squad"
                             >
+                              <Users className="w-3 h-3" />
                               Inspect
                             </button>
                             {t.status === 'pending' ? (
                               <button
                                 onClick={() => handleApproveReject(t.id, 'approved')}
-                                className="px-2 py-1 bg-green-500/20 text-green-400 border border-green-500 hover:bg-green-500 hover:text-black font-bold text-[10px] uppercase cursor-pointer"
+                                className="px-2 py-1 flex items-center gap-1 bg-green-500/20 text-green-400 border border-green-500 hover:bg-green-500 hover:text-black font-bold text-[10px] uppercase cursor-pointer"
                               >
+                                <CheckCircle2 className="w-3 h-3" />
                                 Approve
                               </button>
                             ) : t.status === 'approved' ? (
                               <button
                                 onClick={() => handleApproveReject(t.id, 'rejected')}
-                                className="px-2 py-1 text-cyber-pink border border-cyber-pink/40 hover:border-cyber-pink font-bold text-[10px] uppercase cursor-pointer"
+                                className="px-2 py-1 flex items-center gap-1 text-cyber-pink border border-cyber-pink/40 hover:border-cyber-pink font-bold text-[10px] uppercase cursor-pointer"
                               >
+                                <XCircle className="w-3 h-3" />
                                 Revoke
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleApproveReject(t.id, 'approved')}
-                                className="px-2 py-1 text-green-400 border border-green-500/40 hover:border-green-500 font-bold text-[10px] uppercase cursor-pointer"
+                                className="px-2 py-1 flex items-center gap-1 text-green-400 border border-green-500/40 hover:border-green-500 font-bold text-[10px] uppercase cursor-pointer"
                               >
+                                <CheckCircle2 className="w-3 h-3" />
                                 Re-Approve
                               </button>
                             )}
@@ -728,14 +732,14 @@ export default function AdminDashboard() {
 
         {/* Tab 2: Checkpoints & Question Bank Vault */}
         {activeTab === 'checkpoints' && (
-          <div className="space-y-6">
-            <div className="bg-cyber-panel border border-cyber-pink/40 p-4 flex flex-wrap justify-between items-center gap-3">
+          <div className="space-y-8">
+            <div className="bg-cyber-panel border border-cyber-pink/40 p-5 sm:p-6 flex flex-wrap justify-between items-center gap-4 rounded-sm">
               <div>
                 <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-pink flex items-center gap-2">
                   <KeyRound className="w-4 h-4" />
-                  Checkpoint Coordinates, Location Clues & Question Banks (2 Routes // 24 Nodes)
+                  Checkpoints & Question Pools
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 mt-1">
                   Teams are randomly assigned to Route 1 or Route 2. You can filter by route below and customize physical clues, areas, and question pools.
                 </p>
               </div>
@@ -795,7 +799,7 @@ export default function AdminDashboard() {
                 const routeNumber = cp.route_id || (cp.id <= 12 ? 1 : 2);
                 const stageNumber = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
                 return (
-                  <div key={cp.id} className="bg-cyber-panel border-2 border-cyber-border hover:border-cyber-pink/60 transition-colors p-4 sm:p-5 relative shadow-md">
+                  <div key={cp.id} className="bg-cyber-panel border border-cyber-border hover:border-cyber-pink/60 transition-colors p-5 sm:p-6 relative shadow-md rounded-sm">
                     {/* Node Header */}
                     <div className="flex flex-wrap justify-between items-center gap-2 border-b border-cyber-border pb-3 mb-4">
                       <div className="flex items-center gap-3">
@@ -816,7 +820,7 @@ export default function AdminDashboard() {
                           className="text-xs text-cyber-cyan hover:text-white flex items-center gap-1 border border-cyber-cyan/50 px-3 py-1.5 hover:bg-cyber-cyan/20 cursor-pointer font-bold uppercase"
                         >
                           <Edit className="w-3.5 h-3.5" />
-                          Edit Node & Clue
+                          Edit
                         </button>
 
                         <button
@@ -824,7 +828,7 @@ export default function AdminDashboard() {
                           className="text-xs bg-green-500/20 text-green-400 border border-green-500 hover:bg-green-500 hover:text-black flex items-center gap-1 px-3 py-1.5 cursor-pointer font-bold uppercase transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          Add Question to Pool
+                          Add Question
                         </button>
                       </div>
                     </div>
@@ -834,7 +838,7 @@ export default function AdminDashboard() {
                       {/* Location Clue */}
                       <div className="bg-cyber-darker p-3.5 border border-cyber-border/70 text-xs text-gray-300">
                         <span className="text-cyber-cyan text-[10px] uppercase font-bold flex items-center gap-1 mb-1">
-                          <Footprints className="w-3 h-3" /> Next Location Physical Clue (Shown to scouts):
+                          <Footprints className="w-3 h-3" /> Location Clue:
                         </span>
                         <p className="leading-relaxed text-gray-200">{cp.clue}</p>
                       </div>
@@ -852,7 +856,7 @@ export default function AdminDashboard() {
 
                         <div className="flex-1 w-full space-y-1.5">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-[10px] uppercase font-bold">QR Code Token:</span>
+                            <span className="text-gray-400 text-[10px] uppercase font-bold">QR Token:</span>
                             <button
                               onClick={() => handleCopyHash(cp.qr_hash)}
                               className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer bg-cyber-panel px-1.5 py-0.5 border border-cyber-border"
@@ -873,7 +877,7 @@ export default function AdminDashboard() {
                             className="text-[10px] text-cyber-cyan hover:text-white hover:underline flex items-center gap-1 cursor-pointer font-bold uppercase mt-1"
                           >
                             <QrCode className="w-3 h-3 text-cyber-yellow" />
-                            View, Print & Download QR Sticker &rarr;
+                            View / Print QR &rarr;
                           </button>
                         </div>
                       </div>
@@ -884,9 +888,9 @@ export default function AdminDashboard() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs uppercase font-bold tracking-wider text-gray-300 flex items-center gap-1.5">
                           <HelpCircle className="w-3.5 h-3.5 text-cyber-cyan" />
-                          Question Bank Pool ({pool.length} Questions Configured)
+                          Questions ({pool.length})
                         </span>
-                        <span className="text-[10px] text-gray-500">1 random is etched per team</span>
+                        <span className="text-[10px] text-gray-500">1 random per team</span>
                       </div>
 
                       <div className="space-y-2">
@@ -934,7 +938,7 @@ export default function AdminDashboard() {
 
                         {pool.length === 0 && (
                           <div className="p-4 text-center text-gray-500 text-xs italic bg-cyber-darker border border-dashed border-cyber-border">
-                            No questions added yet for Node 0{cp.id}. Click &quot;Add Question to Pool&quot; above to add questions!
+                            No questions yet. Add one above.
                           </div>
                         )}
                       </div>
@@ -973,7 +977,7 @@ export default function AdminDashboard() {
               Configure Node 0{editingCheckpoint.id} Location & Clue
             </h3>
             <p className="text-xs text-gray-400 mb-4">
-              Edit the clue given to teams to find this checkpoint once the previous node is solved.
+              Clue shown to teams after solving the previous checkpoint.
             </p>
 
             {saveStatus && (
@@ -1007,7 +1011,7 @@ export default function AdminDashboard() {
 
               <div>
                 <label className="text-[10px] uppercase text-cyber-cyan font-bold block mb-1">
-                  Location Physical Clue (Presented to Scouts):
+                  Location Clue:
                 </label>
                 <textarea
                   rows={3}
@@ -1019,7 +1023,7 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">QR Code Secret Token (SHA-256)</label>
+                <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">QR Token</label>
                 <input
                   type="text"
                   value={editForm.qr_hash || ''}
@@ -1066,7 +1070,7 @@ export default function AdminDashboard() {
               {editingQuestion.isNew ? `Add Question to Node 0${editingQuestion.nodeId} Pool` : `Edit Question (Node 0${editingQuestion.nodeId})`}
             </h3>
             <p className="text-xs text-gray-400 mb-4">
-              Add multiple questions to this node. The system randomly etches one for each team.
+              1 question randomly selected per team.
             </p>
 
             {questionSaveStatus && (
@@ -1139,7 +1143,7 @@ export default function AdminDashboard() {
                   required
                 />
                 <p className="text-[10px] text-gray-500 mt-1">
-                  Answers are evaluated case-insensitively on the server.
+                  Answers are case-insensitive.
                 </p>
               </div>
 

@@ -72,7 +72,7 @@ export default function VictoryScreen({
         <ThemeToggle />
       </div>
 
-      <div className="z-10 w-full max-w-lg bg-cyber-panel cyber-panel-border border-2 border-cyber-yellow p-6 sm:p-8 text-center shadow-[0_0_35px_rgba(252,238,10,0.3)]">
+      <div className="z-10 w-full max-w-lg bg-cyber-panel cyber-panel-border border-2 border-cyber-yellow p-8 sm:p-10 text-center shadow-[0_0_35px_rgba(252,238,10,0.3)]">
         
         <Trophy className="w-16 h-16 sm:w-20 sm:h-20 text-cyber-yellow mx-auto mb-4 animate-bounce" />
         
@@ -89,12 +89,12 @@ export default function VictoryScreen({
           <ShieldCheck className="absolute -bottom-4 -right-4 w-32 h-32 text-cyber-yellow opacity-10 pointer-events-none" />
           
           <div>
-            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Total Clearance Time</div>
+            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Total Time</div>
             <div className="text-2xl sm:text-3xl text-cyber-yellow font-extrabold tracking-wider">{elapsed}</div>
           </div>
           
           <div>
-            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Cryptographic Verification Hash</div>
+            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Victory Code</div>
             <div className="text-xs sm:text-sm text-foreground font-mono font-bold bg-black/40 p-2.5 border border-cyber-border/80 break-all select-all">
               {progress.completionToken || 'WIN-VERIFIED-2026'}
             </div>
@@ -106,7 +106,7 @@ export default function VictoryScreen({
 
         <div className="flex items-center justify-center gap-2 text-cyber-cyan font-bold tracking-widest text-sm animate-pulse">
           <CheckCircle className="w-4 h-4" />
-          <span>ALL 12 CHECKPOINTS CONQUERED</span>
+          <span>ALL 12 CHECKPOINTS CLEARED</span>
         </div>
       </div>
     </main>

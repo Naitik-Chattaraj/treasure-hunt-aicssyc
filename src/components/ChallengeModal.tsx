@@ -52,12 +52,12 @@ export default function ChallengeModal({
       });
       const data = await res.json();
       if (data.run) {
-        setTerminalOutput(data.run.output || data.run.stderr || 'Execution finished with no output.');
+        setTerminalOutput(data.run.output || data.run.stderr || 'No output.');
       } else {
-        setTerminalOutput('Failed to execute code.');
+        setTerminalOutput('Code execution failed.');
       }
     } catch (err) {
-      setTerminalOutput('Network error connecting to execution matrix.');
+      setTerminalOutput('Network error.');
     } finally {
       setRunningCode(false);
     }
@@ -89,7 +89,7 @@ export default function ChallengeModal({
         }, 1800);
       } else {
         setError(true);
-        setErrorMessage(res.message || 'INCORRECT KEY/ANSWER.');
+        setErrorMessage(res.message || 'Incorrect answer.');
         if (res.cooldownSeconds) {
           setCooldown(res.cooldownSeconds);
         }
@@ -97,7 +97,7 @@ export default function ChallengeModal({
       }
     } catch {
       setError(true);
-      setErrorMessage('NETWORK ERROR COMMUNICATING WITH VALIDATION MATRIX.');
+      setErrorMessage('Network error. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -110,7 +110,7 @@ export default function ChallengeModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors">
-      <div className={`w-full max-w-md bg-cyber-panel cyber-panel-border border-t-2 border-b-2 ${cleared ? 'border-cyber-yellow' : 'border-cyber-pink'} p-6 sm:p-8 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-md bg-cyber-panel cyber-panel-border border-t-2 border-b-2 ${cleared ? 'border-cyber-yellow' : 'border-cyber-pink'} p-8 sm:p-10 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
         
         {!cleared && (
           <button 
@@ -131,14 +131,14 @@ export default function ChallengeModal({
         </div>
 
         <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-cyber-yellow' : 'cyber-glitch-text text-cyber-pink'}`}>
-          {cleared ? 'ACCESS GRANTED' : 'CHALLENGE TERMINAL'}
+          {cleared ? 'SOLVED!' : 'CHALLENGE'}
         </h2>
 
         {!cleared && (
           <>
             <div className="bg-cyber-darker border border-cyber-border p-4 mb-5 relative">
               <div className="absolute top-0 left-0 bg-cyber-pink text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
-                NODE 0{stageNum} CHALLENGE
+                CHECKPOINT {stageNum}
               </div>
               <p className="mt-3 text-sm text-foreground leading-relaxed font-sans">{challenge.question}</p>
             </div>
@@ -146,14 +146,14 @@ export default function ChallengeModal({
             {error && (
               <div className="bg-cyber-pink/15 border border-cyber-pink text-cyber-pink px-3 py-2 mb-4 text-xs flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage || 'INCORRECT KEY/ANSWER. TRY AGAIN.'}</span>
+                <span>{errorMessage || 'Incorrect answer.'}</span>
               </div>
             )}
 
             {cooldown > 0 && (
               <div className="bg-cyber-yellow/15 border border-cyber-yellow text-cyber-yellow px-3 py-2 mb-4 text-xs flex items-center gap-2">
                 <Timer className="w-4 h-4 shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
-                <span>SECURITY COOLDOWN: Wait {cooldown}s before retrying.</span>
+                <span>Cooldown: {cooldown}s</span>
               </div>
             )}
 
@@ -203,7 +203,7 @@ export default function ChallengeModal({
                         className="w-full flex items-center justify-center gap-2 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black font-bold py-2 uppercase tracking-widest transition-colors disabled:opacity-50"
                       >
                         <Play className="w-4 h-4" />
-                        {runningCode ? 'RUNNING...' : 'RUN CODE (LOCAL TERMINAL)'}
+                        {runningCode ? 'RUNNING...' : 'RUN CODE'}
                       </button>
                       <div className="bg-black border border-cyber-border p-3 min-h-[100px] max-h-[150px] overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap text-left">
                         {terminalOutput || '> Output will appear here...'}
@@ -221,7 +221,7 @@ export default function ChallengeModal({
                     className={`w-full bg-cyber-darker border ${
                       error ? 'border-cyber-pink' : 'border-cyber-border'
                     } focus:border-cyber-cyan text-foreground px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold disabled:opacity-50`}
-                    placeholder={cooldown > 0 ? `LOCKED (${cooldown}s)` : "ENTER OVERRIDE PASSCODE"}
+                    placeholder={cooldown > 0 ? `LOCKED (${cooldown}s)` : "Enter your answer"}
                     required
                   />
                 </div>
@@ -242,9 +242,9 @@ export default function ChallengeModal({
           <div className="text-center space-y-3 py-4 animate-pulse">
             <div className="flex items-center justify-center gap-2 text-cyber-yellow font-bold text-sm">
               <ShieldCheck className="w-5 h-5" />
-              <span>NODE 0{stageNum} BREACHED!</span>
+              <span>CHECKPOINT {stageNum} SOLVED!</span>
             </div>
-            <p className="text-xs text-cyber-muted">Updating telemetry & unlocking next coordinate...</p>
+            <p className="text-xs text-cyber-muted">Unlocking next checkpoint...</p>
           </div>
         )}
       </div>

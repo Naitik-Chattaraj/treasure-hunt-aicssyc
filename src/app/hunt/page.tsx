@@ -51,6 +51,7 @@ export default function HuntHUD() {
   // Manual code entry state (for room team receiving code from field runners)
   const [manualCode, setManualCode] = useState('');
   const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [showManualCode, setShowManualCode] = useState(false);
 
   const isFieldScout = profile?.operativeRole === 'Field Scout';
   const isBaseDecoder = !isFieldScout;
@@ -72,8 +73,8 @@ export default function HuntHUD() {
           const nextTarget = Math.min(prog.currentStage, 12);
           setStageClearedNotice(
             prof.operativeRole === 'Field Scout'
-              ? `⚡ CHALLENGE CLEARED BY BASE DECODERS! Proceeding to Target Node 0${nextTarget}`
-              : `✓ NODE 0${prev} OVERRIDDEN! Current Objective: Node 0${nextTarget}`
+              ? `⚡ CHALLENGE SOLVED! Target updated to Node 0${nextTarget}`
+              : `✓ NODE 0${prev} OVERRIDDEN! Target: Node 0${nextTarget}`
           );
           setTimeout(() => setStageClearedNotice(null), 8000);
         }
@@ -135,10 +136,10 @@ export default function HuntHUD() {
       setManualCode('');
 
       if (profile?.operativeRole === 'Field Scout') {
-        setScanNotice(`QR SCAN SUCCESSFUL: Checkpoint Node 0${normNode} verified! Please wait for your Base Decoder teammates to solve the challenge.`);
+        setScanNotice(`QR SCANNED: Node 0${normNode} verified! Waiting for Base Decoders.`);
       } else {
         setShowChallenge(true);
-        setScanNotice(`QR VERIFIED: Node 0${normNode} challenge unlocked for Base Decoders!`);
+        setScanNotice(`QR VERIFIED: Node 0${normNode} unlocked!`);
       }
       setTimeout(() => setScanNotice(null), 6000);
     } else if (result.error === 'route_mismatch') {
@@ -195,7 +196,7 @@ export default function HuntHUD() {
       <div className="overlay-scanlines"></div>
       
       {/* Top Header */}
-      <header className="shrink-0 z-10 bg-cyber-panel border-b border-cyber-cyan/40 p-2.5 sm:p-4 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
+      <header className="shrink-0 z-10 bg-cyber-panel border-b border-cyber-cyan/40 p-2 sm:p-3 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setShowProfile(true)}
@@ -229,7 +230,7 @@ export default function HuntHUD() {
           <ThemeToggle />
           <div className="text-right">
             <div className="text-[9px] sm:text-[10px] text-cyber-muted font-bold tracking-widest uppercase">STAGE</div>
-            <div className="text-cyber-yellow font-bold tracking-widest text-sm sm:text-base animate-pulse">
+            <div className="text-cyber-yellow font-bold tracking-widest text-sm sm:text-base animate-pulse" style={{ animationDuration: '2s' }}>
               NODE {currentStageDisplay.toString().padStart(2, '0')}/12
             </div>
           </div>
@@ -253,12 +254,12 @@ export default function HuntHUD() {
       )}
 
       {/* Middle Scrollable Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-2.5 sm:py-3 space-y-3 sm:space-y-4 max-w-lg w-full mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4 sm:space-y-5 max-w-lg w-full mx-auto">
         {/* Active Stage Container */}
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4 sm:space-y-6">
           
           {/* Phase Status Banner (Field Scout vs Base Decoder) */}
-          <div className={`p-3 border text-xs flex items-center justify-between shadow-md ${
+          <div className={`p-3 border text-xs flex items-center shadow-md ${
             isQrUnlocked 
               ? 'bg-cyber-yellow/15 border-cyber-yellow text-cyber-yellow'
               : 'bg-cyber-cyan/15 border-cyber-cyan text-cyber-cyan'
@@ -266,19 +267,16 @@ export default function HuntHUD() {
             <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
               {isQrUnlocked ? (
                 <>
-                  <BrainCircuit className="w-4 h-4 animate-pulse" />
+                  <BrainCircuit className="w-4 h-4" />
                   <span>PHASE 2: BASE STATION CHALLENGE UNLOCKED</span>
                 </>
               ) : (
                 <>
-                  <Footprints className="w-4 h-4 animate-pulse" />
+                  <Footprints className="w-4 h-4" />
                   <span>PHASE 1: FIELD SCOUTS HUNTING CAMPUS</span>
                 </>
               )}
             </div>
-            <span className="text-[10px] bg-cyber-darker px-2 py-0.5 border border-current font-bold uppercase">
-              {isQrUnlocked ? 'DECODE' : 'RECON'}
-            </span>
           </div>
 
           {/* Active Objective Card */}
@@ -297,9 +295,9 @@ export default function HuntHUD() {
             </h2>
             
             {/* Clue box for field runners */}
-            <div className="bg-cyber-darker p-3 border border-cyber-border/70 text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans mb-3">
+            <div className="bg-cyber-darker p-3 border border-cyber-border/70 text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans mb-4">
               <div className="text-[10px] text-cyber-cyan font-mono font-bold uppercase mb-1 flex items-center gap-1">
-                <Footprints className="w-3 h-3" /> Field Clue for Campus Runners:
+                <Footprints className="w-3 h-3" /> Campus Clue:
               </div>
               {activeCheckpoint?.clue}
             </div>
@@ -310,13 +308,14 @@ export default function HuntHUD() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                    <span className="font-bold">Checkpoint QR Verified!</span>
+                    <span className="font-bold">QR Verified ✓</span>
                   </div>
                   {isBaseDecoder && (
                     <button
                       onClick={() => setShowChallenge(true)}
-                      className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer"
+                      className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer flex items-center gap-1"
                     >
+                      <BrainCircuit className="w-3 h-3" />
                       Open Challenge
                     </button>
                   )}
@@ -324,12 +323,13 @@ export default function HuntHUD() {
 
                 {isFieldScout ? (
                   <div className="text-[11px] text-cyber-yellow bg-cyber-darker/90 p-2.5 border border-cyber-yellow/40 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping shrink-0"></div>
-                    <span>QR verified. Please wait for your Base Decoder teammates in the room to solve the challenge.</span>
+                    <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping shrink-0" style={{ animationDuration: '2s' }}></div>
+                    <span>QR scanned! Waiting for Base Decoders to solve the challenge.</span>
                   </div>
                 ) : (
-                  <div className="text-[11px] text-gray-300">
-                    Field team has secured this node. Decode the question now to unlock Node 0{Math.min(currentStageDisplay + 1, 12)}!
+                  <div className="text-[11px] text-gray-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                    <span>QR scanned by Field Scouts. Solve the challenge to proceed!</span>
                   </div>
                 )}
               </div>
@@ -338,8 +338,8 @@ export default function HuntHUD() {
                 <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
                 <span>
                   {isFieldScout 
-                    ? `Navigate to the location and scan Node 0${currentStageDisplay} QR code.`
-                    : `Challenge locked. Awaiting Field Scouts to locate and scan Node 0${currentStageDisplay} on campus.`}
+                    ? `Find and scan the QR code at this location.`
+                    : `Waiting for Field Scouts to scan the QR code.`}
                 </span>
               </div>
             )}
@@ -352,9 +352,9 @@ export default function HuntHUD() {
           >
             <div className="flex items-center gap-3">
               <div className="relative w-11 h-11 rounded-full border-2 border-cyber-cyan/60 bg-cyber-darker flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyber-cyan/20 to-transparent rounded-full animate-spin" style={{ animationDuration: '3s' }}></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyber-cyan/20 to-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
                 <div className="w-2 h-2 rounded-full bg-cyber-cyan z-10"></div>
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyber-yellow animate-ping"></div>
+                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyber-yellow animate-ping" style={{ animationDuration: '3s' }}></div>
                 <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyber-yellow"></div>
               </div>
 
@@ -363,7 +363,7 @@ export default function HuntHUD() {
                   <Compass className="w-3.5 h-3.5" />
                   Treasure Map
                 </div>
-                <p className="text-[11px] text-cyber-muted">Tap to view treasure hunt route map</p>
+                <p className="text-[11px] text-cyber-muted">View Map</p>
               </div>
             </div>
 
@@ -374,52 +374,56 @@ export default function HuntHUD() {
 
           {/* Manual Code Input Box (Only for Base Decoders in Room) */}
           {isBaseDecoder && !isQrUnlocked && (
-            <div className="bg-cyber-panel border border-cyber-border p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1.5">
+            <div className="bg-cyber-panel border border-cyber-border p-3.5">
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowManualCode(!showManualCode)}>
+                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1.5 cursor-pointer">
                   <KeyRound className="w-3.5 h-3.5 text-cyber-yellow" />
-                  Base Station Code Input
+                  Manual Code
                 </label>
-                <span className="text-[10px] text-gray-400">Field Scouts can text code</span>
+                <span className="text-[10px] text-gray-400 hover:text-white transition-colors underline decoration-dashed">
+                  {showManualCode ? 'Hide' : 'Enter code manually'}
+                </span>
               </div>
-
-              <form onSubmit={handleManualCodeSubmit} className="flex gap-2">
-                <input
-                  type="text"
-                  value={manualCode}
-                  onChange={e => setManualCode(e.target.value)}
-                  placeholder="Paste or enter QR code token"
-                  className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan px-3 py-2 text-xs font-mono text-foreground outline-none uppercase tracking-wider"
-                />
-                <button
-                  type="submit"
-                  disabled={manualSubmitting || !manualCode.trim()}
-                  className="bg-cyber-cyan text-cyber-dark hover:bg-cyber-blue font-bold px-4 text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                >
-                  <Send className="w-3 h-3" />
-                  Transmit
-                </button>
-              </form>
+              
+              {showManualCode && (
+                <form onSubmit={handleManualCodeSubmit} className="flex gap-2 mt-3">
+                  <input
+                    type="text"
+                    value={manualCode}
+                    onChange={e => setManualCode(e.target.value)}
+                    placeholder="Enter QR token..."
+                    className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan px-3 py-2 text-xs font-mono text-foreground outline-none uppercase tracking-wider"
+                  />
+                  <button
+                    type="submit"
+                    disabled={manualSubmitting || !manualCode.trim()}
+                    className="bg-cyber-cyan text-cyber-dark hover:bg-cyber-blue font-bold px-4 text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                  >
+                    <Send className="w-3 h-3" />
+                    Send
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </div>
       </div>
 
       {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, role-tailored) */}
-      <div className="shrink-0 p-3 sm:p-4 bg-cyber-panel/95 border-t border-cyber-cyan/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
+      <div className="shrink-0 pb-6 pt-4 px-4 bg-cyber-panel/95 border-t border-cyber-cyan/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
         {isFieldScout ? (
           /* Field Scout View */
           isQrUnlocked ? (
-            <div className="w-full flex items-center justify-center gap-3 bg-cyber-darker border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-ping"></div>
-              <span>CHECKPOINT SECURED // WAITING FOR BASE DECODE</span>
+            <div className="w-full flex items-center justify-center gap-2.5 bg-cyber-darker border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>QR SCANNED // WAITING FOR DECODE</span>
             </div>
           ) : (
             <button
               onClick={() => setShowScanner(true)}
               className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
             >
-              <ScanLine className="w-5 h-5 animate-pulse" />
+              <ScanLine className="w-5 h-5" />
               Scan Checkpoint QR Code
             </button>
           )
@@ -430,16 +434,16 @@ export default function HuntHUD() {
               onClick={() => setShowChallenge(true)}
               className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
             >
-              <BrainCircuit className="w-5 h-5 animate-pulse" />
-              SOLVE ETCHED QUESTION
+              <BrainCircuit className="w-5 h-5" />
+              SOLVE CHALLENGE
             </button>
           ) : (
             <button
               onClick={() => setShowScanner(true)}
               className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
             >
-              <ScanLine className="w-4 h-4 animate-pulse" />
-              AWAITING FIELD SCOUT SCAN (OR SCAN DIRECTLY)
+              <ScanLine className="w-4 h-4" />
+              AWAITING QR SCAN
             </button>
           )
         )}

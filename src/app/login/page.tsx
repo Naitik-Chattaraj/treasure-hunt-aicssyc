@@ -17,7 +17,10 @@ import {
   Trash2, 
   BrainCircuit, 
   Footprints,
-  UserCheck
+  UserCheck,
+  LogIn,
+  UserPlus,
+  Zap
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { TeamMember } from '@/types/hunt';
@@ -150,7 +153,7 @@ export default function LoginPage() {
         router.push('/hunt');
       } else if (res.status === 'rejected') {
         setPendingApproval(false);
-        setAuthError('AUTHORIZATION DENIED BY MISSION CONTROL.');
+        setAuthError('AUTHORIZATION DENIED.');
       }
     } catch {
       // keep waiting
@@ -176,22 +179,22 @@ export default function LoginPage() {
     });
 
     if (!isLoginMode && (errTeam || errLead)) {
-      setAuthError('PLEASE RESOLVE VALIDATION ERRORS BEFORE PROCEEDING.');
+      setAuthError('PLEASE RESOLVE VALIDATION ERRORS.');
       return;
     }
     if (isLoginMode && (errTeam || errUid || errOperative)) {
-      setAuthError('PLEASE COMPLETE ALL REQUIRED CREDENTIALS & OPERATIVE INFO.');
+      setAuthError('PLEASE COMPLETE ALL REQUIRED FIELDS.');
       return;
     }
 
     if (!isLoginMode) {
       if (members.length < 4 || members.length > 5) {
-        setAuthError('TEAM PROTOCOL: TEAMS MUST CONSIST OF EXACTLY 4 OR 5 OPERATIVES.');
+        setAuthError('TEAMS MUST HAVE 4 OR 5 MEMBERS.');
         return;
       }
       for (const m of members) {
         if (!m.regNo.trim() || !m.phone.trim()) {
-           setAuthError('ALL OPERATIVES MUST PROVIDE REGISTRATION NUMBER AND PHONE.');
+           setAuthError('ALL MEMBERS MUST PROVIDE REG NO AND PHONE.');
            return;
         }
       }
@@ -202,7 +205,7 @@ export default function LoginPage() {
 
     // Ensure member names are filled if empty
     const finalMembers = members.map((m, i) => ({
-      name: m.name.trim() || (i === 0 ? teamLead.trim() : `Operative ${i + 1}`),
+      name: m.name.trim() || (i === 0 ? teamLead.trim() : `Member ${i + 1}`),
       role: m.role,
       regNo: m.regNo.trim(),
       phone: m.phone.trim(),
@@ -228,10 +231,10 @@ export default function LoginPage() {
       } else if (res.status === 'pending') {
         setPendingApproval(true);
       } else {
-        setAuthError(res.error || 'ACCESS DENIED: REGISTRATION WAS REJECTED BY ADMIN.');
+        setAuthError(res.error || 'ACCESS DENIED: REGISTRATION REJECTED.');
       }
     } catch {
-      setAuthError('CONNECTION ERROR: UNABLE TO REACH AUTHENTICATION SERVICE.');
+      setAuthError('CONNECTION ERROR: UNABLE TO REACH SERVER.');
     } finally {
       setLoading(false);
     }
@@ -254,15 +257,15 @@ export default function LoginPage() {
         <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest cyber-glitch-text text-cyber-cyan uppercase font-mono">
           TREASURE HUNT 2026
         </h1>
-        <p className="text-center text-xs tracking-widest text-cyber-muted mb-2 font-mono">
-          AICSSYC // PARTICIPANT ACCESS TERMINAL
+        <p className="text-center text-xs tracking-widest text-cyber-muted mb-4 font-mono">
+          AICSSYC // PARTICIPANT LOGIN
         </p>
 
         {/* 4-5 Members Role Banner */}
-        <div className="bg-cyber-darker border border-cyber-cyan/30 p-2.5 mb-6 text-center text-[11px] font-mono text-gray-300">
-          <span className="text-cyber-yellow font-bold">TACTICAL SQUAD (4-5 OPERATIVES):</span>
-          <div className="text-[10px] text-cyber-muted mt-0.5">
-            2 Base Decoders in Room ⇄ 2 Field Scouts Hunting on Campus
+        <div className="bg-cyber-darker border border-cyber-cyan/20 p-3 mb-6 text-center text-[12px] font-mono text-gray-300 rounded">
+          <span className="text-cyber-yellow font-bold">TEAM FORMATION (4-5 MEMBERS):</span>
+          <div className="text-[11px] text-cyber-muted mt-1">
+            2 Base Decoders + 2-3 Field Scouts
           </div>
         </div>
 
@@ -278,13 +281,13 @@ export default function LoginPage() {
             <div className="p-5 bg-cyber-darker border border-cyber-yellow/60 text-cyber-yellow relative">
               <Clock className="w-10 h-10 mx-auto mb-3 animate-spin text-cyber-yellow" style={{ animationDuration: '6s' }} />
               <h2 className="text-sm font-bold tracking-widest uppercase mb-1">
-                AUTHORIZATION PENDING
+                APPROVAL PENDING
               </h2>
               <p className="text-xs text-gray-300 leading-relaxed mt-2">
-                Team <span className="text-cyber-yellow font-bold">{teamName}</span> has been queued for verification.
+                Team <span className="text-cyber-yellow font-bold">{teamName}</span> is pending approval.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
-                Mission Control must grant clearance. Once approved, the admin will provide a <strong className="text-cyber-cyan">6-digit access code</strong> to your team. You will use this code to login.
+                An organizer will approve your team and provide a <strong className="text-cyber-cyan">6-digit access code</strong> for login.
               </p>
             </div>
 
@@ -294,7 +297,7 @@ export default function LoginPage() {
               className="w-full cyber-button-border bg-cyber-yellow hover:bg-yellow-400 text-cyber-dark font-bold text-sm py-3 uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${checkingStatus ? 'animate-spin' : ''}`} />
-              {checkingStatus ? 'VERIFYING CLEARANCE...' : 'CHECK STATUS NOW'}
+              {checkingStatus ? 'Checking...' : 'CHECK STATUS NOW'}
             </button>
 
             <button
@@ -309,24 +312,26 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            <div className="flex w-full mb-6 border-b border-cyber-border">
+            <div className="flex w-full mb-8 border-b border-cyber-border">
               <button
                 type="button"
-                className={`flex-1 py-2 text-sm font-bold tracking-widest uppercase transition-colors ${!isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${!isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
                 onClick={() => { setIsLoginMode(false); setAuthError(''); }}
               >
+                <UserPlus className="w-4 h-4" />
                 REGISTER
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 text-sm font-bold tracking-widest uppercase transition-colors ${isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
                 onClick={() => { setIsLoginMode(true); setAuthError(''); }}
               >
+                <LogIn className="w-4 h-4" />
                 LOGIN
               </button>
             </div>
             
-            <form onSubmit={handleLogin} className="space-y-4 font-mono" noValidate>
+            <form onSubmit={handleLogin} className="space-y-6 font-mono" noValidate>
               {/* Team Name */}
               <div>
                 <div className="flex justify-between items-center mb-1">
@@ -341,7 +346,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="e.g. CYBER_PUNKS_01"
+                  placeholder="e.g. BinaryBrains"
                   value={teamName}
                   onChange={e => handleChange('teamName', e.target.value)}
                   onBlur={() => handleBlur('teamName')}
@@ -427,7 +432,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
-                      Your Operative Handle / Name
+                      Team Leader's Name
                     </label>
                     {touched.operativeName && !fieldErrors.operativeName && operativeName.trim() && (
                       <span className="text-[10px] text-green-500 flex items-center gap-1">
@@ -454,32 +459,32 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-cyber-cyan font-bold tracking-wider mb-1.5">
-                    Assigned Device Position
+                  <label className="block text-xs uppercase text-cyber-cyan font-bold tracking-wider mb-2">
+                    Your Role
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setOperativeRole('Base Decoder')}
-                      className={`p-2.5 border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
                         operativeRole === 'Base Decoder'
                           ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
                           : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-cyan/50'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <BrainCircuit className={`w-4 h-4 ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-gray-400'}`} />
-                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.2 border ${
+                      <div className="flex items-center justify-between mb-1.5">
+                        <BrainCircuit className={`w-5 h-5 ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-gray-400'}`} />
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
                           operativeRole === 'Base Decoder' ? 'bg-cyber-cyan text-cyber-dark border-cyber-cyan' : 'border-gray-700 text-gray-500'
                         }`}>
                           Room
                         </span>
                       </div>
                       <div>
-                        <div className={`text-xs font-bold ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-foreground'}`}>
+                        <div className={`text-sm font-bold ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-foreground'}`}>
                           Base Decoder
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                        <div className="text-[10px] text-gray-400 mt-1 leading-tight">
                           Solves questions in room
                         </div>
                       </div>
@@ -488,25 +493,25 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setOperativeRole('Field Scout')}
-                      className={`p-2.5 border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
                         operativeRole === 'Field Scout'
                           ? 'bg-cyber-yellow/15 border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.25)]'
                           : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-yellow/50'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <Footprints className={`w-4 h-4 ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-gray-400'}`} />
-                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.2 border ${
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Footprints className={`w-5 h-5 ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-gray-400'}`} />
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
                           operativeRole === 'Field Scout' ? 'bg-cyber-yellow text-cyber-dark border-cyber-yellow' : 'border-gray-700 text-gray-500'
                         }`}>
                           Campus
                         </span>
                       </div>
                       <div>
-                        <div className={`text-xs font-bold ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-foreground'}`}>
+                        <div className={`text-sm font-bold ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-foreground'}`}>
                           Field Scout
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                        <div className="text-[10px] text-gray-400 mt-1 leading-tight">
                           Scans QR codes on field
                         </div>
                       </div>
@@ -518,15 +523,15 @@ export default function LoginPage() {
 
             {/* Operatives Roster Collapsible for Registration */}
             {!isLoginMode && (
-              <div className="pt-1 space-y-3">
+              <div className="pt-1 space-y-4">
                 <button
                   type="button"
                   onClick={() => setShowMembers(!showMembers)}
-                  className="w-full flex items-center justify-between text-xs text-cyber-cyan bg-cyber-darker border border-cyber-border p-2.5 hover:border-cyber-cyan transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between text-xs text-cyber-cyan bg-cyber-darker border border-cyber-border p-3.5 rounded-sm hover:border-cyber-cyan transition-colors cursor-pointer"
                 >
                   <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
                     <Users className="w-4 h-4 text-cyber-yellow" />
-                    Squad Roster ({members.length} Operatives)
+                    Team Members ({members.length})
                   </span>
                   <span className="text-[10px] text-gray-400">
                     {showMembers ? 'COLLAPSE ▲' : 'CONFIGURE ▼'}
@@ -534,9 +539,9 @@ export default function LoginPage() {
                 </button>
 
                 {showMembers && (
-                  <div className="p-3 bg-cyber-darker border border-cyber-border/70 space-y-2.5 text-xs">
-                    <p className="text-[10px] text-gray-400 mb-2">
-                      Min 4, max 5 operatives. 2 Base Decoders in Room + 2-3 Field Scouts on Campus.
+                  <div className="p-4 bg-cyber-darker border border-cyber-border/70 space-y-4 text-xs rounded-sm">
+                    <p className="text-[11px] text-gray-400 mb-2">
+                      4-5 members required
                     </p>
                     {members.map((m, idx) => (
                       <div key={idx} className="flex flex-col gap-2 items-start border-b border-cyber-border/50 pb-3 mb-2">
@@ -544,7 +549,7 @@ export default function LoginPage() {
                           <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
                           <input
                             type="text"
-                            placeholder={`Operative ${idx + 1} Name`}
+                            placeholder={`Member ${idx + 1}`}
                             value={m.name}
                             onChange={e => {
                               const val = e.target.value;
@@ -604,7 +609,7 @@ export default function LoginPage() {
                         onClick={handleAddMember}
                         className="w-full border border-dashed border-cyber-yellow/60 text-cyber-yellow hover:bg-cyber-yellow/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
                       >
-                        <Plus className="w-3 h-3" /> Add 5th Operative
+                        <Plus className="w-3 h-3" /> Add 5th Member
                       </button>
                     )}
                   </div>
@@ -656,8 +661,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full cyber-button-border bg-cyber-cyan hover:bg-cyber-blue text-cyber-dark font-bold text-base py-3 uppercase tracking-widest transition-all mt-4 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.2)]"
+              className="w-full cyber-button-border bg-cyber-cyan hover:bg-cyber-blue text-cyber-dark font-bold text-base py-4 uppercase tracking-widest transition-all mt-6 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.2)] flex items-center justify-center gap-2"
             >
+              <Zap className="w-5 h-5" />
               {loading ? 'TRANSMITTING CREDENTIALS...' : 'INITIALIZE LINK'}
             </button>
           </form>
@@ -670,7 +676,7 @@ export default function LoginPage() {
             className="text-[11px] text-gray-500 hover:text-cyber-pink transition-colors font-mono tracking-wider flex items-center justify-center gap-1.5"
           >
             <ShieldAlert className="w-3 h-3" />
-            MISSION CONTROL STAFF LOGIN
+            Staff / Admin Login
           </Link>
         </div>
       </div>

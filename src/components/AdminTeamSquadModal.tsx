@@ -90,7 +90,7 @@ export default function AdminTeamSquadModal({
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="text-xs text-cyber-cyan font-bold flex items-center gap-1.5 uppercase tracking-wider">
                 <Users className="w-4 h-4 text-cyber-yellow" />
-                TACTICAL SQUAD INSPECTION
+                TEAM DETAILS
               </span>
               <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${
                 team.status === 'approved'
@@ -188,14 +188,14 @@ export default function AdminTeamSquadModal({
             <div className="flex items-center justify-between border-b border-cyber-border/80 pb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-cyber-cyan flex items-center gap-2">
                 <Users className="w-4 h-4 text-cyber-cyan" />
-                Assigned Operatives ({memberList.length} Members)
+                Team Members ({memberList.length})
               </h3>
               <span className="text-[10px] text-gray-400">
-                2 Base Decoders in Room ⇄ 2-3 Field Scouts Hunting
+                2 Decoders + 2-3 Scouts
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {memberList.map((m, idx) => {
                 const isDecoder = m.role?.toLowerCase().includes('decoder') || m.role?.toLowerCase().includes('base');
                 const isScout = m.role?.toLowerCase().includes('scout') || m.role?.toLowerCase().includes('field');
@@ -289,7 +289,7 @@ export default function AdminTeamSquadModal({
             <div className="bg-green-500/10 border border-green-500 p-3.5 space-y-1 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <Trophy className="w-3.5 h-3.5" /> Victory Completion Token
+                  <Trophy className="w-3.5 h-3.5" /> Victory Code
                 </span>
                 <button
                   onClick={() => copyToClipboard(team.completion_token!, 'token')}
@@ -335,7 +335,7 @@ export default function AdminTeamSquadModal({
                 className="border border-cyber-pink/60 hover:border-cyber-pink hover:bg-cyber-pink/20 text-cyber-pink px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <ShieldAlert className="w-4 h-4" />
-                Revoke Clearance
+                Revoke
               </button>
             ) : (
               <button
@@ -344,7 +344,7 @@ export default function AdminTeamSquadModal({
                 className="border border-green-500/60 hover:border-green-500 hover:bg-green-500/20 text-green-400 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
-                Re-Approve Clearance
+                Re-Approve
               </button>
             )}
           </div>

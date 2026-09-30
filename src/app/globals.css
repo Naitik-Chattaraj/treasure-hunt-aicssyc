@@ -57,25 +57,25 @@ body {
 
 /* Cyberpunk specific utility classes */
 .cyber-glitch-text {
-  text-shadow: 2px 0 var(--cyber-cyan), -2px 0 var(--cyber-pink);
-  animation: glitch-anim 3s infinite linear alternate-reverse;
+  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
+  animation: glitch-anim 8s infinite linear alternate-reverse;
 }
 
 html.light .cyber-glitch-text {
-  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
+  text-shadow: 0.5px 0 var(--cyber-cyan), -0.5px 0 var(--cyber-pink);
 }
 
 .cyber-glitch-text-hover:hover {
-  text-shadow: 2px 0 var(--cyber-cyan), -2px 0 var(--cyber-pink);
+  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
 }
 
 @keyframes glitch-anim {
-  0% { clip-path: inset(20% 0 80% 0); }
-  20% { clip-path: inset(60% 0 10% 0); }
-  40% { clip-path: inset(40% 0 50% 0); }
-  60% { clip-path: inset(80% 0 5% 0); }
-  80% { clip-path: inset(10% 0 70% 0); }
-  100% { clip-path: inset(30% 0 50% 0); }
+  0% { clip-path: inset(10% 0 85% 0); }
+  20% { clip-path: inset(50% 0 45% 0); }
+  40% { clip-path: inset(30% 0 65% 0); }
+  60% { clip-path: inset(70% 0 25% 0); }
+  80% { clip-path: inset(20% 0 75% 0); }
+  100% { clip-path: inset(40% 0 55% 0); }
 }
 
 .cyber-panel-border {
@@ -89,19 +89,19 @@ html.light .cyber-glitch-text {
 .scanline {
   width: 100%;
   height: 100px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 240, 255, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
-  opacity: 0.25;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 240, 255, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+  opacity: 0.12;
   position: fixed;
   bottom: 100%;
   left: 0;
-  animation: scanline 6s linear infinite;
+  animation: scanline 8s linear infinite;
   pointer-events: none;
   z-index: 50;
 }
 
 html.light .scanline {
-  opacity: 0.08;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(2, 132, 199, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+  opacity: 0.04;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(2, 132, 199, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
 }
 
 @keyframes scanline {
@@ -114,8 +114,8 @@ html.light .scanline {
     to bottom,
     rgba(255,255,255,0),
     rgba(255,255,255,0) 50%,
-    rgba(0,0,0,0.12) 50%,
-    rgba(0,0,0,0.12)
+    rgba(0,0,0,0.06) 50%,
+    rgba(0,0,0,0.06)
   );
   background-size: 100% 4px;
   position: fixed;
@@ -129,8 +129,8 @@ html.light .overlay-scanlines {
     to bottom,
     rgba(0,0,0,0),
     rgba(0,0,0,0) 50%,
-    rgba(0,0,0,0.03) 50%,
-    rgba(0,0,0,0.03)
+    rgba(0,0,0,0.015) 50%,
+    rgba(0,0,0,0.015)
   );
   background-size: 100% 4px;
 }

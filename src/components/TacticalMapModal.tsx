@@ -66,8 +66,8 @@ export default function TacticalMapModal({
               </div>
               <p className="text-[10px] text-cyber-muted">
                 {currentRoute === 1 
-                  ? 'ROUTE 1 // HIPPOCRATES LOOP (12 SECTORS)' 
-                  : 'ROUTE 2 // HOSPITAL TO ARTS SECTORS (12 SECTORS)'}
+                  ? 'ROUTE 1 (12 CHECKPOINTS)' 
+                  : 'ROUTE 2 (12 CHECKPOINTS)'}
               </p>
             </div>
           </div>
@@ -93,9 +93,8 @@ export default function TacticalMapModal({
           
           <div className="absolute inset-4 border border-cyber-blue/30 pointer-events-none">
             {/* Coordinate markings */}
-            <span className="absolute top-1 left-2 text-[9px] text-cyber-blue/70">X: 104.22 // Y: 40.89</span>
             <span className="absolute bottom-1 right-2 text-[9px] text-cyber-blue/70">
-              CAMPUS GRID // ROUTE 0{currentRoute}
+              ROUTE {currentRoute}
             </span>
           </div>
 
@@ -129,7 +128,7 @@ export default function TacticalMapModal({
 
                   {/* Tooltip on hover/touch */}
                   <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-cyber-cyan px-2.5 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
-                    Node 0{stageId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ ACTIVE TARGET' : '🔒'}
+                    Node 0{stageId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ CURRENT' : '🔒'}
                   </div>
                 </div>
               );
@@ -140,15 +139,15 @@ export default function TacticalMapModal({
           <div className="absolute bottom-6 left-6 bg-cyber-panel/90 border border-cyber-border p-2.5 text-[10px] space-y-1.5 shadow-md">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-cyber-yellow shadow-[0_0_6px_rgba(252,238,10,0.8)]"></div> 
-              <span className="font-bold text-cyber-yellow">ACTIVE TARGET (NODE 0{Math.min(progress.currentStage, 12)})</span>
+              <span className="font-bold text-cyber-yellow">CURRENT (CHECKPOINT {Math.min(progress.currentStage, 12)})</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-cyber-cyan shadow-[0_0_6px_rgba(0,240,255,0.8)]"></div> 
-              <span className="text-cyber-cyan">SECURED & CLEARED</span>
+              <span className="text-cyber-cyan">CLEARED</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div> 
-              <span className="text-cyber-muted">ENCRYPTED / LOCKED</span>
+              <span className="text-cyber-muted">LOCKED</span>
             </div>
           </div>
         </div>
