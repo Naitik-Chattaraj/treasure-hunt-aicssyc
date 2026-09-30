@@ -34,6 +34,7 @@ import AdminQRScannerModal from '@/components/AdminQRScannerModal';
 import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
 import AdminQRGeneratorTab from '@/components/AdminQRGeneratorTab';
 import AdminTeamSquadModal from '@/components/AdminTeamSquadModal';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 
 interface AdminTeam {
   id: string;
@@ -890,7 +891,9 @@ export default function AdminDashboard() {
                                 <span className="text-[10px] font-bold bg-cyber-blue/20 text-cyber-blue border border-cyber-blue/40 px-1.5 py-0.2 uppercase">
                                   #{idx + 1} {q.challenge_type}
                                 </span>
-                                <span className="text-gray-200 font-sans">{q.question}</span>
+                                <div className="flex-1 text-gray-200 font-sans w-full max-w-full overflow-hidden">
+                                  <MarkdownRenderer content={q.question} />
+                                </div>
                               </div>
 
                               {q.options && q.options.length > 0 && (
@@ -1083,7 +1086,10 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Question / Prompt</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] uppercase text-gray-400 font-bold">Question / Prompt</label>
+                  <span className="text-[9px] text-gray-500">Supports Markdown (use ``` for code blocks)</span>
+                </div>
                 <textarea
                   rows={3}
                   value={editingQuestion.question}

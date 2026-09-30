@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 
 export default function ChallengeModal({ 
   checkpoint, 
@@ -140,7 +141,9 @@ export default function ChallengeModal({
               <div className="absolute top-0 left-0 bg-cyber-pink text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
                 CHECKPOINT {stageNum}
               </div>
-              <p className="mt-3 text-sm text-foreground leading-relaxed font-sans">{challenge.question}</p>
+              <div className="mt-3">
+                <MarkdownRenderer content={challenge.question} />
+              </div>
             </div>
 
             {error && (
