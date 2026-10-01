@@ -52,11 +52,11 @@ export default function QRScannerModal({
   onScan, 
   onClose 
 }: { 
-  onScan: (qrText: string) => void;
+  onScan: (qrText: string) => Promise<boolean> | void;
   onClose: () => void; 
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [scanSuccess, setScanSuccess] = useState(false);
+  const [scanState, setScanState] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
   const [scanFailed, setScanFailed] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
@@ -92,21 +92,41 @@ export default function QRScannerModal({
   }, []);
 
   // Handle detected QR Code
-  const handleDetected = useCallback((rawCode: string) => {
+  const handleDetected = useCallback(async (rawCode: string) => {
     if (hasDetectedRef.current) return;
     hasDetectedRef.current = true;
-    setScanSuccess(true);
+    setScanState('verifying');
     setIsScanningActive(false);
 
     triggerHapticAndSound();
 
-    // Trigger parent callback immediately
-    onScanRef.current(rawCode.trim());
-
-    // Clean up hardware after visual confirmation
-    setTimeout(() => {
-      cleanupScanner();
-    }, 250);
+    try {
+      const result = await onScanRef.current(rawCode.trim());
+      if (result === false) {
+        setScanState('error');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate([100, 50, 100]); } catch {}
+        }
+        setTimeout(() => {
+          hasDetectedRef.current = false;
+          setScanState('idle');
+          if (scannerRef.current) {
+            scannerRef.current.start().then(() => setIsScanningActive(true)).catch(() => {});
+          }
+        }, 1500);
+        return;
+      }
+      
+      setScanState('success');
+      setTimeout(() => {
+        cleanupScanner();
+      }, 350);
+    } catch {
+      setScanState('success');
+      setTimeout(() => {
+        cleanupScanner();
+      }, 350);
+    }
   }, [cleanupScanner]);
 
   // Initialize and start QrScanner
@@ -117,7 +137,7 @@ export default function QRScannerModal({
 
     setError(null);
     setScanFailed(false);
-    setScanSuccess(false);
+    setScanState('idle');
     setTorchOn(false);
     setTorchSupported(false);
 
@@ -309,8 +329,17 @@ export default function QRScannerModal({
             muted
           />
 
-          {/* Success Flash Overlay */}
-          {scanSuccess && (
+          {/* State Overlays */}
+          {scanState === 'verifying' && (
+            <div className="absolute inset-0 bg-cyber-yellow/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
+              <RefreshCw className="w-16 h-16 text-cyber-yellow mb-2 animate-spin drop-shadow-[0_0_12px_rgba(252,238,10,0.8)]" />
+              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-cyber-yellow text-cyber-yellow shadow-lg">
+                VERIFYING...
+              </div>
+            </div>
+          )}
+
+          {scanState === 'success' && (
             <div className="absolute inset-0 bg-green-500/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
               <CheckCircle2 className="w-16 h-16 text-green-300 mb-2 drop-shadow-[0_0_12px_rgba(74,222,128,0.8)]" />
               <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-green-400 text-green-300 shadow-lg">
@@ -318,9 +347,18 @@ export default function QRScannerModal({
               </div>
             </div>
           )}
+          
+          {scanState === 'error' && (
+            <div className="absolute inset-0 bg-red-500/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
+              <X className="w-16 h-16 text-red-400 mb-2 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)]" />
+              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-red-500 text-red-400 shadow-lg">
+                INVALID QR
+              </div>
+            </div>
+          )}
 
           {/* Cyberpunk HUD Reticle & Laser Sweep */}
-          {!scanSuccess && (
+          {scanState === 'idle' && (
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 z-20">
               <div className="flex justify-between items-center text-cyber-yellow/90 text-[10px] bg-black/75 px-2 py-1 border border-cyber-yellow/30">
                 <span className="flex items-center gap-1.5 font-bold">

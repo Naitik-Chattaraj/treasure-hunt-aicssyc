@@ -1,7 +1,7 @@
 import { TeamProfile, HuntProgress, Checkpoint, LeaderboardEntry, Challenge } from '@/types/hunt';
 import { mockTeam, MOCK_CHECKPOINTS } from './mock-data';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const USE_MOCK = (process.env.NEXT_USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) !== 'false';
 const LOCAL_STORAGE_KEY_TEAM = 'aicssyc_team';
 const LOCAL_STORAGE_KEY_PROGRESS = 'aicssyc_progress';
 

@@ -168,6 +168,24 @@ export async function GET(req: NextRequest) {
           };
         }
       }
+
+      // FALLBACK: If team_active_challenges insert failed (e.g. empty questions pool causing foreign key error),
+      // check if a successful scan was logged in submissions_log
+      if (!qrScanned) {
+        const { data: scanLog } = await supabase
+          .from('submissions_log')
+          .select('id')
+          .eq('team_id', team.id)
+          .eq('node_id', cp.id)
+          .eq('submission_type', 'scan')
+          .eq('is_correct', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (scanLog) {
+          qrScanned = true;
+        }
+      }
     } catch (e) {
       console.warn('team_active_challenges check warning:', e);
     }

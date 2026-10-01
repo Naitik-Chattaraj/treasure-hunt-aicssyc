@@ -106,7 +106,7 @@ export default function HuntHUD() {
     return () => clearInterval(interval);
   }, [router]);
 
-  const processScanCode = async (rawCode: string) => {
+  const processScanCode = async (rawCode: string): Promise<boolean> => {
     setScanNotice(null);
 
     // Extract code if a full URL or query string was scanned
@@ -146,7 +146,7 @@ export default function HuntHUD() {
         setShowChallenge(true);
         setScanNotice(`QR VERIFIED: Node 0${normNode} unlocked!`);
       }
-      setTimeout(() => setScanNotice(null), 6000);
+      setTimeout(() => setScanNotice(null), 6000); return true;
     } else if (result.error === 'route_mismatch') {
       alert(`🚫 ROUTE MISMATCH:\n\n${result.message || 'This QR code belongs to a different route! Verify your route target.'}`);
     } else if (result.error === 'already_completed') {
@@ -161,11 +161,15 @@ export default function HuntHUD() {
     } else {
       alert(result.message || `UNKNOWN QR CODE (${cleanCode.substring(0, 16)}...). ACCESS DENIED.`);
     }
+    return false;
   };
 
   const handleScanResult = async (qrHash: string) => {
-    setShowScanner(false);
-    await processScanCode(qrHash);
+    const success = await processScanCode(qrHash);
+    if (success) {
+      setShowScanner(false);
+    }
+    return success;
   };
 
   const handleManualCodeSubmit = async (e: React.FormEvent) => {
@@ -484,3 +488,6 @@ export default function HuntHUD() {
     </main>
   );
 }
+
+
+

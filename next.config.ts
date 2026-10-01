@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    NEXT_USE_MOCK: process.env.NEXT_USE_MOCK,
+  },
 };
 
 export default nextConfig;
