@@ -669,14 +669,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => setSquadModalTeam(t)}
-                              className="px-2 py-1 flex items-center gap-1 bg-cyber-darker text-cyber-cyan border border-cyber-cyan/40 hover:border-cyber-cyan font-bold text-[10px] uppercase cursor-pointer"
-                              title="Inspect Squad"
-                            >
-                              <Users className="w-3 h-3" />
-                              Inspect
-                            </button>
+                            
                             {t.status === 'pending' ? (
                               <button
                                 onClick={() => handleApproveReject(t.id, 'approved')}
