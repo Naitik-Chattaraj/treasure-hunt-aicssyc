@@ -1,173 +1,169 @@
 @import "tailwindcss";
 
+/*
+ * AICSSYC Treasure Hunt design tokens.
+ * Palette derived from the triadic olive-gray pair P0895 (dark) / P0095 (light):
+ * amber = treasure / primary actions, jade = Route 1, lavender = Route 2.
+ * Shades are tuned so every text colour meets WCAG AA (>= 4.5:1) on every surface.
+ * Components use the semantic names below; only these values change between themes.
+ */
+
+/* Dark: "night expedition" (default) */
 :root {
-  --background: #0B0C10;
-  --foreground: #EDEDED;
-  --cyber-yellow: #FCEE0A;
-  --cyber-cyan: #00F0FF;
-  --cyber-pink: #FF003C;
-  --cyber-blue: #05D9E8;
-  --cyber-dark: #0B0C10;
-  --cyber-darker: #050507;
-  --cyber-panel: #12131A;
-  --cyber-border: #1E293B;
-  --cyber-muted: #94A3B8;
-  --cyber-card: #151824;
+  --canvas: #131412;
+  --surface: #1E201A;
+  --surface-2: #272A22;
+  --sunken: #0D0E0C;
+  --line: #363C31;
+  --line-strong: #727B67;
+
+  --ink: #F1EFE8;
+  --muted: #B3B5A9;
+
+  --primary: #D5943F;
+  --primary-hover: #E2A653;
+  --on-primary: #1A1206;
+
+  --route-1: #52E0C4;
+  --route-2: #C7A6EA;
+  --success: #7DCB7F;
+  --danger: #F2745F;
+
+  --map-line: rgba(213, 148, 63, 0.05);
+  color-scheme: dark;
 }
 
-html.light, body.light {
-  --background: #F1F5F9;
-  --foreground: #0F172A;
-  --cyber-yellow: #D97706;
-  --cyber-cyan: #0284C7;
-  --cyber-pink: #E11D48;
-  --cyber-blue: #0369A1;
-  --cyber-dark: #FFFFFF;
-  --cyber-darker: #E2E8F0;
-  --cyber-panel: #FFFFFF;
-  --cyber-border: #CBD5E1;
-  --cyber-muted: #64748B;
-  --cyber-card: #F8FAFC;
+/* Light: "parchment map" */
+html.light {
+  --canvas: #F6F2E8;
+  --surface: #FFFDF8;
+  --surface-2: #EFE9DC;
+  --sunken: #E8E1D0;
+  --line: #D8CFBB;
+  --line-strong: #8E8169;
+
+  --ink: #1F1B14;
+  --muted: #5C5548;
+
+  --primary: #86501A;
+  --primary-hover: #6F4214;
+  --on-primary: #FFFDF8;
+
+  --route-1: #086A59;
+  --route-2: #6A4C8C;
+  --success: #276C2B;
+  --danger: #B0281D;
+
+  --map-line: rgba(134, 80, 26, 0.06);
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-cyber-yellow: var(--cyber-yellow);
-  --color-cyber-cyan: var(--cyber-cyan);
-  --color-cyber-pink: var(--cyber-pink);
-  --color-cyber-blue: var(--cyber-blue);
-  --color-cyber-dark: var(--cyber-dark);
-  --color-cyber-darker: var(--cyber-darker);
-  --color-cyber-panel: var(--cyber-panel);
-  --color-cyber-border: var(--cyber-border);
-  --color-cyber-muted: var(--cyber-muted);
-  --color-cyber-card: var(--cyber-card);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-route-1: var(--route-1);
+  --color-route-2: var(--route-2);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  /* Temporary aliases for the previous cyber-* class names; removed once all pages are migrated */
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --color-cyber-dark: var(--canvas);
+  --color-cyber-darker: var(--sunken);
+  --color-cyber-panel: var(--surface);
+  --color-cyber-card: var(--surface-2);
+  --color-cyber-border: var(--line);
+  --color-cyber-muted: var(--muted);
+  --color-cyber-yellow: var(--primary);
+  --color-cyber-cyan: var(--route-1);
+  --color-cyber-blue: var(--route-1);
+  --color-cyber-pink: var(--danger);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Elevation: flat (border only), card, raised (dialogs/menus) */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-raised: 0 12px 32px rgb(0 0 0 / 0.28);
+  --shadow-glow: 0 0 0 3px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
   overflow-x: hidden;
-  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* CRT TV / Monitor Heading Utility Classes (using text-clip, no background overlay) */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+/* Faint topographic contour lines: the "map" behind every page */
+.bg-map {
+  background-color: var(--canvas);
+  background-image:
+    repeating-radial-gradient(circle at 15% 20%, transparent 0 22px, var(--map-line) 22px 23px),
+    repeating-radial-gradient(circle at 85% 75%, transparent 0 30px, var(--map-line) 30px 31px);
+}
+
+/* Legacy cyberpunk effects: neutralised until their usages are removed */
 .cyber-crt-text,
 .cyber-glitch-text {
-  display: inline-block;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    currentColor 0px,
-    currentColor 2.5px,
-    rgba(0, 0, 0, 0.45) 2.5px,
-    rgba(0, 0, 0, 0.45) 4.5px
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 0 8px currentColor);
-  animation: crt-phosphor 6s ease-in-out infinite alternate;
-  letter-spacing: 0.12em;
+  font-family: var(--font-display);
 }
-
-html.light .cyber-crt-text,
-html.light .cyber-glitch-text {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    currentColor 0px,
-    currentColor 2.5px,
-    rgba(255, 255, 255, 0.5) 2.5px,
-    rgba(255, 255, 255, 0.5) 4.5px
-  );
-  filter: drop-shadow(0 0 1px currentColor);
-  animation: none;
-}
-
-.cyber-crt-text-hover:hover,
-.cyber-glitch-text-hover:hover {
-  filter: brightness(1.2) drop-shadow(0 0 6px currentColor);
-}
-
-@keyframes crt-phosphor {
-  0%, 100% {
-    opacity: 0.98;
-    filter: brightness(1) drop-shadow(0 0 2px currentColor);
-  }
-  48% {
-    opacity: 1;
-    filter: brightness(1.08) drop-shadow(0 0 5px currentColor);
-  }
-  50% {
-    opacity: 0.94;
-    filter: brightness(0.96) drop-shadow(0 0 1px currentColor);
-  }
-  52% {
-    opacity: 1;
-    filter: brightness(1.06) drop-shadow(0 0 4px currentColor);
-  }
-  85% {
-    opacity: 0.985;
-    filter: brightness(1.02) drop-shadow(0 0 3px currentColor);
-  }
-}
-
-.cyber-panel-border {
-  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
-}
-
+.cyber-panel-border,
 .cyber-button-border {
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  border-radius: 0.5rem;
 }
-
-.scanline {
-  width: 100%;
-  height: 100px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 240, 255, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
-  opacity: 0.12;
-  position: fixed;
-  bottom: 100%;
-  left: 0;
-  animation: scanline 8s linear infinite;
-  pointer-events: none;
-  z-index: 50;
-}
-
-html.light .scanline {
-  opacity: 0.04;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(2, 132, 199, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
-}
-
-@keyframes scanline {
-  0% { bottom: 100%; }
-  100% { bottom: -100px; }
-}
-
+.scanline,
 .overlay-scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0),
-    rgba(255,255,255,0) 50%,
-    rgba(0,0,0,0.06) 50%,
-    rgba(0,0,0,0.06)
-  );
-  background-size: 100% 4px;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 49;
+  display: none;
 }
 
-html.light .overlay-scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0),
-    rgba(0,0,0,0) 50%,
-    rgba(0,0,0,0.015) 50%,
-    rgba(0,0,0,0.015)
-  );
-  background-size: 100% 4px;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
 }
