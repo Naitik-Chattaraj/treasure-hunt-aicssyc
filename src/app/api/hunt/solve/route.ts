@@ -120,28 +120,29 @@ export async function POST(req: NextRequest) {
     let activeChallengeId: string | null = null;
 
     try {
-      const { data: activeChallenge } = await supabase
+      // UNIQUE (team_id, node_id) guarantees at most one row, so no ordering is needed
+      const { data: activeChallenge, error: acError } = await supabase
         .from('team_active_challenges')
-        .select(`
-          id,
-          question_id,
-          questions_pool (
-            id,
-            answer
-          )
-        `)
+        .select('id, question_id')
         .eq('team_id', team.id)
         .eq('node_id', cpId)
-        .order('created_at', { ascending: false })
-        .limit(1)
         .maybeSingle();
 
-      if (activeChallenge && activeChallenge.questions_pool) {
-        const q = Array.isArray(activeChallenge.questions_pool) 
-          ? activeChallenge.questions_pool[0] 
-          : activeChallenge.questions_pool;
-        isMatch = q.answer.trim().toLowerCase() === cleanAnswer.toLowerCase();
-        activeChallengeId = activeChallenge.id;
+      if (acError) console.error('team_active_challenges lookup error:', acError);
+
+      if (activeChallenge?.question_id) {
+        const { data: q, error: qError } = await supabase
+          .from('questions_pool')
+          .select('answer')
+          .eq('id', activeChallenge.question_id)
+          .maybeSingle();
+
+        if (qError) console.error('questions_pool answer lookup error:', qError);
+
+        if (q) {
+          isMatch = String(q.answer).trim().toLowerCase() === cleanAnswer.toLowerCase();
+          activeChallengeId = activeChallenge.id;
+        }
       }
     } catch (e) {
       console.warn('team_active_challenges lookup warning:', e);
