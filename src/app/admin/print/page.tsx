@@ -1,14 +1,66 @@
 'use client';
 
-import { useState } from 'react';
-import { ROUTE_1_CHECKPOINTS, ROUTE_2_CHECKPOINTS, MOCK_CHECKPOINTS } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
 import { ArrowLeft, Printer, Copy, Check, Compass, Layers } from 'lucide-react';
 
-export default function TestQRPage() {
-  const [selectedRoute, setSelectedRoute] = useState<'route1' | 'route2' | 'all'>('route1');
+interface PrintCheckpoint {
+  id: number;
+  routeId: 1 | 2;
+  stage: number;
+  title: string;
+  area: string;
+  clue: string;
+  qrHash: string;
+}
+
+type RouteFilter = 'route1' | 'route2' | 'all';
+
+// Admin-only batch print sheet. QR tokens come from the database (via the admin-authenticated
+// checkpoints API), so regenerated tokens print correctly and nothing is exposed to players.
+export default function AdminPrintQRPage() {
+  const router = useRouter();
+  const [selectedRoute, setSelectedRoute] = useState<RouteFilter>('route1');
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [checkpoints, setCheckpoints] = useState<PrintCheckpoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/checkpoints')
+      .then(async (res) => {
+        if (res.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load checkpoints');
+
+        // Preselect the route from the dashboard link (?route=1 or ?route=2)
+        const route = new URLSearchParams(window.location.search).get('route');
+        if (route === '2') setSelectedRoute('route2');
+        else if (route === 'all') setSelectedRoute('all');
+
+        setCheckpoints(
+          (data.checkpoints || []).map((cp: {
+            id: number; route_id?: number | null; stage?: number | null;
+            title: string; area: string; clue: string; qr_hash: string;
+          }) => ({
+            id: cp.id,
+            routeId: (cp.route_id ?? (cp.id <= 12 ? 1 : 2)) === 2 ? 2 : 1,
+            stage: cp.stage ?? (cp.id <= 12 ? cp.id : cp.id - 12),
+            title: cp.title,
+            area: cp.area,
+            clue: cp.clue,
+            qrHash: cp.qr_hash,
+          }))
+        );
+      })
+      .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : 'Failed to load checkpoints'))
+      .finally(() => setLoading(false));
+  }, [router]);
 
   const handleCopy = (id: number, text: string) => {
     navigator.clipboard.writeText(text);
@@ -16,12 +68,11 @@ export default function TestQRPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const displayedCheckpoints = 
-    selectedRoute === 'route1' 
-      ? ROUTE_1_CHECKPOINTS 
-      : selectedRoute === 'route2' 
-      ? ROUTE_2_CHECKPOINTS 
-      : MOCK_CHECKPOINTS;
+  const displayedCheckpoints = checkpoints
+    .filter((cp) =>
+      selectedRoute === 'route1' ? cp.routeId === 1 : selectedRoute === 'route2' ? cp.routeId === 2 : true
+    )
+    .sort((a, b) => a.routeId - b.routeId || a.stage - b.stage);
 
   return (
     <main className="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8 font-mono">
@@ -30,11 +81,11 @@ export default function TestQRPage() {
         {/* Navigation & Print Controls */}
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-gray-800 pb-4 print:hidden">
           <Link 
-            href="/hunt" 
+            href="/admin" 
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 border border-cyan-500/30 text-xs font-bold uppercase transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Hunt HUD
+            Back to Admin Dashboard
           </Link>
           
           <div className="flex items-center gap-2">
@@ -120,6 +171,13 @@ export default function TestQRPage() {
           </span>
         </div>
         
+        {loading && (
+          <div className="p-4 text-xs text-cyan-400 border border-gray-700 bg-gray-800/60">Loading checkpoints from database...</div>
+        )}
+        {loadError && (
+          <div className="p-4 text-xs text-red-400 border border-red-500/50 bg-red-950/40">{loadError}</div>
+        )}
+
         {/* QR Code Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedCheckpoints.map(cp => {
