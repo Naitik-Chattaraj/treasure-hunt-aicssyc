@@ -267,7 +267,7 @@ export default function QRScannerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors font-mono">
-      <div className="w-full max-w-md bg-cyber-panel cyber-panel-border border-2 border-cyber-yellow shadow-[0_0_25px_rgba(252,238,10,0.25)] p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto">
+      <div className="w-full max-w-md bg-surface rounded-xl border-2 border-primary shadow-[0_0_25px_rgba(252,238,10,0.25)] p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto">
         
         {/* Close Button */}
         <button 
@@ -275,7 +275,7 @@ export default function QRScannerModal({
             cleanupScanner();
             onClose();
           }} 
-          className="absolute top-4 right-4 text-cyber-muted hover:text-cyber-yellow transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-muted hover:text-primary transition-colors cursor-pointer"
           aria-label="Close Scanner"
         >
           <X className="w-6 h-6" />
@@ -283,8 +283,8 @@ export default function QRScannerModal({
 
         {/* Modal Header & Controls */}
         <div className="flex justify-between items-center mb-3 pr-8">
-          <h2 className="text-lg font-bold text-cyber-yellow tracking-widest uppercase flex items-center gap-2">
-            <Camera className="w-5 h-5 text-cyber-yellow" />
+          <h2 className="text-lg font-bold text-primary tracking-widest uppercase flex items-center gap-2">
+            <Camera className="w-5 h-5 text-primary" />
             Checkpoint Scanner
           </h2>
 
@@ -295,12 +295,12 @@ export default function QRScannerModal({
                 onClick={handleToggleTorch}
                 className={`flex items-center gap-1 text-[11px] px-2.5 py-1 border transition-all cursor-pointer font-bold ${
                   torchOn 
-                    ? 'bg-cyber-yellow text-black border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.6)]' 
-                    : 'bg-cyber-darker border-cyber-yellow/40 text-cyber-yellow hover:bg-cyber-yellow/20'
+                    ? 'bg-primary text-black border-primary shadow-[0_0_12px_rgba(252,238,10,0.6)]' 
+                    : 'bg-sunken border-primary/40 text-primary hover:bg-primary/20'
                 }`}
                 title={torchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On'}
               >
-                {torchOn ? <ZapOff className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5 text-cyber-yellow" />}
+                {torchOn ? <ZapOff className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5 text-primary" />}
                 <span>{torchOn ? 'LIGHT ON' : 'TORCH'}</span>
               </button>
             )}
@@ -309,7 +309,7 @@ export default function QRScannerModal({
               <button
                 type="button"
                 onClick={handleFlipCamera}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 bg-cyber-darker border border-cyber-yellow/40 text-cyber-yellow hover:bg-cyber-yellow hover:text-black transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-[11px] px-2 py-1 bg-sunken border border-primary/40 text-primary hover:bg-primary hover:text-black transition-colors cursor-pointer"
                 title="Switch Camera"
               >
                 <FlipHorizontal className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export default function QRScannerModal({
         </div>
 
         {/* Live Camera Viewfinder (Direct HTML5 Video element) */}
-        <div className="relative mb-3 border-2 border-cyber-yellow/80 overflow-hidden bg-black min-h-[260px] max-h-[340px] flex items-center justify-center">
+        <div className="relative mb-3 border-2 border-primary/80 overflow-hidden bg-black min-h-[260px] max-h-[340px] flex items-center justify-center">
           
           <video 
             ref={videoRef}
@@ -331,9 +331,9 @@ export default function QRScannerModal({
 
           {/* State Overlays */}
           {scanState === 'verifying' && (
-            <div className="absolute inset-0 bg-cyber-yellow/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
-              <RefreshCw className="w-16 h-16 text-cyber-yellow mb-2 animate-spin drop-shadow-[0_0_12px_rgba(252,238,10,0.8)]" />
-              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-cyber-yellow text-cyber-yellow shadow-lg">
+            <div className="absolute inset-0 bg-primary/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
+              <RefreshCw className="w-16 h-16 text-primary mb-2 animate-spin drop-shadow-[0_0_12px_rgba(252,238,10,0.8)]" />
+              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-primary text-primary shadow-lg">
                 VERIFYING...
               </div>
             </div>
@@ -360,35 +360,35 @@ export default function QRScannerModal({
           {/* Cyberpunk HUD Reticle & Laser Sweep */}
           {scanState === 'idle' && (
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 z-20">
-              <div className="flex justify-between items-center text-cyber-yellow/90 text-[10px] bg-black/75 px-2 py-1 border border-cyber-yellow/30">
+              <div className="flex justify-between items-center text-primary/90 text-[10px] bg-black/75 px-2 py-1 border border-primary/30">
                 <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-2 h-2 rounded-full ${isScanningActive ? 'bg-cyber-green animate-ping' : 'bg-cyber-yellow'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${isScanningActive ? 'bg-success animate-ping' : 'bg-primary'}`}></span>
                   {isScanningActive ? 'SENSOR ACTIVE' : 'INITIALIZING...'}
                 </span>
-                <span className="text-[9px] text-cyber-cyan flex items-center gap-1">
-                  <Gauge className="w-3 h-3 text-cyber-cyan" />
+                <span className="text-[9px] text-accent flex items-center gap-1">
+                  <Gauge className="w-3 h-3 text-accent" />
                   TURBO DECODER
                 </span>
               </div>
 
               {/* Central Target Reticle & High-speed Laser Sweep */}
               <div className="relative flex items-center justify-center my-auto">
-                <div className="relative w-48 h-48 rounded border border-cyber-yellow/40 flex items-center justify-center shadow-[0_0_20px_rgba(252,238,10,0.15)]">
+                <div className="relative w-48 h-48 rounded border border-primary/40 flex items-center justify-center shadow-[0_0_20px_rgba(252,238,10,0.15)]">
                   {/* Corner Reticle Accents */}
-                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-cyber-yellow"></div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-cyber-yellow"></div>
-                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-cyber-yellow"></div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-cyber-yellow"></div>
+                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-primary"></div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-primary"></div>
+                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-primary"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-primary"></div>
                   
                   {/* Center Crosshair */}
-                  <Crosshair className="w-6 h-6 text-cyber-yellow/40" />
+                  <Crosshair className="w-6 h-6 text-primary/40" />
 
                   {/* Laser Sweep Beam */}
-                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyber-cyan to-transparent shadow-[0_0_10px_#00f0ff] laser-beam pointer-events-none"></div>
+                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent shadow-[0_0_10px_#00f0ff] laser-beam pointer-events-none"></div>
                 </div>
               </div>
 
-              <div className="text-center text-[10px] text-cyber-yellow font-bold tracking-widest bg-black/85 py-1 border-t border-cyber-yellow/30">
+              <div className="text-center text-[10px] text-primary font-bold tracking-widest bg-black/85 py-1 border-t border-primary/30">
                 ALIGN QR CODE IN RETICLE
               </div>
             </div>
@@ -397,18 +397,18 @@ export default function QRScannerModal({
 
         {/* Camera Error Alert */}
         {scanFailed && (
-          <div className="bg-cyber-pink/20 border border-cyber-pink text-cyber-pink px-3 py-2 text-xs mb-3 flex items-start gap-2">
+          <div className="bg-danger/20 border border-danger text-danger px-3 py-2 text-xs mb-3 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <div className="text-[11px] leading-relaxed">{error}</div>
           </div>
         )}
 
         {/* Manual Input & Image Upload */}
-        <div className="space-y-3 pt-1 border-t border-cyber-border">
+        <div className="space-y-3 pt-1 border-t border-line">
           <form onSubmit={handleManualSubmit} className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1">
-                <KeyRound className="w-3 h-3 text-cyber-yellow" />
+              <label className="text-[11px] uppercase text-accent font-bold tracking-wider flex items-center gap-1">
+                <KeyRound className="w-3 h-3 text-primary" />
                 Or Paste / Type Code Directly
               </label>
               <span className="text-[9px] text-gray-400">If camera cannot focus</span>
@@ -420,12 +420,12 @@ export default function QRScannerModal({
                 value={manualCode}
                 onChange={e => setManualCode(e.target.value)}
                 placeholder="Paste SHA-256 token"
-                className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan text-foreground px-3 py-2 text-xs font-mono outline-none uppercase tracking-wider"
+                className="flex-1 bg-sunken border border-line focus:border-accent text-ink px-3 py-2 text-xs font-mono outline-none uppercase tracking-wider"
               />
               <button 
                 type="submit"
                 disabled={!manualCode.trim()}
-                className="bg-cyber-yellow text-black px-4 font-bold text-xs uppercase hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
+                className="bg-primary text-black px-4 font-bold text-xs uppercase hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
               >
                 Submit
               </button>
@@ -433,7 +433,7 @@ export default function QRScannerModal({
           </form>
 
           <div className="flex items-center justify-between pt-1">
-            <label className="text-[11px] text-gray-400 hover:text-cyber-cyan flex items-center gap-1.5 cursor-pointer">
+            <label className="text-[11px] text-gray-400 hover:text-accent flex items-center gap-1.5 cursor-pointer">
               <Upload className="w-3.5 h-3.5" />
               <span>Upload QR Photo from Gallery</span>
               <input 
@@ -447,7 +447,7 @@ export default function QRScannerModal({
             <button
               type="button"
               onClick={() => startScanner()}
-              className="text-[11px] text-cyber-yellow hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
               Reset Camera

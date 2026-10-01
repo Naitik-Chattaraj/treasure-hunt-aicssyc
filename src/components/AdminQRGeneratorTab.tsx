@@ -310,10 +310,10 @@ export default function AdminQRGeneratorTab({
   return (
     <div className="space-y-6 font-mono">
       {/* Top Banner Alert & Action Bar */}
-      <div className="bg-cyber-panel border-2 border-cyber-yellow p-4 sm:p-5 flex flex-wrap justify-between items-center gap-4 shadow-[0_0_20px_rgba(252,238,10,0.15)]">
+      <div className="bg-surface border-2 border-primary p-4 sm:p-5 flex flex-wrap justify-between items-center gap-4 shadow-[0_0_20px_rgba(252,238,10,0.15)]">
         <div>
-          <div className="flex items-center gap-2 text-cyber-yellow text-sm font-bold uppercase tracking-wider mb-1">
-            <QrCode className="w-5 h-5 text-cyber-yellow animate-pulse" />
+          <div className="flex items-center gap-2 text-primary text-sm font-bold uppercase tracking-wider mb-1">
+            <QrCode className="w-5 h-5 text-primary animate-pulse" />
             <span>MISSION CONTROL // QUESTION BLOCK QR CODE STUDIO</span>
           </div>
           <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
@@ -334,7 +334,7 @@ export default function AdminQRGeneratorTab({
 
       {/* CREATE NEW QUESTION BLOCK FORM (DRAWER) */}
       {showCreateBlock && (
-        <div className="bg-cyber-panel border-2 border-green-500 p-5 sm:p-6 shadow-[0_0_25px_rgba(34,197,94,0.2)]">
+        <div className="bg-surface border-2 border-green-500 p-5 sm:p-6 shadow-[0_0_25px_rgba(34,197,94,0.2)]">
           <div className="flex justify-between items-center border-b border-green-500/30 pb-3 mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-green-400" />
@@ -357,7 +357,7 @@ export default function AdminQRGeneratorTab({
                 <select
                   value={newBlockRoute}
                   onChange={(e) => setNewBlockRoute(Number(e.target.value) as 1 | 2)}
-                  className="w-full bg-cyber-darker border border-cyber-border focus:border-green-400 px-3 py-2 text-foreground text-xs"
+                  className="w-full bg-sunken border border-line focus:border-green-400 px-3 py-2 text-ink text-xs"
                 >
                   <option value={1}>Route 01 (Hippocrates Loop)</option>
                   <option value={2}>Route 02 (Hospital to Arts)</option>
@@ -369,7 +369,7 @@ export default function AdminQRGeneratorTab({
                 <select
                   value={newBlockStage}
                   onChange={(e) => setNewBlockStage(Number(e.target.value))}
-                  className="w-full bg-cyber-darker border border-cyber-border focus:border-green-400 px-3 py-2 text-foreground text-xs"
+                  className="w-full bg-sunken border border-line focus:border-green-400 px-3 py-2 text-ink text-xs"
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((stage) => (
                     <option key={stage} value={stage}>Node 0{stage} (Checkpoint #{newBlockRoute === 1 ? stage : stage + 12})</option>
@@ -384,7 +384,7 @@ export default function AdminQRGeneratorTab({
                   value={newBlockTitle}
                   onChange={(e) => setNewBlockTitle(e.target.value)}
                   placeholder="e.g. Clock Tower Archway"
-                  className="w-full bg-cyber-darker border border-cyber-border focus:border-green-400 px-3 py-2 text-foreground text-xs"
+                  className="w-full bg-sunken border border-line focus:border-green-400 px-3 py-2 text-ink text-xs"
                   required
                 />
               </div>
@@ -398,7 +398,7 @@ export default function AdminQRGeneratorTab({
                   value={newBlockArea}
                   onChange={(e) => setNewBlockArea(e.target.value)}
                   placeholder="e.g. Central Plaza Sector 04"
-                  className="w-full bg-cyber-darker border border-cyber-border focus:border-green-400 px-3 py-2 text-foreground text-xs"
+                  className="w-full bg-sunken border border-line focus:border-green-400 px-3 py-2 text-ink text-xs"
                   required
                 />
               </div>
@@ -410,14 +410,14 @@ export default function AdminQRGeneratorTab({
                   value={newBlockClue}
                   onChange={(e) => setNewBlockClue(e.target.value)}
                   placeholder="e.g. Find the monolith where shadows converge at solar noon."
-                  className="w-full bg-cyber-darker border border-cyber-border focus:border-green-400 px-3 py-2 text-foreground text-xs"
+                  className="w-full bg-sunken border border-line focus:border-green-400 px-3 py-2 text-ink text-xs"
                 />
               </div>
             </div>
 
             {/* Initial Question in Block */}
-            <div className="bg-cyber-darker p-3.5 border border-cyber-border space-y-3">
-              <span className="text-[10px] text-cyber-yellow font-bold uppercase flex items-center gap-1">
+            <div className="bg-sunken p-3.5 border border-line space-y-3">
+              <span className="text-[10px] text-primary font-bold uppercase flex items-center gap-1">
                 <HelpCircle className="w-3.5 h-3.5" /> Initial Question for this Block&apos;s Pool (Optional):
               </span>
 
@@ -427,7 +427,7 @@ export default function AdminQRGeneratorTab({
                   <select
                     value={newBlockType}
                     onChange={(e) => setNewBlockType(e.target.value as any)}
-                    className="w-full bg-black border border-cyber-border focus:border-green-400 px-2.5 py-1.5 text-foreground text-xs"
+                    className="w-full bg-black border border-line focus:border-green-400 px-2.5 py-1.5 text-ink text-xs"
                   >
                     <option value="passcode">Passcode</option>
                     <option value="mcq">Multiple Choice</option>
@@ -442,7 +442,7 @@ export default function AdminQRGeneratorTab({
                     value={newBlockQuestion}
                     onChange={(e) => setNewBlockQuestion(e.target.value)}
                     placeholder="e.g. What is the hexadecimal code etched beneath the plaque?"
-                    className="w-full bg-black border border-cyber-border focus:border-green-400 px-2.5 py-1.5 text-foreground text-xs"
+                    className="w-full bg-black border border-line focus:border-green-400 px-2.5 py-1.5 text-ink text-xs"
                   />
                 </div>
               </div>
@@ -454,13 +454,13 @@ export default function AdminQRGeneratorTab({
                   value={newBlockAnswer}
                   onChange={(e) => setNewBlockAnswer(e.target.value)}
                   placeholder="e.g. 0x4F9B"
-                  className="w-full bg-black border border-cyber-border focus:border-green-400 px-2.5 py-1.5 text-foreground text-xs font-mono uppercase"
+                  className="w-full bg-black border border-line focus:border-green-400 px-2.5 py-1.5 text-ink text-xs font-mono uppercase"
                 />
               </div>
             </div>
 
             {createStatus && (
-              <div className={`p-3 text-xs font-bold ${createStatus.startsWith('SUCCESS') ? 'bg-green-500/20 text-green-400 border border-green-500' : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow'}`}>
+              <div className={`p-3 text-xs font-bold ${createStatus.startsWith('SUCCESS') ? 'bg-green-500/20 text-green-400 border border-green-500' : 'bg-primary/20 text-primary border border-primary'}`}>
                 {createStatus}
               </div>
             )}
@@ -477,7 +477,7 @@ export default function AdminQRGeneratorTab({
                     setSelectedCpId(createdResult.id);
                     setShowCreateBlock(false);
                   }}
-                  className="text-cyber-yellow underline font-bold"
+                  className="text-primary underline font-bold"
                 >
                   View in Studio &rarr;
                 </button>
@@ -495,7 +495,7 @@ export default function AdminQRGeneratorTab({
               <button
                 type="button"
                 onClick={() => setShowCreateBlock(false)}
-                className="border border-cyber-border text-gray-400 hover:text-white px-4 py-2.5 text-xs uppercase"
+                className="border border-line text-gray-400 hover:text-white px-4 py-2.5 text-xs uppercase"
               >
                 Cancel
               </button>
@@ -509,9 +509,9 @@ export default function AdminQRGeneratorTab({
         
         {/* Left Column: Question Block Selector & Filter */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-cyber-panel border border-cyber-border p-4 space-y-3">
+          <div className="bg-surface border border-line p-4 space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-cyber-cyan flex items-center gap-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
                 <Compass className="w-4 h-4" />
                 Select Question Block
               </h3>
@@ -523,7 +523,7 @@ export default function AdminQRGeneratorTab({
               <button
                 onClick={() => setSelectedRoute(1)}
                 className={`flex-1 py-1.5 text-[11px] font-bold uppercase border transition-colors cursor-pointer ${
-                  selectedRoute === 1 ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-cyber-darker text-gray-400 border-cyber-border hover:border-cyan-400'
+                  selectedRoute === 1 ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-sunken text-gray-400 border-line hover:border-cyan-400'
                 }`}
               >
                 Route 1
@@ -531,7 +531,7 @@ export default function AdminQRGeneratorTab({
               <button
                 onClick={() => setSelectedRoute(2)}
                 className={`flex-1 py-1.5 text-[11px] font-bold uppercase border transition-colors cursor-pointer ${
-                  selectedRoute === 2 ? 'bg-purple-500 text-white border-purple-400' : 'bg-cyber-darker text-gray-400 border-cyber-border hover:border-purple-400'
+                  selectedRoute === 2 ? 'bg-purple-500 text-white border-purple-400' : 'bg-sunken text-gray-400 border-line hover:border-purple-400'
                 }`}
               >
                 Route 2
@@ -539,7 +539,7 @@ export default function AdminQRGeneratorTab({
               <button
                 onClick={() => setSelectedRoute('all')}
                 className={`flex-1 py-1.5 text-[11px] font-bold uppercase border transition-colors cursor-pointer ${
-                  selectedRoute === 'all' ? 'bg-yellow-400 text-black border-yellow-300' : 'bg-cyber-darker text-gray-400 border-cyber-border hover:border-yellow-400'
+                  selectedRoute === 'all' ? 'bg-yellow-400 text-black border-yellow-300' : 'bg-sunken text-gray-400 border-line hover:border-yellow-400'
                 }`}
               >
                 All 24
@@ -554,7 +554,7 @@ export default function AdminQRGeneratorTab({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search node title, sector, token..."
-                className="w-full bg-cyber-darker border border-cyber-border focus:border-cyber-cyan pl-8 pr-3 py-1.5 text-xs text-foreground outline-none"
+                className="w-full bg-sunken border border-line focus:border-accent pl-8 pr-3 py-1.5 text-xs text-ink outline-none"
               />
             </div>
 
@@ -575,8 +575,8 @@ export default function AdminQRGeneratorTab({
                     }}
                     className={`p-3 border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       isSelected
-                        ? 'bg-cyber-yellow/15 border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.2)]'
-                        : 'bg-cyber-darker border-cyber-border hover:border-cyber-cyan/50'
+                        ? 'bg-primary/15 border-primary shadow-[0_0_12px_rgba(252,238,10,0.2)]'
+                        : 'bg-sunken border-line hover:border-accent/50'
                     }`}
                   >
                     <div className="flex-1 min-w-0">
@@ -588,12 +588,12 @@ export default function AdminQRGeneratorTab({
                         </span>
                         <span className="text-[10px] text-gray-400 truncate">{cp.area}</span>
                       </div>
-                      <div className="text-xs font-bold text-foreground truncate">{cp.title}</div>
+                      <div className="text-xs font-bold text-ink truncate">{cp.title}</div>
                       <div className="text-[10px] text-gray-500 font-mono truncate mt-0.5">{cp.qr_hash}</div>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] bg-cyber-panel px-1.5 py-0.5 border border-cyber-border text-gray-300">
+                      <span className="text-[10px] bg-surface px-1.5 py-0.5 border border-line text-gray-300">
                         {qCount} Qs
                       </span>
                     </div>
@@ -606,7 +606,7 @@ export default function AdminQRGeneratorTab({
 
         {/* Right Column: Live Interactive QR Generator & Sticker Preview */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="bg-cyber-panel border-2 border-cyber-cyan p-5 sm:p-6 shadow-[0_0_25px_rgba(0,240,255,0.15)] flex flex-col items-center text-center">
+          <div className="bg-surface border-2 border-accent p-5 sm:p-6 shadow-[0_0_25px_rgba(0,240,255,0.15)] flex flex-col items-center text-center">
             
             {/* Header info */}
             <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
@@ -615,15 +615,15 @@ export default function AdminQRGeneratorTab({
               }`}>
                 ROUTE 0{routeNumber} // NODE 0{stageNumber}
               </span>
-              <span className="text-xs bg-cyber-darker text-gray-300 px-2.5 py-1 border border-cyber-border font-bold">
+              <span className="text-xs bg-sunken text-gray-300 px-2.5 py-1 border border-line font-bold">
                 CHECKPOINT #{selectedCheckpoint?.id || 1}
               </span>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-ink mb-1">
               {selectedCheckpoint?.title || 'Selected Checkpoint'}
             </h2>
-            <div className="text-xs text-cyber-yellow font-bold uppercase mb-4 tracking-wider">
+            <div className="text-xs text-primary font-bold uppercase mb-4 tracking-wider">
               {selectedCheckpoint?.area || 'Sector Area'}
             </div>
 
@@ -640,18 +640,18 @@ export default function AdminQRGeneratorTab({
             </div>
 
             {/* Active Encoded Token */}
-            <div className="w-full max-w-lg bg-cyber-darker p-3 border border-cyber-border text-left text-xs mb-4">
+            <div className="w-full max-w-lg bg-sunken p-3 border border-line text-left text-xs mb-4">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] text-gray-400 uppercase font-bold">Encoded QR Token (Sent to Server):</span>
                 <button
                   onClick={() => handleCopy(activeQrCodeValue)}
-                  className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer bg-cyber-panel px-2 py-0.5 border border-cyber-cyan/40"
+                  className="text-[10px] text-accent hover:text-white flex items-center gap-1 cursor-pointer bg-surface px-2 py-0.5 border border-accent/40"
                 >
                   {copiedToken === activeQrCodeValue ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                   <span>{copiedToken === activeQrCodeValue ? 'Copied!' : 'Copy'}</span>
                 </button>
               </div>
-              <code className="text-xs text-cyber-yellow break-all block font-mono bg-black/60 p-2 border border-cyber-border/40 font-bold">
+              <code className="text-xs text-primary break-all block font-mono bg-black/60 p-2 border border-line/40 font-bold">
                 {activeQrCodeValue}
               </code>
             </div>
@@ -667,13 +667,13 @@ export default function AdminQRGeneratorTab({
                   value={customToken}
                   onChange={(e) => setCustomToken(e.target.value)}
                   placeholder="Type any custom string or URL to render live QR..."
-                  className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan px-3 py-1.5 text-xs text-foreground font-mono outline-none"
+                  className="flex-1 bg-sunken border border-line focus:border-accent px-3 py-1.5 text-xs text-ink font-mono outline-none"
                 />
                 {customToken && (
                   <button
                     type="button"
                     onClick={() => setCustomToken('')}
-                    className="px-2 py-1 bg-cyber-darker border border-cyber-border text-gray-400 hover:text-white text-xs"
+                    className="px-2 py-1 bg-sunken border border-line text-gray-400 hover:text-white text-xs"
                   >
                     Reset
                   </button>
@@ -682,13 +682,13 @@ export default function AdminQRGeneratorTab({
             </div>
 
             {/* Generator Customization Settings */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs bg-cyber-darker p-3 border border-cyber-border w-full max-w-lg mb-5">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs bg-sunken p-3 border border-line w-full max-w-lg mb-5">
               <div className="flex items-center gap-2">
                 <span className="text-gray-400 text-[10px] uppercase font-bold">QR Size:</span>
                 <select
                   value={qrSize}
                   onChange={(e) => setQrSize(Number(e.target.value))}
-                  className="bg-black border border-cyber-border px-2 py-1 text-foreground text-xs"
+                  className="bg-black border border-line px-2 py-1 text-ink text-xs"
                 >
                   <option value={180}>Compact (180px)</option>
                   <option value={240}>Standard (240px)</option>
@@ -702,7 +702,7 @@ export default function AdminQRGeneratorTab({
                 <select
                   value={errorLevel}
                   onChange={(e) => setErrorLevel(e.target.value as any)}
-                  className="bg-black border border-cyber-border px-2 py-1 text-foreground text-xs"
+                  className="bg-black border border-line px-2 py-1 text-ink text-xs"
                 >
                   <option value="L">L (7% Recovery)</option>
                   <option value="M">M (15% Recovery)</option>
@@ -716,7 +716,7 @@ export default function AdminQRGeneratorTab({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg mb-3">
               <button
                 onClick={handlePrintSelected}
-                className="flex items-center justify-center gap-2 bg-cyber-cyan text-black hover:bg-white font-extrabold py-3 px-4 text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+                className="flex items-center justify-center gap-2 bg-accent text-black hover:bg-white font-extrabold py-3 px-4 text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.4)]"
               >
                 <Printer className="w-4 h-4" />
                 Print Sticker
@@ -724,7 +724,7 @@ export default function AdminQRGeneratorTab({
 
               <button
                 onClick={handleDownloadSVG}
-                className="flex items-center justify-center gap-1.5 bg-cyber-panel hover:bg-cyber-darker text-cyber-cyan border border-cyber-cyan font-bold py-3 px-3 text-xs uppercase transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-surface hover:bg-sunken text-accent border border-accent font-bold py-3 px-3 text-xs uppercase transition-colors cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 Download SVG
@@ -732,7 +732,7 @@ export default function AdminQRGeneratorTab({
 
               <button
                 onClick={handleDownloadPNG}
-                className="flex items-center justify-center gap-1.5 bg-cyber-panel hover:bg-cyber-darker text-cyber-yellow border border-cyber-yellow font-bold py-3 px-3 text-xs uppercase transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-surface hover:bg-sunken text-primary border border-primary font-bold py-3 px-3 text-xs uppercase transition-colors cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 Download PNG
@@ -745,7 +745,7 @@ export default function AdminQRGeneratorTab({
                 <button
                   onClick={handleRegenerate}
                   disabled={regenerating}
-                  className="flex items-center gap-1.5 text-gray-400 hover:text-cyber-yellow text-xs uppercase cursor-pointer transition-colors"
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-primary text-xs uppercase cursor-pointer transition-colors"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
                   <span>Regenerate New Unique QR Token for this Node</span>
@@ -769,9 +769,9 @@ export default function AdminQRGeneratorTab({
       </div>
 
       {/* BATCH PRINT BAR */}
-      <div className="bg-cyber-panel border border-cyber-border p-4 flex flex-wrap justify-between items-center gap-3">
+      <div className="bg-surface border border-line p-4 flex flex-wrap justify-between items-center gap-3">
         <div>
-          <h4 className="text-xs font-bold uppercase text-cyber-yellow tracking-wider flex items-center gap-1.5">
+          <h4 className="text-xs font-bold uppercase text-primary tracking-wider flex items-center gap-1.5">
             <Printer className="w-4 h-4" />
             Batch Printing Campus QR Checkpoint Sheets
           </h4>

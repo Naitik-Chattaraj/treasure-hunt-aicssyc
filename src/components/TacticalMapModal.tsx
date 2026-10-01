@@ -47,24 +47,24 @@ export default function TacticalMapModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono transition-colors">
-      <div className="w-full max-w-2xl h-[82vh] bg-cyber-panel cyber-panel-border border-2 border-cyber-blue shadow-[0_0_30px_rgba(5,217,232,0.25)] relative flex flex-col overflow-hidden">
+      <div className="w-full max-w-2xl h-[82vh] bg-surface rounded-xl border-2 border-accent shadow-[0_0_30px_rgba(5,217,232,0.25)] relative flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-cyber-blue/30 bg-cyber-darker">
+        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-accent/30 bg-sunken">
           <div className="flex items-center gap-2">
-            <Navigation className="w-5 h-5 text-cyber-blue" />
+            <Navigation className="w-5 h-5 text-accent" />
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-cyber-blue tracking-widest uppercase">
+                <h2 className="text-base sm:text-lg font-bold text-accent tracking-widest uppercase">
                   Treasure Map
                 </h2>
                 <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${
-                  currentRoute === 1 ? 'bg-cyber-cyan text-cyber-dark' : 'bg-purple-500 text-white'
+                  currentRoute === 1 ? 'bg-accent text-on-primary' : 'bg-purple-500 text-white'
                 }`}>
                   Route 0{currentRoute}
                 </span>
               </div>
-              <p className="text-[10px] text-cyber-muted">
+              <p className="text-[10px] text-muted">
                 {currentRoute === 1 
                   ? 'ROUTE 1 (12 CHECKPOINTS)' 
                   : 'ROUTE 2 (12 CHECKPOINTS)'}
@@ -73,7 +73,7 @@ export default function TacticalMapModal({
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 text-cyber-muted hover:text-cyber-pink transition-colors cursor-pointer"
+            className="p-1.5 text-muted hover:text-danger transition-colors cursor-pointer"
             aria-label="Close Map"
           >
             <X className="w-5 h-5" />
@@ -81,7 +81,7 @@ export default function TacticalMapModal({
         </div>
 
         {/* Map Container */}
-        <div className="flex-1 relative overflow-hidden bg-cyber-dark p-4 flex flex-col justify-center">
+        <div className="flex-1 relative overflow-hidden bg-canvas p-4 flex flex-col justify-center">
           {/* Blueprint Grid Background */}
           <div 
             className="absolute inset-0 opacity-40" 
@@ -91,9 +91,9 @@ export default function TacticalMapModal({
             }}
           ></div>
           
-          <div className="absolute inset-4 border border-cyber-blue/30 pointer-events-none">
+          <div className="absolute inset-4 border border-accent/30 pointer-events-none">
             {/* Coordinate markings */}
-            <span className="absolute bottom-1 right-2 text-[9px] text-cyber-blue/70">
+            <span className="absolute bottom-1 right-2 text-[9px] text-accent/70">
               ROUTE {currentRoute}
             </span>
           </div>
@@ -104,14 +104,14 @@ export default function TacticalMapModal({
               const isCompleted = progress.completedNodes.some(n => n.nodeId === stageId);
               const isCurrent = progress.currentStage === stageId;
               
-              let styleClasses = 'bg-cyber-darker border-cyber-border text-cyber-muted'; // Locked
+              let styleClasses = 'bg-sunken border-line text-muted'; // Locked
               let glowEffect = '';
 
               if (isCompleted) {
-                styleClasses = 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan font-bold';
+                styleClasses = 'bg-accent/20 border-accent text-accent font-bold';
                 glowEffect = 'shadow-[0_0_12px_rgba(0,240,255,0.6)]';
               } else if (isCurrent) {
-                styleClasses = 'bg-cyber-yellow text-black border-cyber-yellow font-extrabold animate-pulse';
+                styleClasses = 'bg-primary text-black border-primary font-extrabold animate-pulse';
                 glowEffect = 'shadow-[0_0_18px_rgba(252,238,10,0.9)] z-20 scale-110';
               }
 
@@ -123,11 +123,11 @@ export default function TacticalMapModal({
                 >
                   {stageId}
                   {isCurrent && (
-                    <div className="absolute inset-0 border-2 border-cyber-yellow rounded-full animate-ping opacity-60"></div>
+                    <div className="absolute inset-0 border-2 border-primary rounded-full animate-ping opacity-60"></div>
                   )}
 
                   {/* Tooltip on hover/touch */}
-                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-cyber-cyan px-2.5 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
+                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-accent px-2.5 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
                     Node 0{stageId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ CURRENT' : '🔒'}
                   </div>
                 </div>
@@ -136,18 +136,18 @@ export default function TacticalMapModal({
           </div>
 
           {/* Legend */}
-          <div className="absolute bottom-6 left-6 bg-cyber-panel/90 border border-cyber-border p-2.5 text-[10px] space-y-1.5 shadow-md">
+          <div className="absolute bottom-6 left-6 bg-surface/90 border border-line p-2.5 text-[10px] space-y-1.5 shadow-md">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-cyber-yellow shadow-[0_0_6px_rgba(252,238,10,0.8)]"></div> 
-              <span className="font-bold text-cyber-yellow">CURRENT (CHECKPOINT {Math.min(progress.currentStage, 12)})</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_6px_rgba(252,238,10,0.8)]"></div> 
+              <span className="font-bold text-primary">CURRENT (CHECKPOINT {Math.min(progress.currentStage, 12)})</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-cyber-cyan shadow-[0_0_6px_rgba(0,240,255,0.8)]"></div> 
-              <span className="text-cyber-cyan">CLEARED</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_6px_rgba(0,240,255,0.8)]"></div> 
+              <span className="text-accent">CLEARED</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div> 
-              <span className="text-cyber-muted">LOCKED</span>
+              <span className="text-muted">LOCKED</span>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 /*
  * AICSSYC Treasure Hunt design tokens.
  * Palette derived from the triadic olive-gray pair P0895 (dark) / P0095 (light):
- * amber = treasure / primary actions, jade = Route 1, lavender = Route 2.
+ * amber = treasure / primary actions, jade = accent and Route 1, lavender = Route 2.
  * Shades are tuned so every text colour meets WCAG AA (>= 4.5:1) on every surface.
  * Components use the semantic names below; only these values change between themes.
  */
@@ -24,7 +24,8 @@
   --primary-hover: #E2A653;
   --on-primary: #1A1206;
 
-  --route-1: #52E0C4;
+  --accent: #52E0C4;
+  --route-1: var(--accent);
   --route-2: #C7A6EA;
   --success: #7DCB7F;
   --danger: #F2745F;
@@ -49,7 +50,8 @@ html.light {
   --primary-hover: #6F4214;
   --on-primary: #FFFDF8;
 
-  --route-1: #086A59;
+  --accent: #086A59;
+  --route-1: var(--accent);
   --route-2: #6A4C8C;
   --success: #276C2B;
   --danger: #B0281D;
@@ -70,24 +72,12 @@ html.light {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
   --color-route-1: var(--route-1);
   --color-route-2: var(--route-2);
   --color-success: var(--success);
   --color-danger: var(--danger);
 
-  /* Temporary aliases for the previous cyber-* class names; removed once all pages are migrated */
-  --color-background: var(--canvas);
-  --color-foreground: var(--ink);
-  --color-cyber-dark: var(--canvas);
-  --color-cyber-darker: var(--sunken);
-  --color-cyber-panel: var(--surface);
-  --color-cyber-card: var(--surface-2);
-  --color-cyber-border: var(--line);
-  --color-cyber-muted: var(--muted);
-  --color-cyber-yellow: var(--primary);
-  --color-cyber-cyan: var(--route-1);
-  --color-cyber-blue: var(--route-1);
-  --color-cyber-pink: var(--danger);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
@@ -133,20 +123,6 @@ h1, h2, h3, h4 {
   background-image:
     repeating-radial-gradient(circle at 15% 20%, transparent 0 22px, var(--map-line) 22px 23px),
     repeating-radial-gradient(circle at 85% 75%, transparent 0 30px, var(--map-line) 30px 31px);
-}
-
-/* Legacy cyberpunk effects: neutralised until their usages are removed */
-.cyber-crt-text,
-.cyber-glitch-text {
-  font-family: var(--font-display);
-}
-.cyber-panel-border,
-.cyber-button-border {
-  border-radius: 0.5rem;
-}
-.scanline,
-.overlay-scanlines {
-  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

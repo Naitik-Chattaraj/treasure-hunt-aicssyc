@@ -278,36 +278,35 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex items-center justify-center p-4 relative overflow-hidden transition-colors">
-      <div className="overlay-scanlines"></div>
+    <main className="min-h-screen bg-canvas text-ink flex items-center justify-center p-4 relative overflow-hidden transition-colors">
       
       {/* Top Controls Bar */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      <div className="z-10 w-full max-w-md bg-cyber-panel cyber-panel-border border-t-2 border-b-2 border-cyber-cyan p-6 sm:p-8 shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all">
+      <div className="z-10 w-full max-w-md bg-surface rounded-xl border-t-2 border-b-2 border-accent p-6 sm:p-8 shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all">
         <div className="flex justify-center mb-4">
-          <Terminal className="w-12 h-12 text-cyber-cyan animate-pulse" />
+          <Terminal className="w-12 h-12 text-accent animate-pulse" />
         </div>
         
-        <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest cyber-crt-text text-cyber-cyan uppercase font-mono">
+        <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest text-accent uppercase font-mono">
           TREASURE HUNT 2026
         </h1>
-        <p className="text-center text-xs tracking-widest text-cyber-muted mb-4 font-mono">
+        <p className="text-center text-xs tracking-widest text-muted mb-4 font-mono">
           AICSSYC // PARTICIPANT LOGIN
         </p>
 
         {/* 4-5 Members Role Banner */}
-        <div className="bg-cyber-darker border border-cyber-cyan/20 p-3 mb-6 text-center text-[12px] font-mono text-gray-300 rounded">
-          <span className="text-cyber-yellow font-bold">TEAM FORMATION (4-5 MEMBERS):</span>
-          <div className="text-[11px] text-cyber-muted mt-1">
+        <div className="bg-sunken border border-accent/20 p-3 mb-6 text-center text-[12px] font-mono text-gray-300 rounded">
+          <span className="text-primary font-bold">TEAM FORMATION (4-5 MEMBERS):</span>
+          <div className="text-[11px] text-muted mt-1">
             2 Base Decoders + 2-3 Field Scouts
           </div>
         </div>
 
         {authError && (
-          <div className="bg-cyber-pink/15 border border-cyber-pink text-cyber-pink px-4 py-2.5 mb-6 font-mono text-xs uppercase flex items-center gap-2">
+          <div className="bg-danger/15 border border-danger text-danger px-4 py-2.5 mb-6 font-mono text-xs uppercase flex items-center gap-2">
             <Lock className="w-4 h-4 shrink-0" />
             <span>{authError}</span>
           </div>
@@ -315,23 +314,23 @@ export default function LoginPage() {
 
         {pendingApproval ? (
           <div className="space-y-6 text-center font-mono">
-            <div className="p-5 bg-cyber-darker border border-cyber-yellow/60 text-cyber-yellow relative">
-              <Clock className="w-10 h-10 mx-auto mb-3 animate-spin text-cyber-yellow" style={{ animationDuration: '6s' }} />
+            <div className="p-5 bg-sunken border border-primary/60 text-primary relative">
+              <Clock className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" style={{ animationDuration: '6s' }} />
               <h2 className="text-sm font-bold tracking-widest uppercase mb-1">
                 APPROVAL PENDING
               </h2>
               <p className="text-xs text-gray-300 leading-relaxed mt-2">
-                Team <span className="text-cyber-yellow font-bold">{teamName}</span> is pending approval.
+                Team <span className="text-primary font-bold">{teamName}</span> is pending approval.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
-                An organizer will approve your team and provide a <strong className="text-cyber-cyan">6-digit access code</strong> for login.
+                An organizer will approve your team and provide a <strong className="text-accent">6-digit access code</strong> for login.
               </p>
             </div>
 
             <button
               onClick={handleManualCheck}
               disabled={checkingStatus}
-              className="w-full cyber-button-border bg-cyber-yellow hover:bg-yellow-400 text-cyber-dark font-bold text-sm py-3 uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-primary hover:bg-yellow-400 text-on-primary font-bold text-sm py-3 uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${checkingStatus ? 'animate-spin' : ''}`} />
               {checkingStatus ? 'Checking...' : 'CHECK STATUS NOW'}
@@ -342,17 +341,17 @@ export default function LoginPage() {
                 setPendingApproval(false);
                 setIsLoginMode(true);
               }}
-              className="text-xs text-gray-400 hover:text-cyber-cyan transition-colors underline cursor-pointer"
+              className="text-xs text-gray-400 hover:text-accent transition-colors underline cursor-pointer"
             >
               Back to login (I have my access code)
             </button>
           </div>
         ) : (
           <>
-            <div className="flex w-full mb-8 border-b border-cyber-border">
+            <div className="flex w-full mb-8 border-b border-line">
               <button
                 type="button"
-                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${!isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${!isLoginMode ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-white'}`}
                 onClick={() => { setIsLoginMode(false); setAuthError(''); }}
               >
                 <UserPlus className="w-4 h-4" />
@@ -360,7 +359,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${isLoginMode ? 'text-cyber-cyan border-b-2 border-cyber-cyan' : 'text-cyber-muted hover:text-white'}`}
+                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${isLoginMode ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-white'}`}
                 onClick={() => { setIsLoginMode(true); setAuthError(''); }}
               >
                 <LogIn className="w-4 h-4" />
@@ -372,7 +371,7 @@ export default function LoginPage() {
               {/* Team Name */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
                     Team Name
                   </label>
                   {touched.teamName && !fieldErrors.teamName && teamName.trim() && (
@@ -387,12 +386,12 @@ export default function LoginPage() {
                   value={teamName}
                   onChange={e => handleChange('teamName', e.target.value)}
                   onBlur={() => handleBlur('teamName')}
-                  className={`w-full bg-cyber-darker border ${
-                    fieldErrors.teamName ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                  className={`w-full bg-sunken border ${
+                    fieldErrors.teamName ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
+                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
                 />
                 {touched.teamName && fieldErrors.teamName && (
-                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
                     <AlertCircle className="w-3 h-3 shrink-0" />
                     {fieldErrors.teamName}
                   </p>
@@ -403,7 +402,7 @@ export default function LoginPage() {
             {!isLoginMode && (
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
                     Team Lead (Base Decoder)
                   </label>
                   {touched.teamLead && !fieldErrors.teamLead && teamLead.trim() && (
@@ -418,12 +417,12 @@ export default function LoginPage() {
                   value={teamLead}
                   onChange={e => handleChange('teamLead', e.target.value)}
                   onBlur={() => handleBlur('teamLead')}
-                  className={`w-full bg-cyber-darker border ${
-                    fieldErrors.teamLead ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                  className={`w-full bg-sunken border ${
+                    fieldErrors.teamLead ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
+                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
                 />
                 {touched.teamLead && fieldErrors.teamLead && (
-                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
                     <AlertCircle className="w-3 h-3 shrink-0" />
                     {fieldErrors.teamLead}
                   </p>
@@ -435,7 +434,7 @@ export default function LoginPage() {
             {isLoginMode && (
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
                     6-Digit Access Code
                   </label>
                   {touched.uid && !fieldErrors.uid && uid.trim() && (
@@ -450,12 +449,12 @@ export default function LoginPage() {
                   value={uid}
                   onChange={e => handleChange('uid', e.target.value.toUpperCase())}
                   onBlur={() => handleBlur('uid')}
-                  className={`w-full bg-cyber-darker border ${
-                    fieldErrors.uid ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                  } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500 uppercase`}
+                  className={`w-full bg-sunken border ${
+                    fieldErrors.uid ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
+                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500 uppercase`}
                 />
                 {touched.uid && fieldErrors.uid && (
-                  <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
                     <AlertCircle className="w-3 h-3 shrink-0" />
                     {fieldErrors.uid}
                   </p>
@@ -465,10 +464,10 @@ export default function LoginPage() {
 
             {/* Operative Name & Role Assignment on this Device */}
             {isLoginMode && (
-              <div className="space-y-3 pt-1 border-t border-cyber-border/60">
+              <div className="space-y-3 pt-1 border-t border-line/60">
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
+                    <label className="text-xs uppercase text-accent font-bold tracking-wider">
                       Team Leader's Name
                     </label>
                     {touched.operativeName && !fieldErrors.operativeName && operativeName.trim() && (
@@ -483,12 +482,12 @@ export default function LoginPage() {
                     value={operativeName}
                     onChange={e => handleChange('operativeName', e.target.value)}
                     onBlur={() => handleBlur('operativeName')}
-                    className={`w-full bg-cyber-darker border ${
-                      fieldErrors.operativeName ? 'border-cyber-pink focus:border-cyber-pink' : 'border-cyber-border focus:border-cyber-cyan'
-                    } text-foreground px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                    className={`w-full bg-sunken border ${
+                      fieldErrors.operativeName ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
+                    } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
                   />
                   {touched.operativeName && fieldErrors.operativeName && (
-                    <p className="text-[11px] text-cyber-pink mt-1 flex items-center gap-1 font-mono">
+                    <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
                       <AlertCircle className="w-3 h-3 shrink-0" />
                       {fieldErrors.operativeName}
                     </p>
@@ -496,7 +495,7 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-cyber-cyan font-bold tracking-wider mb-2">
+                  <label className="block text-xs uppercase text-accent font-bold tracking-wider mb-2">
                     Your Role
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -505,20 +504,20 @@ export default function LoginPage() {
                       onClick={() => setOperativeRole('Base Decoder')}
                       className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
                         operativeRole === 'Base Decoder'
-                          ? 'bg-cyber-cyan/15 border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.25)]'
-                          : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-cyan/50'
+                          ? 'bg-accent/15 border-accent shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                          : 'bg-sunken border-line text-gray-400 hover:border-accent/50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <BrainCircuit className={`w-5 h-5 ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-gray-400'}`} />
+                        <BrainCircuit className={`w-5 h-5 ${operativeRole === 'Base Decoder' ? 'text-accent' : 'text-gray-400'}`} />
                         <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
-                          operativeRole === 'Base Decoder' ? 'bg-cyber-cyan text-cyber-dark border-cyber-cyan' : 'border-gray-700 text-gray-500'
+                          operativeRole === 'Base Decoder' ? 'bg-accent text-on-primary border-accent' : 'border-gray-700 text-gray-500'
                         }`}>
                           Room
                         </span>
                       </div>
                       <div>
-                        <div className={`text-sm font-bold ${operativeRole === 'Base Decoder' ? 'text-cyber-cyan' : 'text-foreground'}`}>
+                        <div className={`text-sm font-bold ${operativeRole === 'Base Decoder' ? 'text-accent' : 'text-ink'}`}>
                           Base Decoder
                         </div>
                         <div className="text-[10px] text-gray-400 mt-1 leading-tight">
@@ -532,20 +531,20 @@ export default function LoginPage() {
                       onClick={() => setOperativeRole('Field Scout')}
                       className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
                         operativeRole === 'Field Scout'
-                          ? 'bg-cyber-yellow/15 border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.25)]'
-                          : 'bg-cyber-darker border-cyber-border text-gray-400 hover:border-cyber-yellow/50'
+                          ? 'bg-primary/15 border-primary shadow-[0_0_12px_rgba(252,238,10,0.25)]'
+                          : 'bg-sunken border-line text-gray-400 hover:border-primary/50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <Footprints className={`w-5 h-5 ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-gray-400'}`} />
+                        <Footprints className={`w-5 h-5 ${operativeRole === 'Field Scout' ? 'text-primary' : 'text-gray-400'}`} />
                         <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
-                          operativeRole === 'Field Scout' ? 'bg-cyber-yellow text-cyber-dark border-cyber-yellow' : 'border-gray-700 text-gray-500'
+                          operativeRole === 'Field Scout' ? 'bg-primary text-on-primary border-primary' : 'border-gray-700 text-gray-500'
                         }`}>
                           Campus
                         </span>
                       </div>
                       <div>
-                        <div className={`text-sm font-bold ${operativeRole === 'Field Scout' ? 'text-cyber-yellow' : 'text-foreground'}`}>
+                        <div className={`text-sm font-bold ${operativeRole === 'Field Scout' ? 'text-primary' : 'text-ink'}`}>
                           Field Scout
                         </div>
                         <div className="text-[10px] text-gray-400 mt-1 leading-tight">
@@ -567,10 +566,10 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowMembers(!showMembers)}
-                  className="w-full flex items-center justify-between text-xs text-cyber-cyan bg-cyber-darker border border-cyber-border p-3.5 rounded-sm hover:border-cyber-cyan transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between text-xs text-accent bg-sunken border border-line p-3.5 rounded-sm hover:border-accent transition-colors cursor-pointer"
                 >
                   <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
-                    <Users className="w-4 h-4 text-cyber-yellow" />
+                    <Users className="w-4 h-4 text-primary" />
                     Team Members ({members.length})
                   </span>
                   <span className="text-[10px] text-gray-400">
@@ -579,14 +578,14 @@ export default function LoginPage() {
                 </button>
 
                 {showMembers && (
-                  <div className="p-4 bg-cyber-darker border border-cyber-border/70 space-y-4 text-xs rounded-sm">
+                  <div className="p-4 bg-sunken border border-line/70 space-y-4 text-xs rounded-sm">
                     <p className="text-[11px] text-gray-400 mb-2">
                       4-5 members required
                     </p>
                     {members.map((m, idx) => (
-                      <div key={idx} className="flex flex-col gap-2 items-start border-b border-cyber-border/50 pb-3 mb-2">
+                      <div key={idx} className="flex flex-col gap-2 items-start border-b border-line/50 pb-3 mb-2">
                         <div className="flex w-full gap-2 items-center">
-                          <span className="text-[10px] text-cyber-cyan font-bold w-4">{idx + 1}.</span>
+                          <span className="text-[10px] text-accent font-bold w-4">{idx + 1}.</span>
                           <input
                             type="text"
                             placeholder={`Member ${idx + 1}`}
@@ -595,7 +594,7 @@ export default function LoginPage() {
                               const val = e.target.value;
                               setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
                             }}
-                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan"
+                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent"
                           />
                           <select
                             value={m.role}
@@ -603,7 +602,7 @@ export default function LoginPage() {
                               const val = e.target.value;
                               setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
                             }}
-                            className="bg-cyber-panel border border-cyber-border px-2 py-1.5 text-[11px] text-cyber-yellow outline-none"
+                            className="bg-surface border border-line px-2 py-1.5 text-[11px] text-primary outline-none"
                           >
                             <option value="Base Decoder">Base Decoder</option>
                             <option value="Field Scout">Field Scout</option>
@@ -612,7 +611,7 @@ export default function LoginPage() {
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(idx)}
-                              className="text-cyber-pink hover:text-white p-1 ml-auto cursor-pointer"
+                              className="text-danger hover:text-white p-1 ml-auto cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -627,7 +626,7 @@ export default function LoginPage() {
                               const val = e.target.value;
                               setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
                             }}
-                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent placeholder-gray-500"
                           />
                           <input
                             type="text"
@@ -637,7 +636,7 @@ export default function LoginPage() {
                               const val = e.target.value;
                               setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
                             }}
-                            className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
+                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent placeholder-gray-500"
                           />
                         </div>
                       </div>
@@ -647,7 +646,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={handleAddMember}
-                        className="w-full border border-dashed border-cyber-yellow/60 text-cyber-yellow hover:bg-cyber-yellow/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
+                        className="w-full border border-dashed border-primary/60 text-primary hover:bg-primary/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
                       >
                         <Plus className="w-3 h-3" /> Add 5th Member
                       </button>
@@ -656,9 +655,9 @@ export default function LoginPage() {
                 )}
 
                 {/* Device active role for registration */}
-                <div className="p-3 bg-cyber-darker border border-cyber-border">
-                  <label className="block text-[11px] uppercase text-cyber-cyan font-bold tracking-wider mb-2 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-cyber-yellow" />
+                <div className="p-3 bg-sunken border border-line">
+                  <label className="block text-[11px] uppercase text-accent font-bold tracking-wider mb-2 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-primary" />
                     This Device Role:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -670,8 +669,8 @@ export default function LoginPage() {
                       }}
                       className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         operativeRole === 'Base Decoder'
-                          ? 'bg-cyber-cyan text-cyber-dark border-cyber-cyan shadow-[0_0_10px_rgba(0,240,255,0.3)] font-extrabold'
-                          : 'bg-cyber-panel border-cyber-border text-gray-400 hover:border-cyber-cyan'
+                          ? 'bg-accent text-on-primary border-accent shadow-[0_0_10px_rgba(0,240,255,0.3)] font-extrabold'
+                          : 'bg-surface border-line text-gray-400 hover:border-accent'
                       }`}
                     >
                       <BrainCircuit className="w-3.5 h-3.5" />
@@ -686,8 +685,8 @@ export default function LoginPage() {
                       }}
                       className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         operativeRole === 'Field Scout'
-                          ? 'bg-cyber-yellow text-cyber-dark border-cyber-yellow shadow-[0_0_10px_rgba(252,238,10,0.3)] font-extrabold'
-                          : 'bg-cyber-panel border-cyber-border text-gray-400 hover:border-cyber-yellow'
+                          ? 'bg-primary text-on-primary border-primary shadow-[0_0_10px_rgba(252,238,10,0.3)] font-extrabold'
+                          : 'bg-surface border-line text-gray-400 hover:border-primary'
                       }`}
                     >
                       <Footprints className="w-3.5 h-3.5" />
@@ -701,7 +700,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full cyber-button-border bg-cyber-cyan hover:bg-cyber-blue text-cyber-dark font-bold text-base py-4 uppercase tracking-widest transition-all mt-6 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.2)] flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-accent hover:bg-accent text-on-primary font-bold text-base py-4 uppercase tracking-widest transition-all mt-6 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.2)] flex items-center justify-center gap-2"
             >
               <Zap className="w-5 h-5" />
               {loading ? 'TRANSMITTING CREDENTIALS...' : 'INITIALIZE LINK'}
@@ -710,10 +709,10 @@ export default function LoginPage() {
           </>
         )}
 
-        <div className="mt-6 pt-4 border-t border-cyber-border/40 text-center">
+        <div className="mt-6 pt-4 border-t border-line/40 text-center">
           <Link
             href="/admin/login"
-            className="text-[11px] text-gray-500 hover:text-cyber-pink transition-colors font-mono tracking-wider flex items-center justify-center gap-1.5"
+            className="text-[11px] text-gray-500 hover:text-danger transition-colors font-mono tracking-wider flex items-center justify-center gap-1.5"
           >
             <ShieldAlert className="w-3 h-3" />
             Staff / Admin Login

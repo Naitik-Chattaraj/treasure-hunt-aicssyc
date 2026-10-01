@@ -245,9 +245,9 @@ export default function HuntHUD() {
     await loadData(false);
   };
 
-  if (loading && !profile) return <div className="bg-cyber-dark min-h-screen"></div>;
+  if (loading && !profile) return <div className="bg-canvas min-h-screen"></div>;
 
-  if (!profile || !progress) return <div className="bg-cyber-dark min-h-screen"></div>;
+  if (!profile || !progress) return <div className="bg-canvas min-h-screen"></div>;
 
   if (progress.currentStage > 12) {
     return <VictoryScreen progress={progress} teamName={profile.teamName} />;
@@ -262,15 +262,14 @@ export default function HuntHUD() {
   const currentStageDisplay = progress.currentStage;
 
   return (
-    <main className="h-[100dvh] max-h-[100dvh] bg-cyber-dark text-foreground flex flex-col relative overflow-hidden font-mono transition-colors">
-      <div className="overlay-scanlines"></div>
+    <main className="h-[100dvh] max-h-[100dvh] bg-canvas text-ink flex flex-col relative overflow-hidden font-mono transition-colors">
       
       {/* Top Header */}
-      <header className="shrink-0 z-10 bg-cyber-panel border-b border-cyber-cyan/40 p-2 sm:p-3 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
+      <header className="shrink-0 z-10 bg-surface border-b border-accent/40 p-2 sm:p-3 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setShowProfile(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-cyber-dark transition-colors cyber-button-border text-xs sm:text-sm font-bold cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-sunken border border-accent text-accent hover:bg-accent hover:text-on-primary transition-colors rounded-lg text-xs sm:text-sm font-bold cursor-pointer"
             title="View Team Profile & Telemetry"
           >
             <User className="w-3.5 h-3.5" />
@@ -299,8 +298,8 @@ export default function HuntHUD() {
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
           <div className="text-right">
-            <div className="text-[9px] sm:text-[10px] text-cyber-muted font-bold tracking-widest uppercase">STAGE</div>
-            <div className="text-cyber-yellow font-bold tracking-widest text-sm sm:text-base animate-pulse" style={{ animationDuration: '2s' }}>
+            <div className="text-[9px] sm:text-[10px] text-muted font-bold tracking-widest uppercase">STAGE</div>
+            <div className="text-primary font-bold tracking-widest text-sm sm:text-base animate-pulse" style={{ animationDuration: '2s' }}>
               NODE {currentStageDisplay.toString().padStart(2, '0')}/12
             </div>
           </div>
@@ -309,8 +308,8 @@ export default function HuntHUD() {
 
       {/* Floating Notice Toast */}
       {scanNotice && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-cyber-darker border-2 border-cyber-cyan text-white p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
-          <AlertOctagon className="w-4 h-4 text-cyber-cyan shrink-0" />
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-sunken border-2 border-accent text-white p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
+          <AlertOctagon className="w-4 h-4 text-accent shrink-0" />
           <span className="leading-tight">{scanNotice}</span>
         </div>
       )}
@@ -331,8 +330,8 @@ export default function HuntHUD() {
           {/* Phase Status Banner (Field Scout vs Base Decoder) */}
           <div className={`p-3 border text-xs flex items-center shadow-md ${
             isQrUnlocked 
-              ? 'bg-cyber-yellow/15 border-cyber-yellow text-cyber-yellow'
-              : 'bg-cyber-cyan/15 border-cyber-cyan text-cyber-cyan'
+              ? 'bg-primary/15 border-primary text-primary'
+              : 'bg-accent/15 border-accent text-accent'
           }`}>
             <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
               {isQrUnlocked ? (
@@ -350,23 +349,23 @@ export default function HuntHUD() {
           </div>
 
           {/* Active Objective Card */}
-          <div className="cyber-panel-border bg-cyber-panel border-l-4 border-cyber-cyan p-4 sm:p-5 relative shadow-lg">
-            <div className="absolute top-0 right-0 bg-cyber-cyan text-cyber-dark text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
+          <div className="rounded-xl bg-surface border-l-4 border-accent p-4 sm:p-5 relative shadow-lg">
+            <div className="absolute top-0 right-0 bg-accent text-on-primary text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
               Node 0{currentStageDisplay}
             </div>
             
-            <div className="flex items-center gap-2 text-cyber-yellow text-xs font-bold uppercase tracking-widest mt-1">
-              <Crosshair className="w-4 h-4 text-cyber-cyan" />
+            <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest mt-1">
+              <Crosshair className="w-4 h-4 text-accent" />
               <span>{activeCheckpoint?.area || `Sector 0${currentStageDisplay}`}</span>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground mt-2 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-ink mt-2 mb-2">
               {activeCheckpoint?.title || `Node 0${currentStageDisplay}`}
             </h2>
             
             {/* Clue box for field runners */}
-            <div className="bg-cyber-darker p-3 border border-cyber-border/70 text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans mb-4">
-              <div className="text-[10px] text-cyber-cyan font-mono font-bold uppercase mb-1 flex items-center gap-1">
+            <div className="bg-sunken p-3 border border-line/70 text-xs sm:text-sm text-ink/90 leading-relaxed font-sans mb-4">
+              <div className="text-[10px] text-accent font-mono font-bold uppercase mb-1 flex items-center gap-1">
                 <Footprints className="w-3 h-3" /> Intel:
               </div>
               {activeCheckpoint?.clue}
@@ -392,8 +391,8 @@ export default function HuntHUD() {
                 </div>
 
                 {isFieldScout ? (
-                  <div className="text-[11px] text-cyber-yellow bg-cyber-darker/90 p-2.5 border border-cyber-yellow/40 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping shrink-0" style={{ animationDuration: '2s' }}></div>
+                  <div className="text-[11px] text-primary bg-sunken/90 p-2.5 border border-primary/40 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-ping shrink-0" style={{ animationDuration: '2s' }}></div>
                     <span>WAITING FOR DECODER...</span>
                   </div>
                 ) : (
@@ -404,8 +403,8 @@ export default function HuntHUD() {
                 )}
               </div>
             ) : (
-              <div className="p-2.5 bg-cyber-darker border border-cyber-border text-xs text-cyber-muted flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
+              <div className="p-2.5 bg-sunken border border-line text-xs text-muted flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span>
                   {isFieldScout 
                     ? `LOCATE AND SCAN QR`
@@ -418,36 +417,36 @@ export default function HuntHUD() {
           {/* Mini-Map Radar Widget */}
           <div 
             onClick={() => setShowMap(true)}
-            className="cursor-pointer group relative bg-cyber-panel border border-cyber-blue/50 hover:border-cyber-cyan p-3 cyber-panel-border transition-all shadow-md flex items-center justify-between"
+            className="cursor-pointer group relative bg-surface border border-accent/50 hover:border-accent p-3 rounded-xl transition-all shadow-md flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-full border-2 border-cyber-cyan/60 bg-cyber-darker flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyber-cyan/20 to-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-cyber-cyan z-10"></div>
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyber-yellow animate-ping" style={{ animationDuration: '3s' }}></div>
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyber-yellow"></div>
+              <div className="relative w-11 h-11 rounded-full border-2 border-accent/60 bg-sunken flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-accent/20 to-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
+                <div className="w-2 h-2 rounded-full bg-accent z-10"></div>
+                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-ping" style={{ animationDuration: '3s' }}></div>
+                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary"></div>
               </div>
 
               <div>
-                <div className="text-xs font-bold text-cyber-cyan group-hover:text-cyber-yellow transition-colors flex items-center gap-1.5 uppercase tracking-wider">
+                <div className="text-xs font-bold text-accent group-hover:text-primary transition-colors flex items-center gap-1.5 uppercase tracking-wider">
                   <Compass className="w-3.5 h-3.5" />
                   Treasure Map
                 </div>
-                <p className="text-[11px] text-cyber-muted">View Map</p>
+                <p className="text-[11px] text-muted">View Map</p>
               </div>
             </div>
 
-            <span className="text-[10px] uppercase font-bold text-cyber-cyan bg-cyber-cyan/10 border border-cyber-cyan/30 px-2 py-1">
+            <span className="text-[10px] uppercase font-bold text-accent bg-accent/10 border border-accent/30 px-2 py-1">
               MAP
             </span>
           </div>
 
           {/* Manual Code Input Box (Only for Base Decoders in Room) */}
           {isBaseDecoder && !isQrUnlocked && (
-            <div className="bg-cyber-panel border border-cyber-border p-3.5">
+            <div className="bg-surface border border-line p-3.5">
               <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowManualCode(!showManualCode)}>
-                <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1.5 cursor-pointer">
-                  <KeyRound className="w-3.5 h-3.5 text-cyber-yellow" />
+                <label className="text-xs uppercase text-accent font-bold tracking-wider flex items-center gap-1.5 cursor-pointer">
+                  <KeyRound className="w-3.5 h-3.5 text-primary" />
                   Manual Code
                 </label>
                 <span className="text-[10px] text-gray-400 hover:text-white transition-colors underline decoration-dashed">
@@ -462,12 +461,12 @@ export default function HuntHUD() {
                     value={manualCode}
                     onChange={e => setManualCode(e.target.value)}
                     placeholder="Enter QR token..."
-                    className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan px-3 py-2 text-xs font-mono text-foreground outline-none uppercase tracking-wider"
+                    className="flex-1 bg-sunken border border-line focus:border-accent px-3 py-2 text-xs font-mono text-ink outline-none uppercase tracking-wider"
                   />
                   <button
                     type="submit"
                     disabled={manualSubmitting || !manualCode.trim()}
-                    className="bg-cyber-cyan text-cyber-dark hover:bg-cyber-blue font-bold px-4 text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                    className="bg-accent text-on-primary hover:bg-accent font-bold px-4 text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
                   >
                     <Send className="w-3 h-3" />
                     Send
@@ -480,18 +479,18 @@ export default function HuntHUD() {
       </div>
 
       {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, role-tailored) */}
-      <div className="shrink-0 pb-6 pt-4 px-4 bg-cyber-panel/95 border-t border-cyber-cyan/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
+      <div className="shrink-0 pb-6 pt-4 px-4 bg-surface/95 border-t border-accent/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
         {isFieldScout ? (
           /* Field Scout View */
           isQrUnlocked ? (
-            <div className="w-full flex items-center justify-center gap-2.5 bg-cyber-darker border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
+            <div className="w-full flex items-center justify-center gap-2.5 bg-sunken border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
               <CheckCircle2 className="w-4 h-4" />
               <span>QR SCANNED // WAITING FOR DECODE</span>
             </div>
           ) : (
             <button
               onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-yellow text-cyber-dark hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-3 rounded-lg bg-primary text-on-primary hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
             >
               <ScanLine className="w-5 h-5" />
               Scan Checkpoint QR Code
@@ -500,14 +499,14 @@ export default function HuntHUD() {
         ) : (
           /* Base Decoder View */
           isQrUnlocked && !hasChallenge ? (
-            <div className="w-full flex items-center justify-center gap-2.5 bg-cyber-darker border-2 border-cyber-pink/70 text-cyber-pink py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest text-center">
+            <div className="w-full flex items-center justify-center gap-2.5 bg-sunken border-2 border-danger/70 text-danger py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest text-center">
               <AlertOctagon className="w-4 h-4 shrink-0" />
               <span>QR SCANNED // NO QUESTION SET FOR THIS NODE. CALL AN ORGANIZER</span>
             </div>
           ) : isQrUnlocked ? (
             <button
               onClick={() => setShowChallenge(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-3 rounded-lg bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
             >
               <BrainCircuit className="w-5 h-5" />
               SOLVE CHALLENGE
@@ -515,7 +514,7 @@ export default function HuntHUD() {
           ) : (
             <button
               onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-3 rounded-lg bg-accent/20 border border-accent text-accent hover:bg-accent hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
             >
               <ScanLine className="w-4 h-4" />
               AWAITING QR SCAN

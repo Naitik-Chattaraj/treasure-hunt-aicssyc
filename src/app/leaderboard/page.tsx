@@ -175,21 +175,20 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-hidden transition-colors">
-      <div className="overlay-scanlines"></div>
+    <main className="min-h-screen bg-canvas text-ink flex flex-col font-mono relative overflow-x-hidden transition-colors">
 
       {/* Header */}
-      <header className="z-10 bg-cyber-panel border-b border-cyber-yellow/40 p-4 sm:p-5 flex justify-between items-center shadow-[0_0_25px_rgba(252,238,10,0.15)]">
+      <header className="z-10 bg-surface border-b border-primary/40 p-4 sm:p-5 flex justify-between items-center shadow-[0_0_25px_rgba(252,238,10,0.15)]">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 border-2 border-cyber-yellow flex items-center justify-center bg-cyber-darker text-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.3)]">
+          <div className="w-12 h-12 border-2 border-primary flex items-center justify-center bg-sunken text-primary shadow-[0_0_15px_rgba(252,238,10,0.3)]">
             <Trophy className="w-6 h-6 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-cyber-yellow uppercase cyber-crt-text">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-primary uppercase">
                 LIVE LEADERBOARD
               </h1>
-              <span className="text-[10px] bg-cyber-yellow/20 border border-cyber-yellow text-cyber-yellow px-2 py-0.5 font-bold uppercase animate-pulse">
+              <span className="text-[10px] bg-primary/20 border border-primary text-primary px-2 py-0.5 font-bold uppercase animate-pulse">
                 REALTIME
               </span>
             </div>
@@ -200,14 +199,14 @@ export default function LeaderboardPage() {
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST SYNC</div>
-            <div className="text-xs text-cyber-cyan font-bold">
+            <div className="text-xs text-accent font-bold">
               {lastUpdated.toLocaleTimeString()}
             </div>
           </div>
           <button
             onClick={() => fetchLeaderboard(true)}
             disabled={isRefreshing}
-            className="p-2 border border-cyber-cyan/40 bg-cyber-darker hover:bg-cyber-cyan/15 text-cyber-cyan transition-colors flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
+            className="p-2 border border-accent/40 bg-sunken hover:bg-accent/15 text-accent transition-colors flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
             title="Refresh Leaderboard"
             aria-label="Refresh Leaderboard"
           >
@@ -225,24 +224,24 @@ export default function LeaderboardPage() {
         {leaderboard.filter(t => t.status === 'approved').length >= 3 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Rank 2 */}
-            <div className="order-2 md:order-1 bg-cyber-panel border border-gray-400/50 p-4 relative flex flex-col justify-between shadow-md">
+            <div className="order-2 md:order-1 bg-surface border border-gray-400/50 p-4 relative flex flex-col justify-between shadow-md">
               <div className="flex justify-between items-start">
                 <span className="text-xl font-bold text-gray-300">#02</span>
                 <Medal className="w-6 h-6 text-gray-300" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
+                <h3 className="font-bold text-base text-ink truncate flex items-center gap-1.5">
                   {leaderboard[1].teamName}
                   {leaderboard[1].assignedRoute && (
-                    <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
+                    <span className="text-[9px] bg-accent/15 text-accent border border-accent/40 px-1 py-0.2 font-mono">
                       R0{leaderboard[1].assignedRoute}
                     </span>
                   )}
                 </h3>
                 <div className="text-xs text-gray-400">Lead: {leaderboard[1].teamLead}</div>
               </div>
-              <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
-                <span className="text-cyber-cyan font-bold">
+              <div className="pt-2 border-t border-line flex justify-between text-xs">
+                <span className="text-accent font-bold">
                   {leaderboard[1].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[1].currentStage}/12`}
                 </span>
                 <span className="text-gray-300 font-bold">
@@ -252,27 +251,27 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Rank 1 (Gold) */}
-            <div className="order-1 md:order-2 bg-cyber-panel border-2 border-cyber-yellow p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(252,238,10,0.25)] -mt-2">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-yellow text-cyber-dark font-bold text-[10px] uppercase px-3 py-0.5 tracking-widest shadow-md flex items-center gap-1">
+            <div className="order-1 md:order-2 bg-surface border-2 border-primary p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(252,238,10,0.25)] -mt-2">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary font-bold text-[10px] uppercase px-3 py-0.5 tracking-widest shadow-md flex items-center gap-1">
                 <Trophy className="w-3 h-3" /> LEADER
               </div>
               <div className="flex justify-between items-start mt-1">
-                <span className="text-2xl font-bold text-cyber-yellow">#01</span>
-                <Trophy className="w-7 h-7 text-cyber-yellow animate-bounce" />
+                <span className="text-2xl font-bold text-primary">#01</span>
+                <Trophy className="w-7 h-7 text-primary animate-bounce" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-lg text-cyber-yellow truncate flex items-center gap-1.5">
+                <h3 className="font-bold text-lg text-primary truncate flex items-center gap-1.5">
                   {leaderboard[0].teamName}
                   {leaderboard[0].assignedRoute && (
-                    <span className="text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-1 py-0.2 font-mono">
+                    <span className="text-[9px] bg-primary/20 text-primary border border-primary/50 px-1 py-0.2 font-mono">
                       R0{leaderboard[0].assignedRoute}
                     </span>
                   )}
                 </h3>
                 <div className="text-xs text-gray-300">Lead: {leaderboard[0].teamLead}</div>
               </div>
-              <div className="pt-3 border-t border-cyber-yellow/40 flex justify-between text-xs">
-                <span className="text-cyber-yellow font-bold text-sm">
+              <div className="pt-3 border-t border-primary/40 flex justify-between text-xs">
+                <span className="text-primary font-bold text-sm">
                   {leaderboard[0].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[0].currentStage}/12`}
                 </span>
                 <span className="text-white font-bold text-sm">
@@ -282,13 +281,13 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Rank 3 */}
-            <div className="order-3 bg-cyber-panel border border-amber-600/50 p-4 relative flex flex-col justify-between shadow-md">
+            <div className="order-3 bg-surface border border-amber-600/50 p-4 relative flex flex-col justify-between shadow-md">
               <div className="flex justify-between items-start">
                 <span className="text-xl font-bold text-amber-500">#03</span>
                 <Medal className="w-6 h-6 text-amber-500" />
               </div>
               <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
+                <h3 className="font-bold text-base text-ink truncate flex items-center gap-1.5">
                   {leaderboard[2].teamName}
                   {leaderboard[2].assignedRoute && (
                     <span className="text-[9px] bg-amber-500/15 text-amber-500 border border-amber-500/40 px-1 py-0.2 font-mono">
@@ -298,8 +297,8 @@ export default function LeaderboardPage() {
                 </h3>
                 <div className="text-xs text-gray-400">Lead: {leaderboard[2].teamLead}</div>
               </div>
-              <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
-                <span className="text-cyber-cyan font-bold">
+              <div className="pt-2 border-t border-line flex justify-between text-xs">
+                <span className="text-accent font-bold">
                   {leaderboard[2].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[2].currentStage}/12`}
                 </span>
                 <span className="text-gray-300 font-bold">
@@ -311,21 +310,21 @@ export default function LeaderboardPage() {
         )}
 
         {/* Master Ranking Table */}
-        <div className="bg-cyber-panel border border-cyber-border overflow-hidden shadow-lg">
-          <div className="p-4 border-b border-cyber-border flex justify-between items-center bg-cyber-darker/60">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-yellow flex items-center gap-2">
-              <Zap className="w-4 h-4 text-cyber-yellow" />
+        <div className="bg-surface border border-line overflow-hidden shadow-lg">
+          <div className="p-4 border-b border-line flex justify-between items-center bg-sunken/60">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
               Standings ({leaderboard.length} Teams)
             </h2>
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Clock className="w-3.5 h-3.5 text-cyber-cyan" />
+              <Clock className="w-3.5 h-3.5 text-accent" />
               <span>Real-time client calculated</span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-cyber-darker text-gray-400 uppercase tracking-wider border-b border-cyber-border">
+              <thead className="bg-sunken text-gray-400 uppercase tracking-wider border-b border-line">
                 <tr>
                   <th className="p-4 w-16 text-center">Rank</th>
                   <th className="p-4">Team Name</th>
@@ -335,7 +334,7 @@ export default function LeaderboardPage() {
                   <th className="p-4 text-right">Elapsed Time</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-cyber-border/40">
+              <tbody className="divide-y divide-line/40">
                 {leaderboard.map((team, idx) => {
                   const rank = idx + 1;
                   const isDisqualified = team.status === 'rejected';
@@ -345,19 +344,19 @@ export default function LeaderboardPage() {
                   return (
                     <tr 
                       key={team.id} 
-                      className={`hover:bg-cyber-darker/80 transition-colors ${
+                      className={`hover:bg-sunken/80 transition-colors ${
                         isDisqualified
-                          ? 'bg-cyber-pink/5 opacity-70'
+                          ? 'bg-danger/5 opacity-70'
                           : rank === 1
-                          ? 'bg-cyber-yellow/5'
+                          ? 'bg-primary/5'
                           : ''
                       }`}
                     >
                       <td className="p-4 text-center font-bold text-sm">
                         {isDisqualified ? (
-                          <span className="text-cyber-pink font-bold">DQ</span>
+                          <span className="text-danger font-bold">DQ</span>
                         ) : rank === 1 ? (
-                          <span className="text-cyber-yellow font-bold flex items-center justify-center gap-1">
+                          <span className="text-primary font-bold flex items-center justify-center gap-1">
                             🥇 #1
                           </span>
                         ) : rank === 2 ? (
@@ -369,18 +368,18 @@ export default function LeaderboardPage() {
                         )}
                       </td>
 
-                      <td className="p-4 font-bold text-sm text-foreground">
+                      <td className="p-4 font-bold text-sm text-ink">
                         <div className="flex items-center gap-2">
-                          <span className={isDisqualified ? 'text-cyber-pink line-through' : rank === 1 ? 'text-cyber-yellow' : ''}>
+                          <span className={isDisqualified ? 'text-danger line-through' : rank === 1 ? 'text-primary' : ''}>
                             {team.teamName}
                           </span>
                           {team.assignedRoute && (
-                            <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
+                            <span className="text-[9px] bg-accent/15 text-accent border border-accent/40 px-1 py-0.2 font-mono">
                               R0{team.assignedRoute}
                             </span>
                           )}
                           {isDisqualified ? (
-                            <span className="text-[9px] bg-cyber-pink/20 text-cyber-pink border border-cyber-pink/50 px-1.5 py-0.2 font-bold uppercase flex items-center gap-1">
+                            <span className="text-[9px] bg-danger/20 text-danger border border-danger/50 px-1.5 py-0.2 font-bold uppercase flex items-center gap-1">
                               <ShieldAlert className="w-3 h-3" /> DISQUALIFIED
                             </span>
                           ) : isWinner ? (
@@ -394,14 +393,14 @@ export default function LeaderboardPage() {
                       <td className="p-4 text-gray-300">{team.teamLead}</td>
 
                       <td className="p-4 w-48">
-                        <div className="w-full bg-cyber-darker h-2 rounded-full overflow-hidden border border-cyber-border/80">
+                        <div className="w-full bg-sunken h-2 rounded-full overflow-hidden border border-line/80">
                           <div 
                             className={`h-full transition-all duration-500 ${
                               isDisqualified
-                                ? 'bg-cyber-pink/60'
+                                ? 'bg-danger/60'
                                 : isWinner
                                 ? 'bg-green-400'
-                                : 'bg-gradient-to-r from-cyber-cyan to-cyber-yellow'
+                                : 'bg-gradient-to-r from-accent to-primary'
                             }`}
                             style={{ width: `${isDisqualified ? 100 : isWinner ? 100 : progressPercent}%` }}
                           />
@@ -413,7 +412,7 @@ export default function LeaderboardPage() {
 
                       <td className="p-4 text-center font-bold">
                         {isDisqualified ? (
-                          <span className="text-cyber-pink flex items-center justify-center gap-1">
+                          <span className="text-danger flex items-center justify-center gap-1">
                             <ShieldAlert className="w-4 h-4" />
                             ELIMINATED
                           </span>
@@ -423,11 +422,11 @@ export default function LeaderboardPage() {
                             COMPLETED
                           </span>
                         ) : (
-                          <span className="text-cyber-cyan">NODE 0{team.currentStage}</span>
+                          <span className="text-accent">NODE 0{team.currentStage}</span>
                         )}
                       </td>
 
-                      <td className={`p-4 text-right font-bold text-sm ${isDisqualified ? 'text-cyber-pink/80' : 'text-cyber-yellow'}`}>
+                      <td className={`p-4 text-right font-bold text-sm ${isDisqualified ? 'text-danger/80' : 'text-primary'}`}>
                         {formatElapsedDisplay(
                           team.startTime,
                           team.completedAt ?? team.completed_at,

@@ -383,8 +383,8 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-cyber-dark text-foreground flex items-center justify-center font-mono">
-        <div className="flex items-center gap-3 text-cyber-cyan animate-pulse">
+      <main className="min-h-screen bg-canvas text-ink flex items-center justify-center font-mono">
+        <div className="flex items-center gap-3 text-accent animate-pulse">
           <RefreshCw className="w-6 h-6 animate-spin" />
           <span className="tracking-widest text-sm uppercase">Loading dashboard...</span>
         </div>
@@ -393,17 +393,16 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-clip transition-colors">
-      <div className="overlay-scanlines opacity-50 duration-1000"></div>
+    <main className="min-h-screen bg-canvas text-ink flex flex-col font-mono relative overflow-x-clip transition-colors">
 
       {/* Top Admin Header (Fixed on Top) */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-cyber-panel/95 backdrop-blur-md border-b border-cyber-pink/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_25px_rgba(0,0,0,0.85)]">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-surface/95 backdrop-blur-md border-b border-danger/50 p-3 sm:p-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4 shadow-[0_4px_25px_rgba(0,0,0,0.85)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 border-2 border-cyber-pink flex items-center justify-center bg-cyber-darker text-cyber-pink shadow-[0_0_10px_rgba(255,0,60,0.3)]">
+          <div className="w-10 h-10 border-2 border-danger flex items-center justify-center bg-sunken text-danger shadow-[0_0_10px_rgba(255,0,60,0.3)]">
             <Radio className="w-5 h-5 animate-[pulse_3s_ease-in-out_infinite]" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-widest text-cyber-pink cyber-crt-text uppercase flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-widest text-danger uppercase flex items-center gap-2">
               MISSION CONTROL TERMINAL
               
             </h1>
@@ -416,7 +415,7 @@ export default function AdminDashboard() {
 
           <button
             onClick={() => setShowAdminScanner(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-sunken border border-danger text-danger hover:bg-danger hover:text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.25)]"
             title="Scan & Verify QR"
           >
             <Camera className="w-3.5 h-3.5" />
@@ -426,7 +425,7 @@ export default function AdminDashboard() {
           <Link
             href="/leaderboard"
             target="_blank"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-yellow text-cyber-yellow hover:bg-cyber-yellow hover:text-cyber-dark text-xs font-bold transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-sunken border border-primary text-primary hover:bg-primary hover:text-on-primary text-xs font-bold transition-all"
             title="Live Leaderboard"
           >
             <Trophy className="w-3.5 h-3.5" />
@@ -437,7 +436,7 @@ export default function AdminDashboard() {
           <button
             onClick={() => fetchDashboardData()}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-cyber-dark text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-sunken border border-accent text-accent hover:bg-accent hover:text-on-primary text-xs font-bold transition-all cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>REFRESH</span>
@@ -447,7 +446,7 @@ export default function AdminDashboard() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-danger text-danger hover:bg-danger hover:text-white text-xs font-bold transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>LOGOUT</span>
@@ -462,40 +461,40 @@ export default function AdminDashboard() {
       <div className="flex-1 p-6 sm:p-8 z-10 max-w-7xl w-full mx-auto space-y-8">
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
+          <div className="bg-surface border border-line p-5 shadow-sm rounded-sm">
             <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TOTAL TEAMS</div>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{teams.length}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-ink mt-2">{teams.length}</div>
           </div>
 
-          <div className={`bg-cyber-panel border rounded-sm ${pendingTeams.length > 0 ? 'border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.2)]' : 'border-cyber-border'} p-5`}>
-            <div className="text-[10px] text-cyber-yellow uppercase font-bold tracking-wider flex items-center justify-between">
+          <div className={`bg-surface border rounded-sm ${pendingTeams.length > 0 ? 'border-primary shadow-[0_0_15px_rgba(252,238,10,0.2)]' : 'border-line'} p-5`}>
+            <div className="text-[10px] text-primary uppercase font-bold tracking-wider flex items-center justify-between">
               <span>PENDING</span>
-              {pendingTeams.length > 0 && <span className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping"></span>}
+              {pendingTeams.length > 0 && <span className="w-2 h-2 rounded-full bg-primary animate-ping"></span>}
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-cyber-yellow mt-2">{pendingTeams.length}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-primary mt-2">{pendingTeams.length}</div>
           </div>
 
-          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
-            <div className="text-[10px] text-cyber-cyan uppercase font-bold tracking-wider">ACTIVE</div>
-            <div className="text-2xl sm:text-3xl font-bold text-cyber-cyan mt-2">{activeHunting.length}</div>
+          <div className="bg-surface border border-line p-5 shadow-sm rounded-sm">
+            <div className="text-[10px] text-accent uppercase font-bold tracking-wider">ACTIVE</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent mt-2">{activeHunting.length}</div>
           </div>
 
-          <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
+          <div className="bg-surface border border-line p-5 shadow-sm rounded-sm">
             <div className="text-[10px] text-green-400 uppercase font-bold tracking-wider">FINISHED</div>
             <div className="text-2xl sm:text-3xl font-bold text-green-400 mt-2">{finishedTeams.length}</div>
           </div>
         </div>
 
-        <div className="flex flex-wrap border-b border-cyber-border gap-2">
+        <div className="flex flex-wrap border-b border-line gap-2">
           <button
             onClick={() => setActiveTab('teams')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'teams'
-                ? 'border-cyber-cyan text-cyber-cyan bg-cyber-panel shadow-[0_4px_12px_rgba(0,240,255,0.15)] font-extrabold'
-                : 'border-transparent text-gray-400 hover:text-foreground'
+                ? 'border-accent text-accent bg-surface shadow-[0_4px_12px_rgba(0,240,255,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-ink'
             }`}
           >
-            <Users className="w-4 h-4 text-cyber-cyan" />
+            <Users className="w-4 h-4 text-accent" />
             <span>TEAMS {pendingTeams.length > 0 && `(${pendingTeams.length})`}</span>
           </button>
 
@@ -503,11 +502,11 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('checkpoints')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'checkpoints'
-                ? 'border-cyber-pink text-cyber-pink bg-cyber-panel shadow-[0_4px_12px_rgba(255,0,60,0.15)] font-extrabold'
-                : 'border-transparent text-gray-400 hover:text-foreground'
+                ? 'border-danger text-danger bg-surface shadow-[0_4px_12px_rgba(255,0,60,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-ink'
             }`}
           >
-            <Layers className="w-4 h-4 text-cyber-pink" />
+            <Layers className="w-4 h-4 text-danger" />
             <span>CHECKPOINTS</span>
           </button>
 
@@ -515,11 +514,11 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('qr-generator')}
             className={`px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'qr-generator'
-                ? 'border-cyber-yellow text-cyber-yellow bg-cyber-panel shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
-                : 'border-transparent text-gray-400 hover:text-foreground'
+                ? 'border-primary text-primary bg-surface shadow-[0_4px_12px_rgba(252,238,10,0.15)] font-extrabold'
+                : 'border-transparent text-gray-400 hover:text-ink'
             }`}
           >
-            <QrCode className="w-4 h-4 text-cyber-yellow" />
+            <QrCode className="w-4 h-4 text-primary" />
             <span>QR STUDIO</span>
           </button>
         </div>
@@ -528,28 +527,28 @@ export default function AdminDashboard() {
         {activeTab === 'teams' && (
           <div className="space-y-8">
             {pendingTeams.length > 0 && (
-              <div className="bg-cyber-panel border-2 border-cyber-yellow p-5 sm:p-6 shadow-[0_0_20px_rgba(252,238,10,0.15)] rounded-sm">
-                <div className="flex items-center gap-2 text-cyber-yellow text-sm font-bold uppercase tracking-wider mb-5">
+              <div className="bg-surface border-2 border-primary p-5 sm:p-6 shadow-[0_0_20px_rgba(252,238,10,0.15)] rounded-sm">
+                <div className="flex items-center gap-2 text-primary text-sm font-bold uppercase tracking-wider mb-5">
                   <AlertTriangle className="w-5 h-5 shrink-0 animate-[pulse_2s_ease-in-out_infinite]" />
                   <span>{pendingTeams.length} Team(s) Pending Approval</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendingTeams.map((team) => (
-                    <div key={team.id} className="bg-cyber-darker border border-cyber-yellow/60 p-4 space-y-3 relative">
+                    <div key={team.id} className="bg-sunken border border-primary/60 p-4 space-y-3 relative">
                       <div className="flex justify-between items-start">
                         <div>
                           <button
                             onClick={() => setSquadModalTeam(team)}
-                            className="font-bold text-base text-foreground hover:text-cyber-yellow text-left transition-colors cursor-pointer flex items-center gap-1.5"
+                            className="font-bold text-base text-ink hover:text-primary text-left transition-colors cursor-pointer flex items-center gap-1.5"
                             title="Inspect Team Squad Members"
                           >
                             <span>{team.team_name}</span>
-                            <Users className="w-3.5 h-3.5 text-cyber-yellow" />
+                            <Users className="w-3.5 h-3.5 text-primary" />
                           </button>
-                          <div className="text-xs text-cyber-yellow">Access Code: {team.uid}</div>
+                          <div className="text-xs text-primary">Access Code: {team.uid}</div>
                         </div>
-                        <span className="text-[10px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-2 py-0.5 uppercase font-bold">
+                        <span className="text-[10px] bg-primary/20 text-primary border border-primary/50 px-2 py-0.5 uppercase font-bold">
                           Pending
                         </span>
                       </div>
@@ -560,7 +559,7 @@ export default function AdminDashboard() {
                           <span><strong className="text-gray-400">Operatives:</strong> {team.members?.length || 4} members</span>
                           <button
                             onClick={() => setSquadModalTeam(team)}
-                            className="text-[10px] text-cyber-cyan hover:underline uppercase font-bold flex items-center gap-1 cursor-pointer"
+                            className="text-[10px] text-accent hover:underline uppercase font-bold flex items-center gap-1 cursor-pointer"
                           >
                             View Squad →
                           </button>
@@ -584,7 +583,7 @@ export default function AdminDashboard() {
                         <div className="text-[10px] text-gray-500">Registered: {new Date(team.created_at).toLocaleTimeString()}</div>
                       </div>
 
-                      <div className="flex gap-2 pt-2 border-t border-cyber-border">
+                      <div className="flex gap-2 pt-2 border-t border-line">
                         <button
                           onClick={() => handleApproveReject(team.id, 'approved')}
                           disabled={actionLoading === team.id}
@@ -596,7 +595,7 @@ export default function AdminDashboard() {
                         <button
                           onClick={() => handleApproveReject(team.id, 'rejected')}
                           disabled={actionLoading === team.id}
-                          className="flex-1 bg-cyber-pink/20 hover:bg-cyber-pink hover:text-white text-cyber-pink border border-cyber-pink py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          className="flex-1 bg-danger/20 hover:bg-danger hover:text-white text-danger border border-danger py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           Reject
@@ -609,9 +608,9 @@ export default function AdminDashboard() {
             )}
 
             {/* All Teams Roster Table */}
-            <div className="bg-cyber-panel border border-cyber-border overflow-hidden rounded-sm">
-              <div className="p-5 border-b border-cyber-border flex justify-between items-center">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-cyan flex items-center gap-2">
+            <div className="bg-surface border border-line overflow-hidden rounded-sm">
+              <div className="p-5 border-b border-line flex justify-between items-center">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-accent flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   All Teams ({teams.length})
                 </h2>
@@ -619,7 +618,7 @@ export default function AdminDashboard() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-cyber-darker text-gray-400 uppercase tracking-wider border-b border-cyber-border">
+                  <thead className="bg-sunken text-gray-400 uppercase tracking-wider border-b border-line">
                     <tr>
                       <th className="px-4 py-3">Access Code</th>
                       <th className="px-4 py-3">Team Name</th>
@@ -632,14 +631,14 @@ export default function AdminDashboard() {
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-cyber-border/50">
+                  <tbody className="divide-y divide-line/50">
                     {teams.map((t) => (
-                      <tr key={t.id} className="hover:bg-cyber-darker/60 transition-colors">
-                        <td className="px-4 py-3 text-cyber-cyan font-bold">{t.uid}</td>
+                      <tr key={t.id} className="hover:bg-sunken/60 transition-colors">
+                        <td className="px-4 py-3 text-accent font-bold">{t.uid}</td>
                         <td className="px-4 py-3 font-bold">
                           <button
                             onClick={() => setSquadModalTeam(t)}
-                            className="text-foreground hover:text-cyber-cyan transition-colors text-left cursor-pointer flex items-center gap-1.5"
+                            className="text-ink hover:text-accent transition-colors text-left cursor-pointer flex items-center gap-1.5"
                             title="Click to view all team members & positions"
                           >
                             <span>{t.team_name}</span>
@@ -649,10 +648,10 @@ export default function AdminDashboard() {
                         <td className="px-4 py-3">
                           <button
                             onClick={() => setSquadModalTeam(t)}
-                            className="px-2.5 py-1 bg-cyber-darker hover:bg-cyber-panel border border-cyber-cyan/40 hover:border-cyber-cyan text-cyber-cyan text-[11px] font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            className="px-2.5 py-1 bg-sunken hover:bg-surface border border-accent/40 hover:border-accent text-accent text-[11px] font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                             title="Inspect full operative roster (Base Decoders & Field Scouts)"
                           >
-                            <Users className="w-3.5 h-3.5 text-cyber-yellow" />
+                            <Users className="w-3.5 h-3.5 text-primary" />
                             <span>{t.members?.length || 4} Operatives</span>
                           </button>
                         </td>
@@ -676,8 +675,8 @@ export default function AdminDashboard() {
                             t.status === 'approved'
                               ? 'bg-green-500/10 text-green-400 border-green-500/40'
                               : t.status === 'pending'
-                              ? 'bg-cyber-yellow/10 text-cyber-yellow border-cyber-yellow/40'
-                              : 'bg-cyber-pink/10 text-cyber-pink border-cyber-pink/40'
+                              ? 'bg-primary/10 text-primary border-primary/40'
+                              : 'bg-danger/10 text-danger border-danger/40'
                           }`}>
                             {t.status}
                           </span>
@@ -689,7 +688,7 @@ export default function AdminDashboard() {
                               COMPLETED (WINNER)
                             </span>
                           ) : (
-                            <span className="text-cyber-yellow font-bold">
+                            <span className="text-primary font-bold">
                               NODE 0{t.current_stage} / 12
                             </span>
                           )}
@@ -711,7 +710,7 @@ export default function AdminDashboard() {
                             ) : t.status === 'approved' ? (
                               <button
                                 onClick={() => handleApproveReject(t.id, 'rejected')}
-                                className="px-2 py-1 flex items-center gap-1 text-cyber-pink border border-cyber-pink/40 hover:border-cyber-pink font-bold text-[10px] uppercase cursor-pointer"
+                                className="px-2 py-1 flex items-center gap-1 text-danger border border-danger/40 hover:border-danger font-bold text-[10px] uppercase cursor-pointer"
                               >
                                 <XCircle className="w-3 h-3" />
                                 Revoke
@@ -746,9 +745,9 @@ export default function AdminDashboard() {
         {/* Tab 2: Checkpoints & Question Bank Vault */}
         {activeTab === 'checkpoints' && (
           <div className="space-y-8">
-            <div className="bg-cyber-panel border border-cyber-pink/40 p-5 sm:p-6 flex flex-wrap justify-between items-center gap-4 rounded-sm">
+            <div className="bg-surface border border-danger/40 p-5 sm:p-6 flex flex-wrap justify-between items-center gap-4 rounded-sm">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-pink flex items-center gap-2">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-danger flex items-center gap-2">
                   <KeyRound className="w-4 h-4" />
                   Checkpoints & Question Pools
                 </h2>
@@ -764,7 +763,7 @@ export default function AdminDashboard() {
                   className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
                     checkpointRouteFilter === 1
                       ? 'bg-cyan-500 text-black border-cyan-400 font-extrabold'
-                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-cyan-400'
+                      : 'bg-sunken text-gray-300 border-gray-700 hover:border-cyan-400'
                   }`}
                 >
                   Route 1 (12 Nodes)
@@ -774,7 +773,7 @@ export default function AdminDashboard() {
                   className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
                     checkpointRouteFilter === 2
                       ? 'bg-purple-500 text-white border-purple-400 font-extrabold'
-                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-purple-400'
+                      : 'bg-sunken text-gray-300 border-gray-700 hover:border-purple-400'
                   }`}
                 >
                   Route 2 (12 Nodes)
@@ -784,7 +783,7 @@ export default function AdminDashboard() {
                   className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
                     checkpointRouteFilter === 'all'
                       ? 'bg-yellow-400 text-black border-yellow-300 font-extrabold'
-                      : 'bg-cyber-darker text-gray-300 border-gray-700 hover:border-yellow-400'
+                      : 'bg-sunken text-gray-300 border-gray-700 hover:border-yellow-400'
                   }`}
                 >
                   All 24 Nodes
@@ -792,7 +791,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => setActiveTab('qr-generator')}
-                  className="px-3 py-1.5 bg-cyber-yellow hover:bg-white text-black text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(252,238,10,0.3)] ml-auto"
+                  className="px-3 py-1.5 bg-primary hover:bg-white text-black text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(252,238,10,0.3)] ml-auto"
                 >
                   <QrCode className="w-3.5 h-3.5" />
                   <span>Open QR Code Studio &rarr;</span>
@@ -812,9 +811,9 @@ export default function AdminDashboard() {
                 const routeNumber = cp.route_id || (cp.id <= 12 ? 1 : 2);
                 const stageNumber = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
                 return (
-                  <div key={cp.id} className="bg-cyber-panel border border-cyber-border hover:border-cyber-pink/60 transition-colors p-5 sm:p-6 relative shadow-md rounded-sm">
+                  <div key={cp.id} className="bg-surface border border-line hover:border-danger/60 transition-colors p-5 sm:p-6 relative shadow-md rounded-sm">
                     {/* Node Header */}
-                    <div className="flex flex-wrap justify-between items-center gap-2 border-b border-cyber-border pb-3 mb-4">
+                    <div className="flex flex-wrap justify-between items-center gap-2 border-b border-line pb-3 mb-4">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${
                           routeNumber === 1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
@@ -822,15 +821,15 @@ export default function AdminDashboard() {
                           ROUTE 0{routeNumber} // NODE 0{stageNumber}
                         </span>
                         <div>
-                          <h3 className="font-bold text-foreground text-base sm:text-lg">{cp.title}</h3>
-                          <div className="text-xs text-cyber-yellow font-bold uppercase">{cp.area}</div>
+                          <h3 className="font-bold text-ink text-base sm:text-lg">{cp.title}</h3>
+                          <div className="text-xs text-primary font-bold uppercase">{cp.area}</div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleStartEdit(cp)}
-                          className="text-xs text-cyber-cyan hover:text-white flex items-center gap-1 border border-cyber-cyan/50 px-3 py-1.5 hover:bg-cyber-cyan/20 cursor-pointer font-bold uppercase"
+                          className="text-xs text-accent hover:text-white flex items-center gap-1 border border-accent/50 px-3 py-1.5 hover:bg-accent/20 cursor-pointer font-bold uppercase"
                         >
                           <Edit className="w-3.5 h-3.5" />
                           Edit
@@ -849,15 +848,15 @@ export default function AdminDashboard() {
                     {/* Location Clue & QR Hash */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       {/* Location Clue */}
-                      <div className="bg-cyber-darker p-3.5 border border-cyber-border/70 text-xs text-gray-300">
-                        <span className="text-cyber-cyan text-[10px] uppercase font-bold flex items-center gap-1 mb-1">
+                      <div className="bg-sunken p-3.5 border border-line/70 text-xs text-gray-300">
+                        <span className="text-accent text-[10px] uppercase font-bold flex items-center gap-1 mb-1">
                           <Footprints className="w-3 h-3" /> Location Clue:
                         </span>
                         <p className="leading-relaxed text-gray-200">{cp.clue}</p>
                       </div>
 
                       {/* Visual QR Code & Token Block */}
-                      <div className="bg-cyber-darker p-3.5 border border-cyber-border/70 text-xs flex flex-col sm:flex-row items-center gap-3">
+                      <div className="bg-sunken p-3.5 border border-line/70 text-xs flex flex-col sm:flex-row items-center gap-3">
                         {/* Rendered QR Code Thumbnail */}
                         <div 
                           onClick={() => setQrModalCheckpoint(cp)}
@@ -872,7 +871,7 @@ export default function AdminDashboard() {
                             <span className="text-gray-400 text-[10px] uppercase font-bold">QR Token:</span>
                             <button
                               onClick={() => handleCopyHash(cp.qr_hash)}
-                              className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer bg-cyber-panel px-1.5 py-0.5 border border-cyber-border"
+                              className="text-[10px] text-accent hover:text-white flex items-center gap-1 cursor-pointer bg-surface px-1.5 py-0.5 border border-line"
                             >
                               {copiedHash === cp.qr_hash ? (
                                 <Check className="w-3 h-3 text-green-400" />
@@ -882,14 +881,14 @@ export default function AdminDashboard() {
                               <span>{copiedHash === cp.qr_hash ? 'Copied!' : 'Copy'}</span>
                             </button>
                           </div>
-                          <code className="text-[10px] text-cyber-yellow break-all block font-mono bg-black/60 p-1.5 border border-cyber-border/40">
+                          <code className="text-[10px] text-primary break-all block font-mono bg-black/60 p-1.5 border border-line/40">
                             {cp.qr_hash}
                           </code>
                           <button
                             onClick={() => setQrModalCheckpoint(cp)}
-                            className="text-[10px] text-cyber-cyan hover:text-white hover:underline flex items-center gap-1 cursor-pointer font-bold uppercase mt-1"
+                            className="text-[10px] text-accent hover:text-white hover:underline flex items-center gap-1 cursor-pointer font-bold uppercase mt-1"
                           >
-                            <QrCode className="w-3 h-3 text-cyber-yellow" />
+                            <QrCode className="w-3 h-3 text-primary" />
                             View / Print QR &rarr;
                           </button>
                         </div>
@@ -900,7 +899,7 @@ export default function AdminDashboard() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs uppercase font-bold tracking-wider text-gray-300 flex items-center gap-1.5">
-                          <HelpCircle className="w-3.5 h-3.5 text-cyber-cyan" />
+                          <HelpCircle className="w-3.5 h-3.5 text-accent" />
                           Questions ({pool.length})
                         </span>
                         <span className="text-[10px] text-gray-500">1 random per team</span>
@@ -908,10 +907,10 @@ export default function AdminDashboard() {
 
                       <div className="space-y-2">
                         {pool.map((q, idx) => (
-                          <div key={q.id} className="bg-cyber-darker border border-cyber-border/60 p-3 text-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                          <div key={q.id} className="bg-sunken border border-line/60 p-3 text-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                             <div className="flex-1 space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold bg-cyber-blue/20 text-cyber-blue border border-cyber-blue/40 px-1.5 py-0.2 uppercase">
+                                <span className="text-[10px] font-bold bg-accent/20 text-accent border border-accent/40 px-1.5 py-0.2 uppercase">
                                   #{idx + 1} {q.challenge_type}
                                 </span>
                                 <div className="flex-1 text-gray-200 font-sans w-full max-w-full overflow-hidden">
@@ -934,7 +933,7 @@ export default function AdminDashboard() {
 
                               <button
                                 onClick={() => handleOpenEditQuestion(cp.id, q)}
-                                className="p-1.5 text-gray-400 hover:text-cyber-cyan cursor-pointer border border-cyber-border hover:border-cyber-cyan"
+                                className="p-1.5 text-gray-400 hover:text-accent cursor-pointer border border-line hover:border-accent"
                                 title="Edit Question"
                               >
                                 <Edit className="w-3.5 h-3.5" />
@@ -942,7 +941,7 @@ export default function AdminDashboard() {
 
                               <button
                                 onClick={() => handleDeleteQuestion(q.id)}
-                                className="p-1.5 text-gray-400 hover:text-cyber-pink cursor-pointer border border-cyber-border hover:border-cyber-pink"
+                                className="p-1.5 text-gray-400 hover:text-danger cursor-pointer border border-line hover:border-danger"
                                 title="Delete Question"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -952,7 +951,7 @@ export default function AdminDashboard() {
                         ))}
 
                         {pool.length === 0 && (
-                          <div className="p-4 text-center text-gray-500 text-xs italic bg-cyber-darker border border-dashed border-cyber-border">
+                          <div className="p-4 text-center text-gray-500 text-xs italic bg-sunken border border-dashed border-line">
                             No questions yet. Add one above.
                           </div>
                         )}
@@ -979,15 +978,15 @@ export default function AdminDashboard() {
       {/* Modal 1: Edit Checkpoint Info & Next Location Clue */}
       {editingCheckpoint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-cyber-panel border-2 border-cyber-pink p-6 relative font-mono shadow-[0_0_30px_rgba(255,0,60,0.3)] max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-surface border-2 border-danger p-6 relative font-mono shadow-[0_0_30px_rgba(255,0,60,0.3)] max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setEditingCheckpoint(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-cyber-pink"
+              className="absolute top-4 right-4 text-gray-400 hover:text-danger"
             >
               <X className="w-6 h-6" />
             </button>
 
-            <h3 className="text-lg font-bold text-cyber-pink uppercase tracking-widest mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-danger uppercase tracking-widest mb-1 flex items-center gap-2">
               <Edit className="w-5 h-5" />
               Configure Node 0{editingCheckpoint.id} Location & Clue
             </h3>
@@ -996,7 +995,7 @@ export default function AdminDashboard() {
             </p>
 
             {saveStatus && (
-              <div className="bg-cyber-darker border border-cyber-pink text-xs p-2.5 mb-4 text-cyber-pink">
+              <div className="bg-sunken border border-danger text-xs p-2.5 mb-4 text-danger">
                 {saveStatus}
               </div>
             )}
@@ -1008,7 +1007,7 @@ export default function AdminDashboard() {
                   type="text"
                   value={editForm.title || ''}
                   onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-foreground outline-none focus:border-cyber-pink"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-danger"
                   required
                 />
               </div>
@@ -1019,20 +1018,20 @@ export default function AdminDashboard() {
                   type="text"
                   value={editForm.area || ''}
                   onChange={e => setEditForm(prev => ({ ...prev, area: e.target.value }))}
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-foreground outline-none focus:border-cyber-pink"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-danger"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[10px] uppercase text-cyber-cyan font-bold block mb-1">
+                <label className="text-[10px] uppercase text-accent font-bold block mb-1">
                   Location Clue:
                 </label>
                 <textarea
                   rows={3}
                   value={editForm.clue || ''}
                   onChange={e => setEditForm(prev => ({ ...prev, clue: e.target.value }))}
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-foreground outline-none focus:border-cyber-cyan leading-relaxed font-sans"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-accent leading-relaxed font-sans"
                   required
                 />
               </div>
@@ -1043,7 +1042,7 @@ export default function AdminDashboard() {
                   type="text"
                   value={editForm.qr_hash || ''}
                   onChange={e => setEditForm(prev => ({ ...prev, qr_hash: e.target.value }))}
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-cyber-yellow font-bold outline-none focus:border-cyber-pink text-xs"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-primary font-bold outline-none focus:border-danger text-xs"
                   required
                 />
               </div>
@@ -1051,7 +1050,7 @@ export default function AdminDashboard() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-cyber-pink hover:bg-white text-white hover:text-black py-2.5 font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 bg-danger hover:bg-white text-white hover:text-black py-2.5 font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Save className="w-3.5 h-3.5" />
                   Save Checkpoint
@@ -1059,7 +1058,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setEditingCheckpoint(null)}
-                  className="px-4 border border-cyber-border text-gray-400 hover:text-foreground text-xs uppercase cursor-pointer"
+                  className="px-4 border border-line text-gray-400 hover:text-ink text-xs uppercase cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1072,7 +1071,7 @@ export default function AdminDashboard() {
       {/* Modal 2: Add / Edit Question in Pool */}
       {questionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-cyber-panel border-2 border-green-500 p-6 relative font-mono shadow-[0_0_30px_rgba(34,197,94,0.3)] max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-surface border-2 border-green-500 p-6 relative font-mono shadow-[0_0_30px_rgba(34,197,94,0.3)] max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setQuestionModalOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-green-400"
@@ -1089,7 +1088,7 @@ export default function AdminDashboard() {
             </p>
 
             {questionSaveStatus && (
-              <div className="bg-cyber-darker border border-green-500 text-xs p-2.5 mb-4 text-green-400">
+              <div className="bg-sunken border border-green-500 text-xs p-2.5 mb-4 text-green-400">
                 {questionSaveStatus}
               </div>
             )}
@@ -1100,7 +1099,7 @@ export default function AdminDashboard() {
                 <select
                   value={editingQuestion.challenge_type}
                   onChange={e => setEditingQuestion(prev => ({ ...prev, challenge_type: e.target.value as any }))}
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-foreground outline-none focus:border-green-400 font-bold uppercase"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-green-400 font-bold uppercase"
                 >
                   <option value="passcode">Passcode / Cryptographic Cipher</option>
                   <option value="mcq">Multiple Choice (MCQ)</option>
@@ -1118,7 +1117,7 @@ export default function AdminDashboard() {
                   value={editingQuestion.question}
                   onChange={e => setEditingQuestion(prev => ({ ...prev, question: e.target.value }))}
                   placeholder="Enter the puzzle, cipher, or riddle question..."
-                  className="w-full bg-cyber-darker border border-cyber-border px-3 py-2 text-foreground outline-none focus:border-green-400 font-sans"
+                  className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-green-400 font-sans"
                   required
                 />
               </div>
@@ -1141,7 +1140,7 @@ export default function AdminDashboard() {
                             }));
                           }}
                           placeholder={`Option ${i + 1}`}
-                          className="flex-1 bg-cyber-darker border border-cyber-border px-2 py-1 text-foreground outline-none focus:border-green-400 text-xs"
+                          className="flex-1 bg-sunken border border-line px-2 py-1 text-ink outline-none focus:border-green-400 text-xs"
                           required
                         />
                       </div>
@@ -1157,7 +1156,7 @@ export default function AdminDashboard() {
                   value={editingQuestion.answer}
                   onChange={e => setEditingQuestion(prev => ({ ...prev, answer: e.target.value }))}
                   placeholder="Case-insensitive secret solution"
-                  className="w-full bg-cyber-darker border border-green-500 px-3 py-2 text-green-400 font-bold outline-none focus:border-green-300"
+                  className="w-full bg-sunken border border-green-500 px-3 py-2 text-green-400 font-bold outline-none focus:border-green-300"
                   required
                 />
                 <p className="text-[10px] text-gray-500 mt-1">
@@ -1176,7 +1175,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setQuestionModalOpen(false)}
-                  className="px-4 border border-cyber-border text-gray-400 hover:text-foreground text-xs uppercase cursor-pointer"
+                  className="px-4 border border-line text-gray-400 hover:text-ink text-xs uppercase cursor-pointer"
                 >
                   Cancel
                 </button>

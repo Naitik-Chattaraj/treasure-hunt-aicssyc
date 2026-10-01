@@ -111,12 +111,12 @@ export default function ChallengeModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors">
-      <div className={`w-full max-w-md bg-cyber-panel cyber-panel-border border-t-2 border-b-2 ${cleared ? 'border-cyber-yellow' : 'border-cyber-pink'} p-8 sm:p-10 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-md bg-surface rounded-xl border-t-2 border-b-2 ${cleared ? 'border-primary' : 'border-danger'} p-8 sm:p-10 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
         
         {!cleared && (
           <button 
             onClick={onClose} 
-            className="absolute top-4 right-4 text-cyber-muted hover:text-cyber-pink transition-colors cursor-pointer"
+            className="absolute top-4 right-4 text-muted hover:text-danger transition-colors cursor-pointer"
             aria-label="Close Challenge"
           >
             <X className="w-6 h-6" />
@@ -125,20 +125,20 @@ export default function ChallengeModal({
 
         <div className="flex justify-center mb-3">
           {cleared ? (
-            <LockOpen className="w-12 h-12 text-cyber-yellow animate-bounce" />
+            <LockOpen className="w-12 h-12 text-primary animate-bounce" />
           ) : (
-            <Terminal className="w-12 h-12 text-cyber-pink animate-pulse" />
+            <Terminal className="w-12 h-12 text-danger animate-pulse" />
           )}
         </div>
 
-        <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-cyber-yellow' : 'cyber-crt-text text-cyber-pink'}`}>
+        <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-primary' : ' text-danger'}`}>
           {cleared ? 'SOLVED!' : 'CHALLENGE'}
         </h2>
 
         {!cleared && (
           <>
-            <div className="bg-cyber-darker border border-cyber-border p-4 mb-5 relative">
-              <div className="absolute top-0 left-0 bg-cyber-pink text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
+            <div className="bg-sunken border border-line p-4 mb-5 relative">
+              <div className="absolute top-0 left-0 bg-danger text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
                 CHECKPOINT {stageNum}
               </div>
               <div className="mt-3">
@@ -147,14 +147,14 @@ export default function ChallengeModal({
             </div>
 
             {error && (
-              <div className="bg-cyber-pink/15 border border-cyber-pink text-cyber-pink px-3 py-2 mb-4 text-xs flex items-center gap-2">
+              <div className="bg-danger/15 border border-danger text-danger px-3 py-2 mb-4 text-xs flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage || 'Incorrect answer.'}</span>
               </div>
             )}
 
             {cooldown > 0 && (
-              <div className="bg-cyber-yellow/15 border border-cyber-yellow text-cyber-yellow px-3 py-2 mb-4 text-xs flex items-center gap-2">
+              <div className="bg-primary/15 border border-primary text-primary px-3 py-2 mb-4 text-xs flex items-center gap-2">
                 <Timer className="w-4 h-4 shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
                 <span>Cooldown: {cooldown}s</span>
               </div>
@@ -168,8 +168,8 @@ export default function ChallengeModal({
                       key={opt} 
                       className={`block border p-3 cursor-pointer transition-all ${
                         answer === opt 
-                          ? 'border-cyber-cyan bg-cyber-cyan/15 text-cyber-cyan font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' 
-                          : 'border-cyber-border hover:border-cyber-cyan/50 text-foreground bg-cyber-darker'
+                          ? 'border-accent bg-accent/15 text-accent font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' 
+                          : 'border-line hover:border-accent/50 text-ink bg-sunken'
                       }`}
                     >
                       <input 
@@ -186,7 +186,7 @@ export default function ChallengeModal({
                 </div>
               ) : challenge.type === 'code' ? (
                 <div className="space-y-4">
-                  <div className="border border-cyber-border overflow-hidden">
+                  <div className="border border-line overflow-hidden">
                     <CodeMirror
                       value={answer}
                       height="200px"
@@ -203,12 +203,12 @@ export default function ChallengeModal({
                         type="button"
                         onClick={runCode}
                         disabled={runningCode || !answer || cooldown > 0}
-                        className="w-full flex items-center justify-center gap-2 bg-cyber-darker border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black font-bold py-2 uppercase tracking-widest transition-colors disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 bg-sunken border border-accent text-accent hover:bg-accent hover:text-black font-bold py-2 uppercase tracking-widest transition-colors disabled:opacity-50"
                       >
                         <Play className="w-4 h-4" />
                         {runningCode ? 'RUNNING...' : 'RUN CODE'}
                       </button>
-                      <div className="bg-black border border-cyber-border p-3 min-h-[100px] max-h-[150px] overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap text-left">
+                      <div className="bg-black border border-line p-3 min-h-[100px] max-h-[150px] overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap text-left">
                         {terminalOutput || '> Output will appear here...'}
                       </div>
                     </div>
@@ -221,9 +221,9 @@ export default function ChallengeModal({
                     value={answer}
                     disabled={cooldown > 0}
                     onChange={e => setAnswer(e.target.value)}
-                    className={`w-full bg-cyber-darker border ${
-                      error ? 'border-cyber-pink' : 'border-cyber-border'
-                    } focus:border-cyber-cyan text-foreground px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold disabled:opacity-50`}
+                    className={`w-full bg-sunken border ${
+                      error ? 'border-danger' : 'border-line'
+                    } focus:border-accent text-ink px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold disabled:opacity-50`}
                     placeholder={cooldown > 0 ? `LOCKED (${cooldown}s)` : "Enter your answer"}
                     required
                   />
@@ -233,7 +233,7 @@ export default function ChallengeModal({
               <button
                 type="submit"
                 disabled={loading || !answer || cooldown > 0}
-                className="w-full cyber-button-border bg-cyber-pink hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.3)]"
+                className="w-full rounded-lg bg-danger hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.3)]"
               >
                 {loading ? 'VALIDATING...' : cooldown > 0 ? `LOCKED (${cooldown}s)` : 'SUBMIT SOLUTION'}
               </button>
@@ -243,11 +243,11 @@ export default function ChallengeModal({
 
         {cleared && (
           <div className="text-center space-y-3 py-4 animate-pulse">
-            <div className="flex items-center justify-center gap-2 text-cyber-yellow font-bold text-sm">
+            <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm">
               <ShieldCheck className="w-5 h-5" />
               <span>CHECKPOINT {stageNum} SOLVED!</span>
             </div>
-            <p className="text-xs text-cyber-muted">Unlocking next checkpoint...</p>
+            <p className="text-xs text-muted">Unlocking next checkpoint...</p>
           </div>
         )}
       </div>
