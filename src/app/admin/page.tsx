@@ -427,34 +427,29 @@ export default function AdminDashboard() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
-            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TOTAL REGISTRATIONS</div>
+            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TOTAL TEAMS</div>
             <div className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{teams.length}</div>
-            <div className="text-[10px] text-gray-500 mt-1">Registered</div>
           </div>
 
           <div className={`bg-cyber-panel border rounded-sm ${pendingTeams.length > 0 ? 'border-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.2)]' : 'border-cyber-border'} p-5`}>
             <div className="text-[10px] text-cyber-yellow uppercase font-bold tracking-wider flex items-center justify-between">
-              <span>PENDING APPROVAL</span>
+              <span>PENDING</span>
               {pendingTeams.length > 0 && <span className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping"></span>}
             </div>
             <div className="text-2xl sm:text-3xl font-bold text-cyber-yellow mt-2">{pendingTeams.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Need approval</div>
           </div>
 
           <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
-            <div className="text-[10px] text-cyber-cyan uppercase font-bold tracking-wider">ACTIVE IN FIELD</div>
+            <div className="text-[10px] text-cyber-cyan uppercase font-bold tracking-wider">ACTIVE</div>
             <div className="text-2xl sm:text-3xl font-bold text-cyber-cyan mt-2">{activeHunting.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Currently playing</div>
           </div>
 
           <div className="bg-cyber-panel border border-cyber-border p-5 shadow-sm rounded-sm">
-            <div className="text-[10px] text-green-400 uppercase font-bold tracking-wider">HUNT COMPLETED</div>
+            <div className="text-[10px] text-green-400 uppercase font-bold tracking-wider">FINISHED</div>
             <div className="text-2xl sm:text-3xl font-bold text-green-400 mt-2">{finishedTeams.length}</div>
-            <div className="text-[10px] text-gray-400 mt-1">Finished</div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
         <div className="flex flex-wrap border-b border-cyber-border gap-2">
           <button
             onClick={() => setActiveTab('teams')}
@@ -465,7 +460,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Users className="w-4 h-4 text-cyber-cyan" />
-            <span>Teams & Approvals ({pendingTeams.length} Pending)</span>
+            <span>TEAMS {pendingTeams.length > 0 && `(${pendingTeams.length})`}</span>
           </button>
 
           <button
@@ -477,7 +472,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Layers className="w-4 h-4 text-cyber-pink" />
-            <span>Checkpoints & Questions</span>
+            <span>CHECKPOINTS</span>
           </button>
 
           <button
@@ -489,8 +484,7 @@ export default function AdminDashboard() {
             }`}
           >
             <QrCode className="w-4 h-4 text-cyber-yellow" />
-            <span>QR Code Generator & Stickers</span>
-            <span className="text-[9px] bg-cyber-yellow text-black font-extrabold px-1.5 py-0.2 rounded">STUDIO</span>
+            <span>QR STUDIO</span>
           </button>
         </div>
 
@@ -723,7 +717,7 @@ export default function AdminDashboard() {
                   Checkpoints & Question Pools
                 </h2>
                 <p className="text-xs text-gray-400 mt-1">
-                  Teams are randomly assigned to Route 1 or Route 2. You can filter by route below and customize physical clues, areas, and question pools.
+                  Manage routes, clues, and questions.
                 </p>
               </div>
 

@@ -8,7 +8,30 @@ interface MarkdownRendererProps {
   content: string;
 }
 
+function autoFormatCode(text: string): string {
+  if (!text) return '';
+  if (text.includes('```')) return text;
+  
+  const codeIndicators = [
+    'function ', 'def ', 'class ', 'import ', '#include', 
+    'public static', '<?php', 'const ', 'let ', 'var ', '=>', 'System.out.'
+  ];
+  const hasBraces = text.includes('{') && text.includes('}');
+  const hasIndent = /^\s{2,}/m.test(text);
+  const hasSemicolon = text.includes(';');
+  
+  const indicatorCount = codeIndicators.filter(ind => text.includes(ind)).length;
+  const isLikelyCode = indicatorCount >= 1 || (hasBraces && (hasIndent || hasSemicolon));
+  
+  if (isLikelyCode) {
+     return `\`\`\`javascript\n${text}\n\`\`\``; // Defaulting to javascript/c-like highlighting
+  }
+  return text;
+}
+
 export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  const processedContent = autoFormatCode(content);
+
   return (
     <div className="markdown-body text-sm font-mono leading-relaxed space-y-4">
       <ReactMarkdown
@@ -17,13 +40,12 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             
-            // Render block code with syntax highlighting
-            if (!inline && match) {
+            if (!inline) {
               return (
                 <div className="rounded border border-cyber-border overflow-hidden my-4 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
                   <SyntaxHighlighter
                     style={vscDarkPlus}
-                    language={match[1]}
+                    language={match ? match[1] : 'javascript'}
                     PreTag="div"
                     className="!bg-black !m-0 !p-4 !text-sm"
                     {...props}
@@ -34,17 +56,6 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               );
             }
             
-            // Fallback for code blocks without a specified language
-            if (!inline && !match) {
-              return (
-                <div className="rounded border border-cyber-border overflow-hidden my-4 shadow-[0_0_15px_rgba(0,240,255,0.1)] bg-black p-4">
-                  <code className="text-gray-300 block whitespace-pre overflow-x-auto" {...props}>
-                    {children}
-                  </code>
-                </div>
-              );
-            }
-
             // Inline code snippet
             return (
               <code className="bg-black text-cyber-cyan border border-cyber-border/50 px-1.5 py-0.5 rounded text-xs" {...props}>
@@ -59,7 +70,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1 mb-2" {...props} />,
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

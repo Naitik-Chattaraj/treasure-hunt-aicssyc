@@ -260,6 +260,26 @@ export async function POST(req: NextRequest) {
             .single();
 
           existingActive = inserted;
+        } else {
+          // Fallback: If no questions for this specific node, try to fetch ANY question
+          const { data: anyPool } = await teamDb.from('questions_pool').select('id').limit(1);
+          const fallbackQuestionId = (anyPool && anyPool.length > 0) ? anyPool[0].id : null;
+          
+          try {
+            const { data: inserted } = await teamDb
+              .from('team_active_challenges')
+              .insert({
+                team_id: team.id,
+                node_id: matchedNode.id,
+                question_id: fallbackQuestionId,
+              })
+              .select('*')
+              .single();
+            
+            existingActive = inserted;
+          } catch (e) {
+            console.warn('Could not insert fallback active challenge:', e);
+          }
         }
       }
 

@@ -273,12 +273,12 @@ export default function HuntHUD() {
               {isQrUnlocked ? (
                 <>
                   <BrainCircuit className="w-4 h-4" />
-                  <span>PHASE 2: BASE STATION CHALLENGE UNLOCKED</span>
+                  <span>PHASE 2: DECODE</span>
                 </>
               ) : (
                 <>
                   <Footprints className="w-4 h-4" />
-                  <span>PHASE 1: FIELD SCOUTS HUNTING CAMPUS</span>
+                  <span>PHASE 1: SEARCH</span>
                 </>
               )}
             </div>
@@ -287,7 +287,7 @@ export default function HuntHUD() {
           {/* Active Objective Card */}
           <div className="cyber-panel-border bg-cyber-panel border-l-4 border-cyber-cyan p-4 sm:p-5 relative shadow-lg">
             <div className="absolute top-0 right-0 bg-cyber-cyan text-cyber-dark text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
-              Target Node 0{currentStageDisplay}
+              Node 0{currentStageDisplay}
             </div>
             
             <div className="flex items-center gap-2 text-cyber-yellow text-xs font-bold uppercase tracking-widest mt-1">
@@ -302,7 +302,7 @@ export default function HuntHUD() {
             {/* Clue box for field runners */}
             <div className="bg-cyber-darker p-3 border border-cyber-border/70 text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans mb-4">
               <div className="text-[10px] text-cyber-cyan font-mono font-bold uppercase mb-1 flex items-center gap-1">
-                <Footprints className="w-3 h-3" /> Campus Clue:
+                <Footprints className="w-3 h-3" /> Intel:
               </div>
               {activeCheckpoint?.clue}
             </div>
@@ -329,12 +329,12 @@ export default function HuntHUD() {
                 {isFieldScout ? (
                   <div className="text-[11px] text-cyber-yellow bg-cyber-darker/90 p-2.5 border border-cyber-yellow/40 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-ping shrink-0" style={{ animationDuration: '2s' }}></div>
-                    <span>QR scanned! Waiting for Base Decoders to solve the challenge.</span>
+                    <span>WAITING FOR DECODER...</span>
                   </div>
                 ) : (
                   <div className="text-[11px] text-gray-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                    <span>QR scanned by Field Scouts. Solve the challenge to proceed!</span>
+                    <span>READY FOR DECODE</span>
                   </div>
                 )}
               </div>
@@ -343,8 +343,8 @@ export default function HuntHUD() {
                 <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
                 <span>
                   {isFieldScout 
-                    ? `Find and scan the QR code at this location.`
-                    : `Waiting for Field Scouts to scan the QR code.`}
+                    ? `LOCATE AND SCAN QR`
+                    : `AWAITING FIELD SCAN...`}
                 </span>
               </div>
             )}

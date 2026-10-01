@@ -16,38 +16,45 @@ export default function VictoryScreen({
   const [elapsed, setElapsed] = useState<string>('');
 
   useEffect(() => {
-    // Fire celebratory confetti sequence for 5 seconds on mount
+    // Initial big burst
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#00F0FF', '#FCEE0A', '#FF003C']
+    });
+
+    // Fire celebratory confetti sequence periodically for 5 seconds
     const duration = 5000;
     const end = Date.now() + duration;
-    let animationFrameId: number;
+    let intervalId: NodeJS.Timeout;
 
-    const frame = () => {
+    const fire = () => {
+      if (Date.now() > end) {
+        clearInterval(intervalId);
+        return;
+      }
+      
       confetti({
-        particleCount: 5,
+        particleCount: 15,
         angle: 60,
         spread: 55,
         origin: { x: 0 },
         colors: ['#00F0FF', '#FCEE0A', '#FF003C']
       });
       confetti({
-        particleCount: 5,
+        particleCount: 15,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
         colors: ['#00F0FF', '#FCEE0A', '#FF003C']
       });
-
-      if (Date.now() < end) {
-        animationFrameId = requestAnimationFrame(frame);
-      }
     };
 
-    frame();
+    intervalId = setInterval(fire, 250);
 
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+      clearInterval(intervalId);
       confetti.reset();
     };
   }, []);

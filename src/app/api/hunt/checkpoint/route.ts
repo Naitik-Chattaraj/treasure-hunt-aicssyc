@@ -151,19 +151,22 @@ export async function GET(req: NextRequest) {
         .limit(1)
         .maybeSingle();
 
-      if (activeChallenge && activeChallenge.questions_pool) {
+      if (activeChallenge) {
         qrScanned = true;
-        const q = Array.isArray(activeChallenge.questions_pool) 
-          ? activeChallenge.questions_pool[0] 
-          : activeChallenge.questions_pool;
+        
+        if (activeChallenge.questions_pool) {
+          const q = Array.isArray(activeChallenge.questions_pool) 
+            ? activeChallenge.questions_pool[0] 
+            : activeChallenge.questions_pool;
 
-        etchedChallenge = {
-          id: q.id,
-          nodeId: cp.id,
-          type: q.challenge_type,
-          question: q.question,
-          options: q.options,
-        };
+          etchedChallenge = {
+            id: q.id,
+            nodeId: cp.id,
+            type: q.challenge_type,
+            question: q.question,
+            options: q.options,
+          };
+        }
       }
     } catch (e) {
       console.warn('team_active_challenges check warning:', e);
