@@ -254,7 +254,7 @@ export default function LoginPage() {
           <Terminal className="w-12 h-12 text-cyber-cyan animate-pulse" />
         </div>
         
-        <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest cyber-glitch-text text-cyber-cyan uppercase font-mono">
+        <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest cyber-crt-text text-cyber-cyan uppercase font-mono">
           TREASURE HUNT 2026
         </h1>
         <p className="text-center text-xs tracking-widest text-cyber-muted mb-4 font-mono">

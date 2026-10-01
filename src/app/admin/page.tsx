@@ -367,7 +367,7 @@ export default function AdminDashboard() {
             <Radio className="w-5 h-5 animate-[pulse_3s_ease-in-out_infinite]" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-widest text-cyber-pink uppercase flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-widest text-cyber-pink cyber-crt-text uppercase flex items-center gap-2">
               MISSION CONTROL TERMINAL
               
             </h1>

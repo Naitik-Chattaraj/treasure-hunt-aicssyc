@@ -76,7 +76,7 @@ export default function VictoryScreen({
         
         <Trophy className="w-16 h-16 sm:w-20 sm:h-20 text-cyber-yellow mx-auto mb-4 animate-bounce" />
         
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 tracking-widest text-cyber-cyan cyber-glitch-text uppercase">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 tracking-widest text-cyber-cyan cyber-crt-text uppercase">
           TREASURE SECURED!
         </h1>
         

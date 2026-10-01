@@ -24,7 +24,7 @@ export default function SequenceViolationModal({
 
         <AlertOctagon className="w-14 h-14 sm:w-16 sm:h-16 text-cyber-pink mx-auto mb-3 animate-pulse" />
         
-        <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-widest text-cyber-pink cyber-glitch-text uppercase">
+        <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-widest text-cyber-pink cyber-crt-text uppercase">
           WRONG CHECKPOINT
         </h2>
 

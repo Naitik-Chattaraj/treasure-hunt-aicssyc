@@ -62,7 +62,7 @@ export default function LeaderboardPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-cyber-yellow uppercase cyber-glitch-text">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-cyber-yellow uppercase cyber-crt-text">
                 LIVE LEADERBOARD
               </h1>
               <span className="text-[10px] bg-cyber-yellow/20 border border-cyber-yellow text-cyber-yellow px-2 py-0.5 font-bold uppercase animate-pulse">

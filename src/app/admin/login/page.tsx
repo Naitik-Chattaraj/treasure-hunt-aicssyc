@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
           </div>
         </div>
 
-        <h1 className="text-xl sm:text-2xl text-center font-bold mb-1 tracking-widest text-cyber-pink cyber-glitch-text uppercase">
+        <h1 className="text-xl sm:text-2xl text-center font-bold mb-1 tracking-widest text-cyber-pink cyber-crt-text uppercase">
           MISSION CONTROL
         </h1>
         <p className="text-center text-[11px] tracking-widest text-gray-400 mb-6">

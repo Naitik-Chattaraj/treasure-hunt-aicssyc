@@ -55,27 +55,73 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Cyberpunk specific utility classes */
+/* CRT TV / Monitor Heading Utility Classes */
+.cyber-crt-text,
 .cyber-glitch-text {
-  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
-  animation: glitch-anim 8s infinite linear alternate-reverse;
+  position: relative;
+  display: inline-block;
+  text-shadow: 
+    0 0 2px currentColor,
+    0 0 8px currentColor,
+    0 0 16px currentColor;
+  animation: crt-phosphor 6s ease-in-out infinite alternate;
+  letter-spacing: 0.12em;
 }
 
+/* Subtle CRT TV raster scanline texture across the typography */
+.cyber-crt-text::after,
+.cyber-glitch-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.35) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+html.light .cyber-crt-text,
 html.light .cyber-glitch-text {
-  text-shadow: 0.5px 0 var(--cyber-cyan), -0.5px 0 var(--cyber-pink);
+  text-shadow: 
+    0 0 1px currentColor,
+    0 0 5px currentColor;
+  animation: none;
 }
 
+html.light .cyber-crt-text::after,
+html.light .cyber-glitch-text::after {
+  opacity: 0.2;
+}
+
+.cyber-crt-text-hover:hover,
 .cyber-glitch-text-hover:hover {
-  text-shadow: 1px 0 var(--cyber-cyan), -1px 0 var(--cyber-pink);
+  filter: brightness(1.2) drop-shadow(0 0 6px currentColor);
 }
 
-@keyframes glitch-anim {
-  0% { clip-path: inset(10% 0 85% 0); }
-  20% { clip-path: inset(50% 0 45% 0); }
-  40% { clip-path: inset(30% 0 65% 0); }
-  60% { clip-path: inset(70% 0 25% 0); }
-  80% { clip-path: inset(20% 0 75% 0); }
-  100% { clip-path: inset(40% 0 55% 0); }
+@keyframes crt-phosphor {
+  0%, 100% {
+    opacity: 0.98;
+    filter: brightness(1) drop-shadow(0 0 2px currentColor);
+  }
+  48% {
+    opacity: 1;
+    filter: brightness(1.08) drop-shadow(0 0 5px currentColor);
+  }
+  50% {
+    opacity: 0.94;
+    filter: brightness(0.96) drop-shadow(0 0 1px currentColor);
+  }
+  52% {
+    opacity: 1;
+    filter: brightness(1.06) drop-shadow(0 0 4px currentColor);
+  }
+  85% {
+    opacity: 0.985;
+    filter: brightness(1.02) drop-shadow(0 0 3px currentColor);
+  }
 }
 
 .cyber-panel-border {

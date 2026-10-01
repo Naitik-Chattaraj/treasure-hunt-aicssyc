@@ -131,7 +131,7 @@ export default function ChallengeModal({
           )}
         </div>
 
-        <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-cyber-yellow' : 'cyber-glitch-text text-cyber-pink'}`}>
+        <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-cyber-yellow' : 'cyber-crt-text text-cyber-pink'}`}>
           {cleared ? 'SOLVED!' : 'CHALLENGE'}
         </h2>
 
