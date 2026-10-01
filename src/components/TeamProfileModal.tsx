@@ -1,7 +1,7 @@
 'use client';
 
 import { TeamProfile, HuntProgress } from '@/types/hunt';
-import { X, LogOut, ShieldAlert, Award, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, LogOut, Users, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -36,100 +36,106 @@ export default function TeamProfileModal({
     router.push('/login');
   };
 
+  const route = profile.assignedRoute || progress.assignedRoute || 1;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm transition-colors">
-      <div className="w-full max-w-md bg-surface rounded-xl border-t-2 border-accent shadow-[0_0_25px_rgba(0,240,255,0.2)] p-6 relative flex flex-col max-h-[90vh] font-mono">
-        
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-title"
+        className="relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-line bg-surface p-5 shadow-raised sm:max-w-md sm:rounded-xl sm:p-6"
+      >
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 text-muted hover:text-danger transition-colors cursor-pointer"
-          aria-label="Close Profile"
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+          aria-label="Close team profile"
         >
-          <X className="w-6 h-6" />
+          <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        <h2 className="text-2xl font-bold text-accent mb-1 tracking-widest uppercase">
-          {profile.teamName}
-        </h2>
-        <div className="flex flex-wrap items-center gap-2 mb-5">
-          <span className="text-[11px] text-primary bg-primary/10 border border-primary/30 px-2 py-0.5">
-            UID: {profile.uid}
+        <h2 id="profile-title" className="pr-10 text-2xl font-bold">{profile.teamName}</h2>
+        <div className="mt-2 mb-5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-md border border-line bg-sunken px-2 py-1">
+            Access code <span className="ml-1 font-mono font-semibold tracking-wider text-primary">{profile.uid}</span>
           </span>
-          <span className="text-[11px] text-accent bg-accent/10 border border-accent/30 px-2 py-0.5">
-            LEAD: {profile.teamLead}
-          </span>
-          <span className={`text-[11px] px-2 py-0.5 font-bold uppercase ${
-            (profile.assignedRoute || progress.assignedRoute || 1) === 1
-              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-              : 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+          <span className="rounded-md border border-line bg-sunken px-2 py-1">Lead: <span className="font-medium">{profile.teamLead}</span></span>
+          <span className={`rounded-md border px-2 py-1 font-semibold ${
+            route === 1 ? 'border-route-1/50 bg-route-1/10 text-route-1' : 'border-route-2/50 bg-route-2/10 text-route-2'
           }`}>
-            ASSIGNED: ROUTE 0{profile.assignedRoute || progress.assignedRoute || 1}
+            Route {route}
           </span>
         </div>
 
-        <div className="overflow-y-auto pr-1 space-y-5 flex-1">
-          {/* Live Telemetry */}
-          <div className="bg-sunken p-3.5 border border-line">
-            <h3 className="text-[10px] text-muted mb-2 uppercase font-bold tracking-widest flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-accent" />
-              Live Hunt Telemetry
-            </h3>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-muted">CURRENT STAGE</span>
-              <span className="text-accent font-bold">NODE 0{Math.min(progress.currentStage, 12)} / 12</span>
+        <div className="flex-1 space-y-5 overflow-y-auto pr-1">
+          <section className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-line bg-sunken p-3">
+              <div className="text-xs text-muted">Stage</div>
+              <div className="mt-0.5 font-mono text-lg font-semibold tabular-nums text-primary">
+                {String(Math.min(progress.currentStage, 12)).padStart(2, '0')}<span className="text-muted">/12</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted">ELAPSED TIME</span>
-              <span className="text-primary font-bold tracking-wider">{elapsed}</span>
+            <div className="rounded-lg border border-line bg-sunken p-3">
+              <div className="flex items-center gap-1 text-xs text-muted">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" /> Elapsed
+              </div>
+              <div className="mt-0.5 font-mono text-lg font-semibold tabular-nums">{elapsed}</div>
             </div>
-          </div>
+          </section>
 
-          {/* Roster */}
-          <div>
-            <h3 className="text-[10px] text-muted mb-2 uppercase font-bold tracking-widest">
-              Team Roster ({profile.members.length} Members)
+          <section>
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted">
+              <Users className="h-4 w-4" aria-hidden="true" />
+              Team ({profile.members.length})
             </h3>
-            <div className="space-y-2">
+            <ul className="space-y-2">
               {profile.members.map((m, i) => (
-                <div key={i} className="bg-sunken p-2.5 border-l-2 border-accent text-sm border-t border-r border-b border-line/40">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-ink">{m.name}</span>
-                    <span className="text-accent text-xs uppercase font-bold tracking-wider">{m.role}</span>
+                <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-sunken px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{m.name}</div>
+                    <div className="truncate font-mono text-xs text-muted">{m.regNo}</div>
                   </div>
-                  <div className="text-[10px] text-muted mt-1">ID: {m.regNo}</div>
-                </div>
+                  <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
+                    m.role === 'Field Scout' ? 'bg-primary/15 text-primary' : 'bg-accent/15 text-accent'
+                  }`}>
+                    {m.role}
+                  </span>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
 
-          {/* Clearance Log */}
-          <div>
-            <h3 className="text-[10px] text-muted mb-2 uppercase font-bold tracking-widest flex items-center gap-1">
-              <Award className="w-3.5 h-3.5 text-accent" />
-              Node Clearance Log
+          <section>
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              Cleared checkpoints
             </h3>
-            <div className="space-y-1.5 text-xs text-muted max-h-32 overflow-y-auto">
-              {progress.completedNodes.length === 0 && (
-                <div className="italic text-[11px] text-muted p-2 bg-sunken border border-line">
-                  No nodes breached yet. Scan Node 01 to begin!
-                </div>
-              )}
-              {progress.completedNodes.map((n, i) => (
-                <div key={i} className="flex justify-between border-b border-line pb-1.5 px-1">
-                  <span className="text-accent font-bold">✓ Node 0{n.nodeId} Cleared</span>
-                  <span className="text-[11px] text-muted">{new Date(n.timestamp).toLocaleTimeString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            {progress.completedNodes.length === 0 ? (
+              <p className="rounded-lg border border-line bg-sunken p-3 text-sm text-muted">
+                Nothing cleared yet. Find checkpoint 1 to begin!
+              </p>
+            ) : (
+              <ul className="max-h-40 divide-y divide-line overflow-y-auto rounded-lg border border-line bg-sunken text-sm">
+                {progress.completedNodes.map((n, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+                      Checkpoint {n.nodeId}
+                    </span>
+                    <span className="font-mono text-xs text-muted">{new Date(n.timestamp).toLocaleTimeString()}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
 
         <button 
           onClick={handleLogout}
-          className="mt-5 w-full flex items-center justify-center gap-2 border border-danger text-danger py-3 text-xs uppercase font-bold hover:bg-danger hover:text-black transition-colors cursor-pointer"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-danger/60 text-sm font-semibold text-danger transition-colors hover:bg-danger/10 cursor-pointer"
         >
-          <LogOut className="w-4 h-4" />
-          Disconnect Session
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Log out of this device
         </button>
       </div>
     </div>

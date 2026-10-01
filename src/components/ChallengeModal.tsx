@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Checkpoint } from '@/types/hunt';
-import { Terminal, LockOpen, X, AlertTriangle, ShieldCheck, Timer, Play } from 'lucide-react';
+import { AlertCircle, BrainCircuit, CheckCircle2, Play, Timer, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
@@ -109,145 +109,168 @@ export default function ChallengeModal({
 
   const stageNum = checkpoint.stage || (checkpoint.id <= 12 ? checkpoint.id : checkpoint.id - 12);
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors">
-      <div className={`w-full max-w-md bg-surface rounded-xl border-t-2 border-b-2 ${cleared ? 'border-primary' : 'border-danger'} p-8 sm:p-10 relative font-mono transition-all duration-300 shadow-[0_0_30px_rgba(255,0,60,0.2)] ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
-        
-        {!cleared && (
-          <button 
-            onClick={onClose} 
-            className="absolute top-4 right-4 text-muted hover:text-danger transition-colors cursor-pointer"
-            aria-label="Close Challenge"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        )}
+  const isCode = challenge.type === 'code';
 
-        <div className="flex justify-center mb-3">
-          {cleared ? (
-            <LockOpen className="w-12 h-12 text-primary animate-bounce" />
-          ) : (
-            <Terminal className="w-12 h-12 text-danger animate-pulse" />
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="challenge-title"
+        className={`relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-raised sm:rounded-xl sm:p-6 ${
+          isCode ? 'sm:max-w-2xl lg:max-w-5xl' : 'sm:max-w-lg'
+        } ${error ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <span className="rounded-md border border-dashed border-primary/60 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+              Checkpoint {String(stageNum).padStart(2, '0')}
+            </span>
+            <h2 id="challenge-title" className="mt-2 flex items-center gap-2 text-xl font-bold sm:text-2xl">
+              {cleared ? (
+                <>
+                  <CheckCircle2 className="h-6 w-6 text-success" aria-hidden="true" /> Solved!
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="h-6 w-6 text-primary" aria-hidden="true" /> Challenge
+                </>
+              )}
+            </h2>
+          </div>
+          {!cleared && (
+            <button
+              onClick={onClose}
+              className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+              aria-label="Close challenge"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           )}
         </div>
 
-        <h2 className={`text-xl sm:text-2xl text-center font-bold mb-4 tracking-widest uppercase ${cleared ? 'text-primary' : ' text-danger'}`}>
-          {cleared ? 'SOLVED!' : 'CHALLENGE'}
-        </h2>
-
         {!cleared && (
-          <>
-            <div className="bg-sunken border border-line p-4 mb-5 relative">
-              <div className="absolute top-0 left-0 bg-danger text-white text-[10px] px-2 py-0.5 font-bold tracking-wider uppercase">
-                CHECKPOINT {stageNum}
-              </div>
-              <div className="mt-3">
-                <MarkdownRenderer content={challenge.question} />
-              </div>
+          <div className={isCode ? 'lg:grid lg:grid-cols-2 lg:gap-6' : ''}>
+            <div className="mb-5 rounded-lg border border-line bg-sunken p-4 lg:mb-0">
+              <MarkdownRenderer content={challenge.question} />
             </div>
 
-            {error && (
-              <div className="bg-danger/15 border border-danger text-danger px-3 py-2 mb-4 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage || 'Incorrect answer.'}</span>
-              </div>
-            )}
-
-            {cooldown > 0 && (
-              <div className="bg-primary/15 border border-primary text-primary px-3 py-2 mb-4 text-xs flex items-center gap-2">
-                <Timer className="w-4 h-4 shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
-                <span>Cooldown: {cooldown}s</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {challenge.type === 'mcq' && challenge.options ? (
-                <div className="space-y-2">
-                  {challenge.options.map(opt => (
-                    <label 
-                      key={opt} 
-                      className={`block border p-3 cursor-pointer transition-all ${
-                        answer === opt 
-                          ? 'border-accent bg-accent/15 text-accent font-bold shadow-[0_0_8px_rgba(0,240,255,0.2)]' 
-                          : 'border-line hover:border-accent/50 text-ink bg-sunken'
-                      }`}
-                    >
-                      <input 
-                        type="radio" 
-                        name="answer" 
-                        value={opt} 
-                        disabled={cooldown > 0}
-                        onChange={e => setAnswer(e.target.value)}
-                        className="hidden"
-                      />
-                      <span className="text-sm">{opt}</span>
-                    </label>
-                  ))}
-                </div>
-              ) : challenge.type === 'code' ? (
-                <div className="space-y-4">
-                  <div className="border border-line overflow-hidden">
-                    <CodeMirror
-                      value={answer}
-                      height="200px"
-                      theme={oneDark}
-                      extensions={[javascript({ jsx: true })]}
-                      onChange={(value) => setAnswer(value)}
-                      editable={cooldown <= 0}
-                      className="text-sm text-left"
-                    />
-                  </div>
-                  {!isMobile && (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={runCode}
-                        disabled={runningCode || !answer || cooldown > 0}
-                        className="w-full flex items-center justify-center gap-2 bg-sunken border border-accent text-accent hover:bg-accent hover:text-black font-bold py-2 uppercase tracking-widest transition-colors disabled:opacity-50"
-                      >
-                        <Play className="w-4 h-4" />
-                        {runningCode ? 'RUNNING...' : 'RUN CODE'}
-                      </button>
-                      <div className="bg-black border border-line p-3 min-h-[100px] max-h-[150px] overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap text-left">
-                        {terminalOutput || '> Output will appear here...'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <input
-                    type="text"
-                    value={answer}
-                    disabled={cooldown > 0}
-                    onChange={e => setAnswer(e.target.value)}
-                    className={`w-full bg-sunken border ${
-                      error ? 'border-danger' : 'border-line'
-                    } focus:border-accent text-ink px-4 py-3 outline-none text-center uppercase tracking-widest text-sm font-bold disabled:opacity-50`}
-                    placeholder={cooldown > 0 ? `LOCKED (${cooldown}s)` : "Enter your answer"}
-                    required
-                  />
+            <div>
+              {error && (
+                <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-danger/50 bg-danger/10 px-3 py-2.5 text-sm text-danger">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{errorMessage || 'Incorrect answer.'}</span>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading || !answer || cooldown > 0}
-                className="w-full rounded-lg bg-danger hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(255,0,60,0.3)]"
-              >
-                {loading ? 'VALIDATING...' : cooldown > 0 ? `LOCKED (${cooldown}s)` : 'SUBMIT SOLUTION'}
-              </button>
-            </form>
-          </>
+              {cooldown > 0 && (
+                <div role="status" className="mb-4 flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/10 px-3 py-2.5 text-sm text-ink">
+                  <Timer className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span>Answering is locked for <span className="font-mono font-semibold tabular-nums">{cooldown}s</span> after a wrong answer.</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {challenge.type === 'mcq' && challenge.options ? (
+                  <fieldset className="space-y-2">
+                    <legend className="sr-only">Choose an answer</legend>
+                    {challenge.options.map((opt, i) => (
+                      <label
+                        key={opt}
+                        className={`flex min-h-12 items-center gap-3 rounded-lg border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary cursor-pointer ${
+                          answer === opt
+                            ? 'border-primary bg-primary/10 font-semibold'
+                            : 'border-line-strong bg-sunken hover:border-ink/40'
+                        } ${cooldown > 0 ? 'opacity-60' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="answer"
+                          value={opt}
+                          checked={answer === opt}
+                          disabled={cooldown > 0}
+                          onChange={e => setAnswer(e.target.value)}
+                          className="sr-only"
+                        />
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${
+                          answer === opt ? 'border-primary bg-primary text-on-primary' : 'border-line-strong text-muted'
+                        }`}>
+                          {String.fromCharCode(65 + i)}
+                        </span>
+                        <span className="text-base">{opt}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : isCode ? (
+                  <div className="space-y-3">
+                    <div className="overflow-hidden rounded-lg border border-line">
+                      <CodeMirror
+                        value={answer}
+                        height="220px"
+                        theme={oneDark}
+                        extensions={[javascript({ jsx: true })]}
+                        onChange={(value) => setAnswer(value)}
+                        editable={cooldown <= 0}
+                        className="text-left text-sm"
+                      />
+                    </div>
+                    {!isMobile && (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={runCode}
+                          disabled={runningCode || !answer || cooldown > 0}
+                          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface text-sm font-semibold transition-colors hover:border-ink/40 disabled:opacity-50 cursor-pointer"
+                        >
+                          <Play className="h-4 w-4 text-accent" aria-hidden="true" />
+                          {runningCode ? 'Running…' : 'Run code'}
+                        </button>
+                        <pre className="max-h-40 min-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg border border-line bg-sunken p-3 text-left font-mono text-sm text-success" aria-live="polite">
+                          {terminalOutput || '> Output will appear here…'}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="challengeAnswer" className="mb-1.5 block text-sm font-medium">Your answer</label>
+                    <input
+                      id="challengeAnswer"
+                      type="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={answer}
+                      disabled={cooldown > 0}
+                      onChange={e => setAnswer(e.target.value)}
+                      aria-invalid={error}
+                      className={`h-12 w-full rounded-lg border bg-sunken px-4 font-mono text-base text-ink placeholder:font-sans placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow disabled:opacity-60 ${
+                        error ? 'border-danger' : 'border-line-strong'
+                      }`}
+                      placeholder={cooldown > 0 ? `Locked for ${cooldown}s` : 'Type your answer'}
+                      required
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || !answer || cooldown > 0}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? 'Checking…' : cooldown > 0 ? `Locked (${cooldown}s)` : 'Submit answer'}
+                </button>
+              </form>
+            </div>
+          </div>
         )}
 
         {cleared && (
-          <div className="text-center space-y-3 py-4 animate-pulse">
-            <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm">
-              <ShieldCheck className="w-5 h-5" />
-              <span>CHECKPOINT {stageNum} SOLVED!</span>
+          <div className="space-y-2 py-6 text-center" role="status">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-success">
+              <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
             </div>
-            <p className="text-xs text-muted">Unlocking next checkpoint...</p>
+            <p className="text-lg font-semibold">Checkpoint {stageNum} solved!</p>
+            <p className="text-sm text-muted">Unlocking the next checkpoint…</p>
           </div>
         )}
       </div>
@@ -255,9 +278,9 @@ export default function ChallengeModal({
       <style jsx>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-10px); }
-          50% { transform: translateX(10px); }
-          75% { transform: translateX(-10px); }
+          25% { transform: translateX(-8px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-8px); }
         }
       `}</style>
     </div>

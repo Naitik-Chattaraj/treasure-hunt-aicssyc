@@ -1,7 +1,7 @@
 'use client';
 
 import { HuntProgress } from '@/types/hunt';
-import { X, Navigation } from 'lucide-react';
+import { Check, Map as MapIcon, X } from 'lucide-react';
 
 const ROUTE_1_MAP_NODES = [
   { x: 18, y: 78, name: 'Hippocrates Hall' },
@@ -45,110 +45,89 @@ export default function TacticalMapModal({
   const currentRoute: 1 | 2 = assignedRoute || progress.assignedRoute || 1;
   const nodes = currentRoute === 1 ? ROUTE_1_MAP_NODES : ROUTE_2_MAP_NODES;
 
+  const currentIndex = Math.min(progress.currentStage, 12) - 1;
+  const trail = nodes.map((p) => `${p.x},${p.y}`).join(' ');
+  const walked = nodes.slice(0, currentIndex + 1).map((p) => `${p.x},${p.y}`).join(' ');
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono transition-colors">
-      <div className="w-full max-w-2xl h-[82vh] bg-surface rounded-xl border-2 border-accent shadow-[0_0_30px_rgba(5,217,232,0.25)] relative flex flex-col overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-accent/30 bg-sunken">
-          <div className="flex items-center gap-2">
-            <Navigation className="w-5 h-5 text-accent" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-accent tracking-widest uppercase">
-                  Treasure Map
-                </h2>
-                <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${
-                  currentRoute === 1 ? 'bg-accent text-on-primary' : 'bg-purple-500 text-white'
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="map-title"
+        className="relative flex h-[88dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-raised sm:h-[82dvh] sm:max-w-3xl sm:rounded-xl"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <MapIcon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="map-title" className="flex items-center gap-2 text-lg font-bold">
+                Treasure map
+                <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${
+                  currentRoute === 1 ? 'border-route-1/50 bg-route-1/10 text-route-1' : 'border-route-2/50 bg-route-2/10 text-route-2'
                 }`}>
-                  Route 0{currentRoute}
+                  Route {currentRoute}
                 </span>
-              </div>
-              <p className="text-[10px] text-muted">
-                {currentRoute === 1 
-                  ? 'ROUTE 1 (12 CHECKPOINTS)' 
-                  : 'ROUTE 2 (12 CHECKPOINTS)'}
+              </h2>
+              <p className="truncate text-sm text-muted">
+                Next: {nodes[currentIndex]?.name} · 12 checkpoints
               </p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 text-muted hover:text-danger transition-colors cursor-pointer"
-            aria-label="Close Map"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+            aria-label="Close map"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Map Container */}
-        <div className="flex-1 relative overflow-hidden bg-canvas p-4 flex flex-col justify-center">
-          {/* Blueprint Grid Background */}
-          <div 
-            className="absolute inset-0 opacity-40" 
-            style={{ 
-              backgroundImage: 'linear-gradient(rgba(0, 240, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.15) 1px, transparent 1px)',
-              backgroundSize: '24px 24px'
-            }}
-          ></div>
-          
-          <div className="absolute inset-4 border border-accent/30 pointer-events-none">
-            {/* Coordinate markings */}
-            <span className="absolute bottom-1 right-2 text-[9px] text-accent/70">
-              ROUTE {currentRoute}
-            </span>
+        <div className="bg-map relative flex-1 overflow-hidden p-4 sm:p-6">
+          <div className="relative h-full w-full rounded-lg border border-dashed border-line-strong">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points={trail} fill="none" stroke="var(--line-strong)" strokeWidth="2" strokeDasharray="1 5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              <polyline points={walked} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            </svg>
+
+            <ol className="contents">
+              {nodes.map((pos, idx) => {
+                const stageId = idx + 1;
+                const isCompleted = progress.completedNodes.some(n => n.nodeId === stageId);
+                const isCurrent = progress.currentStage === stageId;
+                const status = isCompleted ? 'found' : isCurrent ? 'current target' : 'ahead';
+
+                return (
+                  <li
+                    key={stageId}
+                    tabIndex={0}
+                    aria-label={`Checkpoint ${stageId}, ${pos.name}: ${status}`}
+                    className={`group absolute -ml-4 -mt-4 flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold outline-none transition-transform focus-visible:ring-2 focus-visible:ring-primary ${
+                      isCompleted
+                        ? 'border-primary bg-primary text-on-primary'
+                        : isCurrent
+                          ? 'z-20 scale-110 border-accent bg-surface text-accent ring-4 ring-accent/25'
+                          : 'border-line-strong bg-surface text-muted'
+                    }`}
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                  >
+                    {isCompleted ? <Check className="h-4 w-4" aria-hidden="true" /> : stageId}
+
+                    <span className="pointer-events-none absolute bottom-10 left-1/2 z-30 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink shadow-raised group-hover:block group-focus:block">
+                      {stageId}. {pos.name} · {status}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
 
-          <div className="relative w-full h-full">
-            {nodes.map((pos, idx) => {
-              const stageId = idx + 1;
-              const isCompleted = progress.completedNodes.some(n => n.nodeId === stageId);
-              const isCurrent = progress.currentStage === stageId;
-              
-              let styleClasses = 'bg-sunken border-line text-muted'; // Locked
-              let glowEffect = '';
-
-              if (isCompleted) {
-                styleClasses = 'bg-accent/20 border-accent text-accent font-bold';
-                glowEffect = 'shadow-[0_0_12px_rgba(0,240,255,0.6)]';
-              } else if (isCurrent) {
-                styleClasses = 'bg-primary text-black border-primary font-extrabold animate-pulse';
-                glowEffect = 'shadow-[0_0_18px_rgba(252,238,10,0.9)] z-20 scale-110';
-              }
-
-              return (
-                <div 
-                  key={stageId}
-                  className={`group absolute w-8 h-8 -ml-4 -mt-4 border-2 rounded-full flex items-center justify-center text-xs transition-all cursor-pointer ${styleClasses} ${glowEffect}`}
-                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                >
-                  {stageId}
-                  {isCurrent && (
-                    <div className="absolute inset-0 border-2 border-primary rounded-full animate-ping opacity-60"></div>
-                  )}
-
-                  {/* Tooltip on hover/touch */}
-                  <div className="absolute bottom-9 left-1/2 -translate-x-1/2 hidden group-hover:block z-30 whitespace-nowrap bg-black text-white border border-accent px-2.5 py-1 text-[10px] uppercase shadow-lg pointer-events-none">
-                    Node 0{stageId}: {pos.name} {isCompleted ? '✓' : isCurrent ? '★ CURRENT' : '🔒'}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="absolute bottom-6 left-6 bg-surface/90 border border-line p-2.5 text-[10px] space-y-1.5 shadow-md">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_6px_rgba(252,238,10,0.8)]"></div> 
-              <span className="font-bold text-primary">CURRENT (CHECKPOINT {Math.min(progress.currentStage, 12)})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_6px_rgba(0,240,255,0.8)]"></div> 
-              <span className="text-accent">CLEARED</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div> 
-              <span className="text-muted">LOCKED</span>
-            </div>
+          <div className="absolute bottom-6 left-6 space-y-1.5 rounded-lg border border-line bg-surface/95 p-2.5 text-xs shadow-card sm:bottom-8 sm:left-8">
+            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full border-2 border-accent" /> Current ({Math.min(progress.currentStage, 12)})</div>
+            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-primary" /> Found</div>
+            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full border-2 border-line-strong" /> Ahead</div>
           </div>
         </div>
       </div>

@@ -33,7 +33,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const processedContent = autoFormatCode(content);
 
   return (
-    <div className="markdown-body text-sm font-mono leading-relaxed space-y-4">
+    <div className="markdown-body space-y-3 text-base leading-relaxed text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -43,12 +43,12 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
             
             if (isBlock) {
               return (
-                <div className="rounded border border-line overflow-hidden my-4 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
+                <div className="my-3 overflow-hidden rounded-lg border border-line">
                   <SyntaxHighlighter
                     style={vscDarkPlus}
                     language={match ? match[1] : 'javascript'}
                     PreTag="div"
-                    className="!bg-black !m-0 !p-4 !text-sm"
+                    className="!m-0 !p-4 !text-sm"
                     {...props}
                   >
                     {String(children).replace(/\n$/, '')}
@@ -59,16 +59,16 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
             
             // Inline code snippet
             return (
-              <code className="bg-black text-accent border border-line/50 px-1.5 py-0.5 rounded text-xs" {...props}>
+              <code className="rounded border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[0.9em] text-ink" {...props}>
                 {children}
               </code>
             );
           },
           // Customize paragraphs and links for cyber aesthetic
-          p: ({ node, ...props }) => <p className="mb-2" {...props} />,
-          a: ({ node, ...props }) => <a className="text-accent hover:text-primary transition-colors underline" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1 mb-2" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1 mb-2" {...props} />,
+          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+          a: ({ node, ...props }) => <a className="text-accent underline underline-offset-2 transition-colors hover:text-primary" {...props} />,
+          ul: ({ node, ...props }) => <ul className="mb-2 list-disc space-y-1 pl-5" {...props} />,
+          ol: ({ node, ...props }) => <ol className="mb-2 list-decimal space-y-1 pl-5" {...props} />,
         }}
       >
         {processedContent}
