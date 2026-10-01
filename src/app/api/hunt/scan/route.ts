@@ -198,23 +198,16 @@ export async function POST(req: NextRequest) {
     let challengeData: any = null;
 
     try {
-      let { data: existingActive } = await teamDb
-        .from('team_active_challenges')
-        .select(`
-          id,
-          question_id,
-          questions_pool (
-            id,
-            challenge_type,
-            question,
-            options
-          )
-        `)
-        .eq('team_id', team.id)
-        .eq('node_id', matchedNode.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      let { data: existingActive, error: eaError } = await teamDb
+          .from('team_active_challenges')
+          .select('id, question_id, node_id')
+          .eq('team_id', team.id)
+          .eq('node_id', matchedNode.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        if (eaError) console.warn('existingActive fetch error:', eaError);
 
       if (!existingActive) {
         // Fetch questions for this node from team's route pool
@@ -225,24 +218,17 @@ export async function POST(req: NextRequest) {
 
         if (pool && pool.length > 0) {
           const chosen = pool[Math.floor(Math.random() * pool.length)];
-          const { data: inserted } = await teamDb
-            .from('team_active_challenges')
-            .insert({
-              team_id: team.id,
-              node_id: matchedNode.id,
-              question_id: chosen.id,
-            })
-            .select(`
-              id,
-              question_id,
-              questions_pool (
-                id,
-                challenge_type,
-                question,
-                options
-              )
-            `)
-            .single();
+          const { data: inserted, error: iErr } = await teamDb
+              .from('team_active_challenges')
+              .insert({
+                team_id: team.id,
+                node_id: matchedNode.id,
+                question_id: chosen.id,
+              })
+              .select('id, question_id, node_id')
+              .single();
+              
+            if (iErr) console.error('insert active challenge error:', iErr);
 
           existingActive = inserted;
         } else {
@@ -268,20 +254,24 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (existingActive?.questions_pool) {
-        const q = Array.isArray(existingActive.questions_pool) 
-          ? existingActive.questions_pool[0] 
-          : existingActive.questions_pool;
-
-        challengeData = {
-          id: q.id,
-          nodeId: matchedNode.stage,
-          checkpointId: matchedNode.id,
-          type: q.challenge_type,
-          question: q.question,
-          options: q.options,
-        };
-      }
+      if (existingActive?.question_id) {
+          const { data: q } = await teamDb
+            .from('questions_pool')
+            .select('id, challenge_type, question, options')
+            .eq('id', existingActive.question_id)
+            .maybeSingle();
+            
+          if (q) {
+            challengeData = {
+              id: q.id,
+              nodeId: matchedNode.stage,
+              checkpointId: matchedNode.id,
+              type: q.challenge_type,
+              question: q.question,
+              options: q.options,
+            };
+          }
+        }
     } catch (e) {
       console.warn('team_active_challenges process warning:', e);
     }

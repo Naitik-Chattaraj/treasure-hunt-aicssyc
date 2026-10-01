@@ -117,40 +117,36 @@ export async function GET(req: NextRequest) {
     let qrScanned = false;
 
     try {
-      const { data: activeChallenge } = await supabase
+      const { data: activeChallenge, error: acError } = await supabase
         .from('team_active_challenges')
-        .select(`
-          id,
-          node_id,
-          question_id,
-          questions_pool (
-            id,
-            challenge_type,
-            question,
-            options
-          )
-        `)
+        .select('id, node_id, question_id')
         .eq('team_id', team.id)
         .eq('node_id', cp.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+        
+      if (acError) console.warn('team_active_challenges fetch error:', acError);
 
       if (activeChallenge) {
         qrScanned = true;
         
-        if (activeChallenge.questions_pool) {
-          const q = Array.isArray(activeChallenge.questions_pool) 
-            ? activeChallenge.questions_pool[0] 
-            : activeChallenge.questions_pool;
-
-          etchedChallenge = {
-            id: q.id,
-            nodeId: cp.id,
-            type: q.challenge_type,
-            question: q.question,
-            options: q.options,
-          };
+        if (activeChallenge.question_id) {
+          const { data: q } = await supabase
+            .from('questions_pool')
+            .select('id, challenge_type, question, options')
+            .eq('id', activeChallenge.question_id)
+            .maybeSingle();
+            
+          if (q) {
+            etchedChallenge = {
+              id: q.id,
+              nodeId: cp.id,
+              type: q.challenge_type,
+              question: q.question,
+              options: q.options,
+            };
+          }
         }
       }
 
