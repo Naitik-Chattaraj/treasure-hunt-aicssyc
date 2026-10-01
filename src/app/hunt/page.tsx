@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { TeamProfile, HuntProgress, Checkpoint } from '@/types/hunt';
@@ -44,6 +44,7 @@ export default function HuntHUD() {
   const [scannedNode, setScannedNode] = useState<number | null>(null);
   const [violationNode, setViolationNode] = useState<number | null>(null);
   const [showChallenge, setShowChallenge] = useState(false);
+  const autoOpenedCheckpointRef = useRef<number | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [prevStage, setPrevStage] = useState<number | null>(null);
   const [stageClearedNotice, setStageClearedNotice] = useState<string | null>(null);
@@ -86,6 +87,13 @@ export default function HuntHUD() {
         if (prog.currentStage <= 12) {
           const cp = await api.getCheckpoint(prog.currentStage);
           setActiveCheckpoint(cp);
+
+          // The Field Scout scans on campus; pop the question open on the Base Decoder's screen
+          // once per checkpoint as soon as it arrives through polling
+          if (prof.operativeRole !== 'Field Scout' && cp?.challenge && autoOpenedCheckpointRef.current !== cp.id) {
+            autoOpenedCheckpointRef.current = cp.id;
+            setShowChallenge(true);
+          }
         }
       }
     } catch (err) {
@@ -198,6 +206,7 @@ export default function HuntHUD() {
     : 0;
 
   const isQrUnlocked = !!activeCheckpoint?.qrScanned;
+  const hasChallenge = !!activeCheckpoint?.challenge;
   const currentStageDisplay = progress.currentStage;
 
   return (
@@ -319,7 +328,7 @@ export default function HuntHUD() {
                     <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
                     <span className="font-bold">QR Verified ✓</span>
                   </div>
-                  {isBaseDecoder && (
+                  {isBaseDecoder && hasChallenge && (
                     <button
                       onClick={() => setShowChallenge(true)}
                       className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer flex items-center gap-1"
@@ -438,7 +447,12 @@ export default function HuntHUD() {
           )
         ) : (
           /* Base Decoder View */
-          isQrUnlocked ? (
+          isQrUnlocked && !hasChallenge ? (
+            <div className="w-full flex items-center justify-center gap-2.5 bg-cyber-darker border-2 border-cyber-pink/70 text-cyber-pink py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest text-center">
+              <AlertOctagon className="w-4 h-4 shrink-0" />
+              <span>QR SCANNED // NO QUESTION SET FOR THIS NODE. CALL AN ORGANIZER</span>
+            </div>
+          ) : isQrUnlocked ? (
             <button
               onClick={() => setShowChallenge(true)}
               className="w-full flex items-center justify-center gap-3 cyber-button-border bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"

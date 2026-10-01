@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
+import { getTeamChallenge } from '@/lib/challenges';
 
 export async function GET(req: NextRequest) {
   try {
@@ -117,42 +118,11 @@ export async function GET(req: NextRequest) {
     let qrScanned = false;
 
     try {
-      const { data: activeChallenge, error: acError } = await supabase
-        .from('team_active_challenges')
-        .select('id, node_id, question_id')
-        .eq('team_id', team.id)
-        .eq('node_id', cp.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-        
-      if (acError) console.warn('team_active_challenges fetch error:', acError);
+      let state = await getTeamChallenge(supabase, team.id, cp.id, { assignIfMissing: false });
 
-      if (activeChallenge) {
-        qrScanned = true;
-        
-        if (activeChallenge.question_id) {
-          const { data: q } = await supabase
-            .from('questions_pool')
-            .select('id, challenge_type, question, options')
-            .eq('id', activeChallenge.question_id)
-            .maybeSingle();
-            
-          if (q) {
-            etchedChallenge = {
-              id: q.id,
-              nodeId: cp.id,
-              type: q.challenge_type,
-              question: q.question,
-              options: q.options,
-            };
-          }
-        }
-      }
-
-      // FALLBACK: If team_active_challenges insert failed (e.g. empty questions pool causing foreign key error),
-      // check if a successful scan was logged in submissions_log
-      if (!qrScanned) {
+      // If the scan was logged but no question got assigned (e.g. the pool was empty at scan time),
+      // assign one now so the Base Decoder's screen can still show it
+      if (!state.unlocked) {
         const { data: scanLog } = await supabase
           .from('submissions_log')
           .select('id')
@@ -165,7 +135,13 @@ export async function GET(req: NextRequest) {
 
         if (scanLog) {
           qrScanned = true;
+          state = await getTeamChallenge(supabase, team.id, cp.id, { assignIfMissing: true });
         }
+      }
+
+      if (state.unlocked) qrScanned = true;
+      if (state.challenge) {
+        etchedChallenge = { ...state.challenge, nodeId: cp.id };
       }
     } catch (e) {
       console.warn('team_active_challenges check warning:', e);

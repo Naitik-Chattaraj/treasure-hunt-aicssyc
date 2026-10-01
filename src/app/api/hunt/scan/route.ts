@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
+import { getTeamChallenge } from '@/lib/challenges';
 
 export async function POST(req: NextRequest) {
   try {
@@ -194,88 +195,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. Exact stage match! Check or etch challenge in team's route database
+    // 4. Exact stage match! Get or assign this team's question in its route database
     let challengeData: any = null;
 
     try {
-      let { data: existingActive, error: eaError } = await teamDb
-          .from('team_active_challenges')
-          .select('id, question_id, node_id')
-          .eq('team_id', team.id)
-          .eq('node_id', matchedNode.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-          
-        if (eaError) console.warn('existingActive fetch error:', eaError);
-
-      if (!existingActive) {
-        // Fetch questions for this node from team's route pool
-        const { data: pool } = await teamDb
-          .from('questions_pool')
-          .select('id, challenge_type, question, options')
-          .eq('node_id', matchedNode.id);
-
-        if (pool && pool.length > 0) {
-          const chosen = pool[Math.floor(Math.random() * pool.length)];
-          const { data: inserted, error: iErr } = await teamDb
-              .from('team_active_challenges')
-              .insert({
-                team_id: team.id,
-                node_id: matchedNode.id,
-                question_id: chosen.id,
-              })
-              .select('id, question_id, node_id')
-              .single();
-              
-            if (iErr) console.error('insert active challenge error:', iErr);
-
-          existingActive = inserted;
-        } else {
-          // Fallback: If no questions for this specific node, try to fetch ANY question
-          const { data: anyPool } = await teamDb.from('questions_pool').select('id').limit(1);
-          const fallbackQuestionId = (anyPool && anyPool.length > 0) ? anyPool[0].id : null;
-          
-          try {
-            const { data: inserted } = await teamDb
-              .from('team_active_challenges')
-              .insert({
-                team_id: team.id,
-                node_id: matchedNode.id,
-                question_id: fallbackQuestionId,
-              })
-              .select('*')
-              .single();
-            
-            existingActive = inserted;
-          } catch (e) {
-            console.warn('Could not insert fallback active challenge:', e);
-          }
-        }
+      const { challenge } = await getTeamChallenge(teamDb, team.id, matchedNode.id, { assignIfMissing: true });
+      if (challenge) {
+        challengeData = {
+          ...challenge,
+          nodeId: matchedNode.stage,
+          checkpointId: matchedNode.id,
+        };
       }
-
-      if (existingActive?.question_id) {
-          const { data: q } = await teamDb
-            .from('questions_pool')
-            .select('id, challenge_type, question, options')
-            .eq('id', existingActive.question_id)
-            .maybeSingle();
-            
-          if (q) {
-            challengeData = {
-              id: q.id,
-              nodeId: matchedNode.stage,
-              checkpointId: matchedNode.id,
-              type: q.challenge_type,
-              question: q.question,
-              options: q.options,
-            };
-          }
-        }
     } catch (e) {
       console.warn('team_active_challenges process warning:', e);
     }
-
 
 
     // Safely log successful scan in submissions audit
