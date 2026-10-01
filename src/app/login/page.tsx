@@ -65,7 +65,7 @@ export default function LoginPage() {
     if (!isLoginMode && teamLead) {
       setMembers(prev => {
         const next = [...prev];
-        next[0].name = teamLead;
+        next[0] = { ...next[0], name: teamLead };
         return next;
       });
       if (!operativeName) {

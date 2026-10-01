@@ -68,6 +68,7 @@ export interface LeaderboardEntry {
   currentStage: number;
   startTime: string | null;
   completedAt: string | null;
+  completed_at?: string | null;
   status: TeamStatus;
   elapsedSeconds?: number | null;
 }

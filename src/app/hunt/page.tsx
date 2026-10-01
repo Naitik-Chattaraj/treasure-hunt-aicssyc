@@ -60,14 +60,13 @@ export default function HuntHUD() {
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const prof = await api.getProfile();
+      const { team: prof, progress: prog } = await api.getMe();
       if (!prof || prof.status !== 'approved') {
         router.push('/login');
         return;
       }
       setProfile(prof);
       
-      const prog = await api.getProgress();
       if (prog) {
         // Check if team just advanced stage (Base Decoder solved a question!)
         setPrevStage((prev) => {
@@ -109,7 +108,9 @@ export default function HuntHUD() {
     // This allows the Room Base Decoders' screen to instantly refresh as soon as Field Scouts scan on campus,
     // and allows Field Scouts on campus to instantly get notified when Base Decoders solve challenges!
     const interval = setInterval(() => {
-      loadData(true);
+      if (document.visibilityState === 'visible') {
+        loadData(true);
+      }
     }, 3500);
     return () => clearInterval(interval);
   }, [router]);

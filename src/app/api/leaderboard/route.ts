@@ -56,6 +56,7 @@ export async function GET() {
         assignedRoute: t.assigned_route || 1,
         startTime: t.start_time,
         completedAt: t.completed_at,
+        completed_at: t.completed_at,
         status: t.status,
         elapsedSeconds,
       };
@@ -63,15 +64,38 @@ export async function GET() {
 
     // Sort:
     // 1. Stage (descending - furthest ahead first)
-    // 2. Elapsed seconds (ascending - fastest first)
+    // 2. Elapsed seconds (ascending - fastest first, null last)
+    // 3. Completed at (ascending - earliest first, null last)
+    // 4. ID (ascending - stable tie-breaker)
     formatted.sort((a, b) => {
       if (b.currentStage !== a.currentStage) {
         return b.currentStage - a.currentStage;
       }
-      if (a.elapsedSeconds !== null && b.elapsedSeconds !== null) {
+
+      // Sort null last, then by elapsedSeconds (fastest first)
+      if (a.elapsedSeconds === null && b.elapsedSeconds !== null) return 1;
+      if (a.elapsedSeconds !== null && b.elapsedSeconds === null) return -1;
+      if (a.elapsedSeconds !== null && b.elapsedSeconds !== null && a.elapsedSeconds !== b.elapsedSeconds) {
         return a.elapsedSeconds - b.elapsedSeconds;
       }
-      return 0;
+
+      // Then by completed_at (earliest completion first, null last)
+      const aComp = a.completedAt ?? a.completed_at;
+      const bComp = b.completedAt ?? b.completed_at;
+      if (aComp && bComp) {
+        const aTime = new Date(aComp).getTime();
+        const bTime = new Date(bComp).getTime();
+        if (!isNaN(aTime) && !isNaN(bTime) && aTime !== bTime) {
+          return aTime - bTime;
+        }
+      } else if (aComp && !bComp) {
+        return -1;
+      } else if (!aComp && bComp) {
+        return 1;
+      }
+
+      // Then by id (deterministic tie-break to avoid swapping between polls)
+      return String(a.id).localeCompare(String(b.id));
     });
 
     return NextResponse.json({ leaderboard: formatted });

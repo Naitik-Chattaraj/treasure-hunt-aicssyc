@@ -84,6 +84,32 @@ export const api = {
     await fetch('/api/auth/logout', { method: 'POST' });
   },
 
+  
+  async getMe(): Promise<{ team: TeamProfile | null; progress: HuntProgress | null }> {
+    try {
+      const res = await fetch('/api/team/me');
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
+          if (typeof window !== 'undefined') {
+            alert('Your session has expired because your team logged in from another device. Only one device per role can be active at a time.');
+            window.location.href = '/login';
+          }
+        }
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          return { team: null, progress: null };
+        }
+        throw new Error('Server error');
+      }
+      return { team: data.team || null, progress: data.progress || null };
+    } catch (e: any) {
+      if (e.message !== 'Server error') {
+        throw new Error('network_error');
+      }
+      throw e;
+    }
+  },
+
   async getProfile(): Promise<TeamProfile | null> {
 
     try {
