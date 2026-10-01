@@ -80,6 +80,7 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+  const [hideRevokedTeams, setHideRevokedTeams] = useState(false);
 
   // Edit checkpoint modal state (Title, Area, Clue, QR Hash)
   const [editingCheckpoint, setEditingCheckpoint] = useState<AdminCheckpoint | null>(null);
@@ -609,11 +610,20 @@ export default function AdminDashboard() {
 
             {/* All Teams Roster Table */}
             <div className="bg-cyber-panel border border-cyber-border overflow-hidden rounded-sm">
-              <div className="p-5 border-b border-cyber-border flex justify-between items-center">
+              <div className="p-5 border-b border-cyber-border flex justify-between items-center flex-wrap gap-4">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-cyan flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  All Teams ({teams.length})
+                  All Teams ({(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length})
                 </h2>
+                <label className="text-xs text-gray-400 font-bold uppercase flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={hideRevokedTeams}
+                    onChange={(e) => setHideRevokedTeams(e.target.checked)}
+                    className="cursor-pointer accent-cyber-cyan"
+                  />
+                  Hide Revoked Teams
+                </label>
               </div>
 
               <div className="overflow-x-auto">
@@ -632,7 +642,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-cyber-border/50">
-                    {teams.map((t) => (
+                    {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).map((t) => (
                       <tr key={t.id} className="hover:bg-cyber-darker/60 transition-colors">
                         <td className="px-4 py-3 text-cyber-cyan font-bold">{t.uid}</td>
                         <td className="px-4 py-3 font-bold">
@@ -728,7 +738,7 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {teams.length === 0 && (
+                    {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length === 0 && (
                       <tr>
                         <td colSpan={9} className="p-8 text-center text-gray-500">
                           No teams registered yet.

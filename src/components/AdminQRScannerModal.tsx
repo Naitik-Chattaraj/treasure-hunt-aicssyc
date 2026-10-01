@@ -65,7 +65,7 @@ export default function AdminQRScannerModal({
   const scannerRef = useRef<QrScanner | null>(null);
   const isOperatingRef = useRef(false);
 
-  const cleanupScanner = useCallback(() => {
+  const cleanupScanner = useCallback((preserveUI = false) => {
     if (scannerRef.current) {
       try {
         scannerRef.current.stop();
@@ -76,7 +76,10 @@ export default function AdminQRScannerModal({
         scannerRef.current = null;
       }
     }
-    setIsScanning(false);
+    isOperatingRef.current = false;
+    if (!preserveUI) {
+      setIsScanning(false);
+    }
   }, []);
 
   const handleCodeFound = useCallback((rawCode: string) => {
@@ -119,7 +122,7 @@ export default function AdminQRScannerModal({
     setScannedCode(null);
     setMatchedCp(null);
 
-    cleanupScanner();
+    cleanupScanner(true);
 
     try {
       const scanner = new QrScanner(
