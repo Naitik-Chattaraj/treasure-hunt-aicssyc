@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const adminToken = req.cookies.get('admin_session')?.value;
@@ -33,15 +39,14 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: false });
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return serverError('Failed to load teams', error);
       }
       allTeams = teams || [];
     }
 
     return NextResponse.json({ teams: allTeams });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to load teams', err);
   }
 }
 
@@ -82,7 +87,7 @@ export async function PUT(req: NextRequest) {
           .select()
           .single();
 
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) return serverError('Failed to change team route', error);
         return NextResponse.json({ success: true, team: updated });
       } else {
         // Migrate team from DB 1 to DB 2
@@ -99,7 +104,7 @@ export async function PUT(req: NextRequest) {
           .single();
 
         if (insertError) {
-          return NextResponse.json({ error: `Migration insert error: ${insertError.message}` }, { status: 500 });
+          return serverError('Failed to move team to the other route', insertError);
         }
 
         // Remove from DB 1 now that it's moved to DB 2
@@ -129,7 +134,7 @@ export async function PUT(req: NextRequest) {
             .select()
             .single();
 
-          if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+          if (error) return serverError('Failed to change team route', error);
           return NextResponse.json({ success: true, team: updated });
         } else {
           // Migrate team from DB 2 to DB 1
@@ -146,7 +151,7 @@ export async function PUT(req: NextRequest) {
             .single();
 
           if (insertError) {
-            return NextResponse.json({ error: `Migration insert error: ${insertError.message}` }, { status: 500 });
+            return serverError('Failed to move team to the other route', insertError);
           }
 
           // Remove from DB 2
@@ -158,7 +163,6 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ error: 'Team record not found in either database' }, { status: 404 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to change team route', err);
   }
 }

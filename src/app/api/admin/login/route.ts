@@ -4,6 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import { signAdminToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 function getAdminPasswordHash(): string | null {
   // 1. If process.env already has a valid uncorrupted bcrypt hash (starts with $2)
   const envHash = process.env.ADMIN_PASSWORD_HASH?.trim();
@@ -78,7 +84,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Admin login failed', err);
   }
 }

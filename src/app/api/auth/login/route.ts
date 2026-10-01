@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins, isRoute2Configured } from '@/lib/supabase';
 import { signTeamToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { uid, teamName, teamLead, members, isLoginMode, operativeName, operativeRole } = await req.json();
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (errorR1) {
-        return NextResponse.json({ error: errorR1.message }, { status: 500 });
+        return serverError('Login failed. Please try again.', errorR1);
       }
 
       if (teamR1) {
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
 
         if (errorR2) {
-          return NextResponse.json({ error: errorR2.message }, { status: 500 });
+          return serverError('Login failed. Please try again.', errorR2);
         }
 
         if (teamR2) {
@@ -143,7 +149,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (insertError) {
-          return NextResponse.json({ error: insertError.message }, { status: 500 });
+          return serverError('Registration failed. Please try again.', insertError);
         }
 
         team = newTeam;
@@ -240,7 +246,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Login failed. Please try again.', error);
   }
 }
