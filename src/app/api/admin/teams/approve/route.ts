@@ -51,10 +51,7 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    // If approving and timer hasn't started yet, set start_time
-    if (status === 'approved' && !team.start_time) {
-      updatePayload.start_time = new Date().toISOString();
-    }
+    // Start time is no longer set on approval, it's set on first scan.
 
     const { data: updated, error } = await targetDb
       .from('teams')
@@ -69,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, team: updated });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('API /admin/teams/approve: Internal Error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

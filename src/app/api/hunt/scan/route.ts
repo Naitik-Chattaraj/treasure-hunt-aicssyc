@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       const waitSeconds = Math.ceil((new Date(team.cooldown_until).getTime() - Date.now()) / 1000);
       return NextResponse.json({
         error: 'cooldown_active',
-        message: `SYSTEM LOCKOUT: Anti-brute-force active. Wait ${waitSeconds}s before scanning.`,
+        message: team.wrong_attempts >= 5 ? `WASTED. Wait ${waitSeconds}s.` : `SYSTEM LOCKOUT: Anti-brute-force active. Wait ${waitSeconds}s before scanning.`,
         waitSeconds,
       }, { status: 429 });
     }
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       const { data: dbNode } = await teamDb
         .from('checkpoints')
         .select('*')
-        .ilike('qr_hash', cleanQrHash)
+        .eq('qr_hash', cleanQrHash)
         .maybeSingle();
 
       if (dbNode) {
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
             const { data: otherDbNode } = await altDb
               .from('checkpoints')
               .select('route_id')
-              .ilike('qr_hash', cleanQrHash)
+              .eq('qr_hash', cleanQrHash)
               .maybeSingle();
             if (otherDbNode) {
               otherRouteId = otherDbNode.route_id || altRoute;
@@ -134,12 +134,18 @@ export async function POST(req: NextRequest) {
 
 
 
+      let targetCheckpointId = currentStage;
+      try {
+        const { data: cp } = await teamDb.from('checkpoints').select('id').eq('route_id', assignedRoute).eq('stage', currentStage).maybeSingle();
+        if (cp) targetCheckpointId = cp.id;
+      } catch {}
+
       if (otherRouteId) {
         // Log cross-route scan attempt in team's database
         try {
           await teamDb.from('submissions_log').insert({
             team_id: team.id,
-            node_id: currentStage,
+            node_id: targetCheckpointId,
             submission_type: 'scan',
             submitted_value: cleanQrHash,
             is_correct: false,
@@ -156,20 +162,51 @@ export async function POST(req: NextRequest) {
 
     if (!matchedNode) {
       // Safely log failed scan
+      let targetCheckpointId = currentStage;
+      try {
+        const { data: cp } = await teamDb.from('checkpoints').select('id').eq('route_id', assignedRoute).eq('stage', currentStage).maybeSingle();
+        if (cp) targetCheckpointId = cp.id;
+      } catch {}
+
       try {
         await teamDb.from('submissions_log').insert({
           team_id: team.id,
-          node_id: currentStage,
+          node_id: targetCheckpointId,
           submission_type: 'scan',
           submitted_value: cleanQrHash,
           is_correct: false,
         });
       } catch {}
 
+      let errorMsg = 'UNKNOWN QR CODE. ACCESS DENIED.';
+      let waitSeconds = 0;
+
+      if (currentStage > 1) {
+        const attempts = (team.wrong_attempts || 0) + 1;
+        if (attempts >= 5) {
+          const cooldownSeconds = 60;
+          const cooldownUntil = new Date(Date.now() + cooldownSeconds * 1000).toISOString();
+          await teamDb.from('teams').update({ wrong_attempts: attempts, cooldown_until: cooldownUntil, updated_at: new Date().toISOString() }).eq('id', team.id);
+          errorMsg = 'WASTED';
+          waitSeconds = cooldownSeconds;
+        } else {
+          await teamDb.from('teams').update({ wrong_attempts: attempts, updated_at: new Date().toISOString() }).eq('id', team.id);
+        }
+      }
+
       return NextResponse.json({
         success: false,
         error: 'invalid_qr',
-        message: 'UNKNOWN QR CODE. ACCESS DENIED.',
+        message: errorMsg,
+        waitSeconds,
+      });
+    }
+
+    if (matchedNode.route_id !== assignedRoute) {
+      return NextResponse.json({
+        success: false,
+        error: 'route_mismatch',
+        message: `ROUTE MISMATCH: This QR code belongs to Route 0${matchedNode.route_id}. Your team is assigned to Route 0${assignedRoute}!`,
       });
     }
 
@@ -223,6 +260,20 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
 
+    // Reset wrong attempts on successful scan
+    if ((team.wrong_attempts || 0) > 0) {
+      try {
+        await teamDb.from('teams').update({ wrong_attempts: 0, updated_at: new Date().toISOString() }).eq('id', team.id);
+      } catch {}
+    }
+
+    // Set start time on first scan
+    if (!team.start_time) {
+      try {
+        await teamDb.from('teams').update({ start_time: new Date().toISOString() }).eq('id', team.id);
+      } catch {}
+    }
+
     return NextResponse.json({
       success: true,
       nodeId: matchedNode.stage,
@@ -233,7 +284,7 @@ export async function POST(req: NextRequest) {
       challenge: challengeData,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('API /hunt/scan: Internal Error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

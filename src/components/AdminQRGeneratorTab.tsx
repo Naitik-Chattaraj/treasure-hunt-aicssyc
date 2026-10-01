@@ -95,11 +95,20 @@ export default function AdminQRGeneratorTab({
     const qrElement = document.getElementById('admin-qr-generator-svg');
     const svgContent = qrElement ? qrElement.outerHTML : '';
 
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>QR Sticker - Route ${routeNumber} Node ${stageNumber} (${selectedCheckpoint.title})</title>
+          <title>QR Sticker - Route ${routeNumber} Node ${stageNumber} (${escapeHtml(selectedCheckpoint.title)})</title>
           <style>
             @page { size: auto; margin: 10mm; }
             body { 
@@ -138,8 +147,8 @@ export default function AdminQRGeneratorTab({
         <body>
           <div class="sticker-card">
             <div class="badge">AICSSYC 2026 // ROUTE 0${routeNumber} // NODE 0${stageNumber}</div>
-            <h1>${selectedCheckpoint.title}</h1>
-            <h2>${selectedCheckpoint.area}</h2>
+            <h1>${escapeHtml(selectedCheckpoint.title)}</h1>
+            <h2>${escapeHtml(selectedCheckpoint.area)}</h2>
             ${svgContent}
             <div class="token">TOKEN: ${activeQrCodeValue}</div>
           </div>
@@ -204,8 +213,7 @@ export default function AdminQRGeneratorTab({
 
     setRegenerating(true);
     try {
-      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const newHash = `HUNT-R${routeNumber}-N${stageNumber.toString().padStart(2, '0')}-${randomSuffix}`;
+      const newHash = crypto.randomUUID();
       await onRegenerateToken(selectedCheckpoint.id, newHash);
       setCustomToken('');
     } catch {
@@ -224,8 +232,7 @@ export default function AdminQRGeneratorTab({
 
     setCreateStatus('Generating Question Block and Minting QR Code...');
     try {
-      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const generatedQrToken = `HUNT-R${newBlockRoute}-N${newBlockStage.toString().padStart(2, '0')}-${randomSuffix}`;
+      const generatedQrToken = crypto.randomUUID();
       
       // Calculate matching checkpoint ID: Route 1 nodes are 1..12, Route 2 nodes are 13..24
       const targetCheckpointId = newBlockRoute === 1 ? newBlockStage : newBlockStage + 12;

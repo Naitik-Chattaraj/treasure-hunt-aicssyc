@@ -132,20 +132,14 @@ ALTER TABLE public.team_active_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hunt_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.submissions_log ENABLE ROW LEVEL SECURITY;
 
--- Checkpoints: Public can read title, area, clue (but NEVER qr_hash)
+-- Checkpoints: Public can no longer view checkpoint info
 DROP POLICY IF EXISTS "Public can view basic checkpoint info" ON public.checkpoints;
-CREATE POLICY "Public can view basic checkpoint info" ON public.checkpoints
-    FOR SELECT USING (true);
 
--- Teams: Public can view active approved teams for leaderboard display
+-- Teams: Public can no longer view teams for leaderboard display
 DROP POLICY IF EXISTS "Public can view leaderboard teams" ON public.teams;
-CREATE POLICY "Public can view leaderboard teams" ON public.teams
-    FOR SELECT USING (true);
 
--- Hunt Completions: Public can view completions for leaderboard
+-- Hunt Completions: Public can no longer view completions for leaderboard
 DROP POLICY IF EXISTS "Public can view hunt completions" ON public.hunt_completions;
-CREATE POLICY "Public can view hunt completions" ON public.hunt_completions
-    FOR SELECT USING (true);
 
 -- Server-only via Service Role Key
 DROP POLICY IF EXISTS "Questions pool service role only" ON public.questions_pool;
@@ -180,6 +174,21 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.hunt_completions;
     END IF;
 END $$;
+
+-- 11. RPC FUNCTIONS
+CREATE OR REPLACE FUNCTION public.claim_attempt(team_id UUID, lock_seconds INTEGER)
+RETURNS UUID AS $$
+DECLARE
+  returned_id UUID;
+BEGIN
+  UPDATE public.teams
+  SET cooldown_until = now() + (lock_seconds || ' seconds')::interval
+  WHERE id = team_id AND (cooldown_until IS NULL OR cooldown_until < now())
+  RETURNING id INTO returned_id;
+  
+  RETURN returned_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 11. CLEANUP LEGACY ROUTE 1 DATA IF RUNNING ON A PRE-EXISTING DATABASE
 DELETE FROM public.questions_pool WHERE node_id <= 12;

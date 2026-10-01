@@ -85,8 +85,22 @@ export async function POST(req: NextRequest) {
 
     const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
 
+    // Atomic claim to prevent parallel guesses
+    const { data: claimData, error: claimError } = await supabase.rpc('claim_attempt', {
+      team_id: team.id,
+      lock_seconds: 2
+    });
+
+    if (claimError || !claimData) {
+      return NextResponse.json({
+        error: 'cooldown_active',
+        message: 'SYSTEM LOCKOUT: Attempt rejected due to parallel submissions or active cooldown.',
+        waitSeconds: 2,
+      }, { status: 429 });
+    }
+
     // Fetch the checkpoint for this team's route and current stage
-    let cpId = nodeId;
+    let cpId: number | null = null;
     try {
       const { data: currentCp } = await supabase
         .from('checkpoints')
@@ -126,6 +140,7 @@ export async function POST(req: NextRequest) {
         .select('id, question_id')
         .eq('team_id', team.id)
         .eq('node_id', cpId)
+        .eq('is_solved', false)
         .maybeSingle();
 
       if (acError) console.error('team_active_challenges lookup error:', acError);
@@ -237,8 +252,8 @@ export async function POST(req: NextRequest) {
       cooldownSeconds,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('API /hunt/solve: Internal Error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

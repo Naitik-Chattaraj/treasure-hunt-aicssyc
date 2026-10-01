@@ -62,11 +62,20 @@ export default function QuestionBlockQRModal({
     const qrElement = document.getElementById('question-block-qr-svg');
     const svgContent = qrElement ? qrElement.outerHTML : '';
 
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>QR Sticker - Route ${routeNumber} Node ${stageNumber} (${checkpoint.title})</title>
+          <title>QR Sticker - Route ${routeNumber} Node ${stageNumber} (${escapeHtml(checkpoint.title)})</title>
           <style>
             @page { size: auto; margin: 10mm; }
             body { 
@@ -105,8 +114,8 @@ export default function QuestionBlockQRModal({
         <body>
           <div class="sticker-card">
             <div class="badge">AICSSYC 2026 // ROUTE 0${routeNumber} // NODE 0${stageNumber}</div>
-            <h1>${checkpoint.title}</h1>
-            <h2>${checkpoint.area}</h2>
+            <h1>${escapeHtml(checkpoint.title)}</h1>
+            <h2>${escapeHtml(checkpoint.area)}</h2>
             ${svgContent}
             <div class="token">TOKEN: ${checkpoint.qr_hash}</div>
           </div>
@@ -143,8 +152,7 @@ export default function QuestionBlockQRModal({
 
     setRegenerating(true);
     try {
-      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const newHash = `HUNT-R${routeNumber}-N${stageNumber.toString().padStart(2, '0')}-${randomSuffix}`;
+      const newHash = crypto.randomUUID();
       await onRegenerateToken(checkpoint.id, newHash);
     } catch {
       alert('Failed to regenerate QR token');

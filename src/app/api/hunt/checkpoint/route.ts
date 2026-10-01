@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
       cooldownUntil: team.cooldown_until ? new Date(team.cooldown_until).getTime() : null,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('API /hunt/checkpoint: Internal Error', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
