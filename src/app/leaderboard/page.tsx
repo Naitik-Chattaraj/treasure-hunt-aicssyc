@@ -1,49 +1,173 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Trophy, Medal, Clock, Radio, RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Trophy, Medal, Clock, RefreshCw, Zap, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { LeaderboardEntry } from '@/types/hunt';
 import ThemeToggle from '@/components/ThemeToggle';
 
+interface ExtendedLeaderboardEntry extends LeaderboardEntry {
+  updatedAt?: string | null;
+}
+
 export default function LeaderboardPage() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [rawLeaderboard, setRawLeaderboard] = useState<ExtendedLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [now, setNow] = useState<number>(Date.now());
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
     try {
       const res = await fetch('/api/leaderboard');
       if (res.ok) {
         const data = await res.json();
-        setLeaderboard(data.leaderboard || []);
+        setRawLeaderboard(data.leaderboard || []);
         setLastUpdated(new Date());
       }
     } catch {
-      // ignore
+      // ignore network errors
     } finally {
       setLoading(false);
+      if (isManual) setIsRefreshing(false);
     }
-  };
+  }, []);
 
+  // Poll every 10s when tab is visible, pause when hidden to save database requests
   useEffect(() => {
     fetchLeaderboard();
-    // Auto-refresh leaderboard data every 5s
-    const pollInterval = setInterval(fetchLeaderboard, 5000);
-    // Live second tick for elapsed timers
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (!pollInterval) {
+        pollInterval = setInterval(() => {
+          fetchLeaderboard();
+        }, 10000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchLeaderboard();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Live second tick for smooth real-time timer updates without sending database requests
     const clockInterval = setInterval(() => setNow(Date.now()), 1000);
 
     return () => {
-      clearInterval(pollInterval);
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(clockInterval);
     };
+  }, [fetchLeaderboard]);
+
+  // Client-side elapsed time calculation (in seconds)
+  const calculateElapsedSeconds = useCallback((
+    startTime: string | null,
+    completedAt: string | null | undefined,
+    status: string,
+    updatedAt: string | null | undefined,
+    currentTime: number
+  ): number | null => {
+    if (!startTime) return null;
+    const start = new Date(startTime).getTime();
+    if (isNaN(start)) return null;
+
+    let end: number;
+    if (completedAt) {
+      end = new Date(completedAt).getTime();
+    } else if (status === 'rejected') {
+      // Disqualification / rejected timing: lock elapsed time at updatedAt or fallback to start
+      end = updatedAt ? new Date(updatedAt).getTime() : start;
+    } else {
+      end = currentTime;
+    }
+
+    if (isNaN(end)) end = currentTime;
+    return Math.max(0, Math.floor((end - start) / 1000));
   }, []);
 
-  const formatElapsed = (startTime: string | null, completedAt: string | null) => {
+  // Live dynamic sorting calculated on the frontend
+  const leaderboard = useMemo(() => {
+    const list = rawLeaderboard.map((team) => ({
+      ...team,
+      computedElapsedSeconds: calculateElapsedSeconds(
+        team.startTime,
+        team.completedAt ?? team.completed_at,
+        team.status,
+        team.updatedAt,
+        now
+      ),
+    }));
+
+    list.sort((a, b) => {
+      // 1. Approved teams first, Disqualified/Rejected teams last
+      if (a.status === 'approved' && b.status === 'rejected') return -1;
+      if (a.status === 'rejected' && b.status === 'approved') return 1;
+
+      // 2. Stage (descending - furthest ahead first)
+      if (b.currentStage !== a.currentStage) {
+        return b.currentStage - a.currentStage;
+      }
+
+      // 3. Elapsed seconds (ascending - fastest first, null last)
+      if (a.computedElapsedSeconds === null && b.computedElapsedSeconds !== null) return 1;
+      if (a.computedElapsedSeconds !== null && b.computedElapsedSeconds === null) return -1;
+      if (
+        a.computedElapsedSeconds !== null &&
+        b.computedElapsedSeconds !== null &&
+        a.computedElapsedSeconds !== b.computedElapsedSeconds
+      ) {
+        return a.computedElapsedSeconds - b.computedElapsedSeconds;
+      }
+
+      // 4. Completed at (ascending - earliest completion first, null last)
+      const aComp = a.completedAt ?? a.completed_at;
+      const bComp = b.completedAt ?? b.completed_at;
+      if (aComp && bComp) {
+        const aTime = new Date(aComp).getTime();
+        const bTime = new Date(bComp).getTime();
+        if (!isNaN(aTime) && !isNaN(bTime) && aTime !== bTime) {
+          return aTime - bTime;
+        }
+      } else if (aComp && !bComp) {
+        return -1;
+      } else if (!aComp && bComp) {
+        return 1;
+      }
+
+      // 5. Stable deterministic tie-breaker: ID
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    return list;
+  }, [rawLeaderboard, now, calculateElapsedSeconds]);
+
+  // Formatter for elapsed time display
+  const formatElapsedDisplay = (
+    startTime: string | null,
+    completedAt: string | null | undefined,
+    status: string,
+    updatedAt: string | null | undefined
+  ) => {
     if (!startTime) return '--:--:--';
-    const start = new Date(startTime).getTime();
-    const end = completedAt ? new Date(completedAt).getTime() : now;
-    const diff = Math.max(0, Math.floor((end - start) / 1000));
+    const diff = calculateElapsedSeconds(startTime, completedAt, status, updatedAt, now);
+    if (diff === null) return '--:--:--';
     const h = Math.floor(diff / 3600).toString().padStart(2, '0');
     const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
     const s = (diff % 60).toString().padStart(2, '0');
@@ -75,11 +199,21 @@ export default function LeaderboardPage() {
 
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST UPDATED</div>
+            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST SYNC</div>
             <div className="text-xs text-cyber-cyan font-bold">
               {lastUpdated.toLocaleTimeString()}
             </div>
           </div>
+          <button
+            onClick={() => fetchLeaderboard(true)}
+            disabled={isRefreshing}
+            className="p-2 border border-cyber-cyan/40 bg-cyber-darker hover:bg-cyber-cyan/15 text-cyber-cyan transition-colors flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
+            title="Refresh Leaderboard"
+            aria-label="Refresh Leaderboard"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">SYNC</span>
+          </button>
           <ThemeToggle />
         </div>
       </header>
@@ -87,8 +221,8 @@ export default function LeaderboardPage() {
       {/* Leaderboard Body */}
       <div className="flex-1 p-4 sm:p-6 z-10 max-w-6xl w-full mx-auto space-y-6">
         
-        {/* Top 3 Podium (if >= 3 teams) */}
-        {leaderboard.length >= 3 && (
+        {/* Top 3 Podium (if >= 3 approved teams) */}
+        {leaderboard.filter(t => t.status === 'approved').length >= 3 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Rank 2 */}
             <div className="order-2 md:order-1 bg-cyber-panel border border-gray-400/50 p-4 relative flex flex-col justify-between shadow-md">
@@ -109,9 +243,11 @@ export default function LeaderboardPage() {
               </div>
               <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
                 <span className="text-cyber-cyan font-bold">
-                  {leaderboard[1].currentStage > 12 ? 'VICTORY' : `NODE 0${leaderboard[1].currentStage}/12`}
+                  {leaderboard[1].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[1].currentStage}/12`}
                 </span>
-                <span className="text-gray-300 font-bold">{formatElapsed(leaderboard[1].startTime, leaderboard[1].completedAt)}</span>
+                <span className="text-gray-300 font-bold">
+                  {formatElapsedDisplay(leaderboard[1].startTime, leaderboard[1].completedAt ?? leaderboard[1].completed_at, leaderboard[1].status, leaderboard[1].updatedAt)}
+                </span>
               </div>
             </div>
 
@@ -139,7 +275,9 @@ export default function LeaderboardPage() {
                 <span className="text-cyber-yellow font-bold text-sm">
                   {leaderboard[0].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[0].currentStage}/12`}
                 </span>
-                <span className="text-white font-bold text-sm">{formatElapsed(leaderboard[0].startTime, leaderboard[0].completedAt)}</span>
+                <span className="text-white font-bold text-sm">
+                  {formatElapsedDisplay(leaderboard[0].startTime, leaderboard[0].completedAt ?? leaderboard[0].completed_at, leaderboard[0].status, leaderboard[0].updatedAt)}
+                </span>
               </div>
             </div>
 
@@ -162,9 +300,11 @@ export default function LeaderboardPage() {
               </div>
               <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
                 <span className="text-cyber-cyan font-bold">
-                  {leaderboard[2].currentStage > 12 ? 'VICTORY' : `NODE 0${leaderboard[2].currentStage}/12`}
+                  {leaderboard[2].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[2].currentStage}/12`}
                 </span>
-                <span className="text-gray-300 font-bold">{formatElapsed(leaderboard[2].startTime, leaderboard[2].completedAt)}</span>
+                <span className="text-gray-300 font-bold">
+                  {formatElapsedDisplay(leaderboard[2].startTime, leaderboard[2].completedAt ?? leaderboard[2].completed_at, leaderboard[2].status, leaderboard[2].updatedAt)}
+                </span>
               </div>
             </div>
           </div>
@@ -179,7 +319,7 @@ export default function LeaderboardPage() {
             </h2>
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <Clock className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>Ranked by progress & time</span>
+              <span>Real-time client calculated</span>
             </div>
           </div>
 
@@ -198,18 +338,25 @@ export default function LeaderboardPage() {
               <tbody className="divide-y divide-cyber-border/40">
                 {leaderboard.map((team, idx) => {
                   const rank = idx + 1;
-                  const progressPercent = Math.min(100, Math.round(((team.currentStage - 1) / 12) * 100));
+                  const isDisqualified = team.status === 'rejected';
                   const isWinner = team.currentStage > 12;
+                  const progressPercent = Math.min(100, Math.round(((team.currentStage - 1) / 12) * 100));
 
                   return (
                     <tr 
                       key={team.id} 
                       className={`hover:bg-cyber-darker/80 transition-colors ${
-                        rank === 1 ? 'bg-cyber-yellow/5' : ''
+                        isDisqualified
+                          ? 'bg-cyber-pink/5 opacity-70'
+                          : rank === 1
+                          ? 'bg-cyber-yellow/5'
+                          : ''
                       }`}
                     >
                       <td className="p-4 text-center font-bold text-sm">
-                        {rank === 1 ? (
+                        {isDisqualified ? (
+                          <span className="text-cyber-pink font-bold">DQ</span>
+                        ) : rank === 1 ? (
                           <span className="text-cyber-yellow font-bold flex items-center justify-center gap-1">
                             🥇 #1
                           </span>
@@ -224,17 +371,23 @@ export default function LeaderboardPage() {
 
                       <td className="p-4 font-bold text-sm text-foreground">
                         <div className="flex items-center gap-2">
-                          <span className={rank === 1 ? 'text-cyber-yellow' : ''}>{team.teamName}</span>
+                          <span className={isDisqualified ? 'text-cyber-pink line-through' : rank === 1 ? 'text-cyber-yellow' : ''}>
+                            {team.teamName}
+                          </span>
                           {team.assignedRoute && (
                             <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
                               R0{team.assignedRoute}
                             </span>
                           )}
-                          {isWinner && (
+                          {isDisqualified ? (
+                            <span className="text-[9px] bg-cyber-pink/20 text-cyber-pink border border-cyber-pink/50 px-1.5 py-0.2 font-bold uppercase flex items-center gap-1">
+                              <ShieldAlert className="w-3 h-3" /> DISQUALIFIED
+                            </span>
+                          ) : isWinner ? (
                             <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/50 px-1.5 py-0.2 font-bold uppercase">
                               VICTOR
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </td>
 
@@ -244,18 +397,27 @@ export default function LeaderboardPage() {
                         <div className="w-full bg-cyber-darker h-2 rounded-full overflow-hidden border border-cyber-border/80">
                           <div 
                             className={`h-full transition-all duration-500 ${
-                              isWinner ? 'bg-green-400' : 'bg-gradient-to-r from-cyber-cyan to-cyber-yellow'
+                              isDisqualified
+                                ? 'bg-cyber-pink/60'
+                                : isWinner
+                                ? 'bg-green-400'
+                                : 'bg-gradient-to-r from-cyber-cyan to-cyber-yellow'
                             }`}
-                            style={{ width: `${isWinner ? 100 : progressPercent}%` }}
+                            style={{ width: `${isDisqualified ? 100 : isWinner ? 100 : progressPercent}%` }}
                           />
                         </div>
                         <div className="text-[10px] text-gray-500 mt-1">
-                          {isWinner ? '12/12 Cleared' : `${team.currentStage - 1}/12 Cleared`}
+                          {isDisqualified ? 'Disqualified' : isWinner ? '12/12 Cleared' : `${team.currentStage - 1}/12 Cleared`}
                         </div>
                       </td>
 
                       <td className="p-4 text-center font-bold">
-                        {isWinner ? (
+                        {isDisqualified ? (
+                          <span className="text-cyber-pink flex items-center justify-center gap-1">
+                            <ShieldAlert className="w-4 h-4" />
+                            ELIMINATED
+                          </span>
+                        ) : isWinner ? (
                           <span className="text-green-400 flex items-center justify-center gap-1">
                             <ShieldCheck className="w-4 h-4" />
                             COMPLETED
@@ -265,8 +427,13 @@ export default function LeaderboardPage() {
                         )}
                       </td>
 
-                      <td className="p-4 text-right font-bold text-cyber-yellow text-sm">
-                        {formatElapsed(team.startTime, team.completedAt)}
+                      <td className={`p-4 text-right font-bold text-sm ${isDisqualified ? 'text-cyber-pink/80' : 'text-cyber-yellow'}`}>
+                        {formatElapsedDisplay(
+                          team.startTime,
+                          team.completedAt ?? team.completed_at,
+                          team.status,
+                          team.updatedAt
+                        )}
                       </td>
                     </tr>
                   );
