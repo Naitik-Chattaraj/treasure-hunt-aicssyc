@@ -517,6 +517,9 @@ export default function LoginPage() {
                       </div>
                     </button>
                   </div>
+                  <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+                    Limit: 1 active device per role (1 Field Scout + 1 Base Decoder per team). Logging in on another device will disconnect the previous device for that role.
+                  </p>
                 </div>
               </div>
             )}

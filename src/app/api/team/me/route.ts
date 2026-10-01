@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
-import { verifyTeamToken } from '@/lib/auth';
+import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,29 +49,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Enforce role-based device session (up to 1 scout + 1 decoder)
-    if (team.device_id && payload.deviceId) {
-      let isSessionValid = true;
-      if (team.device_id.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(team.device_id);
-          const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
-          if (parsed[roleKey] && parsed[roleKey] !== payload.deviceId) {
-            isSessionValid = false;
-          }
-        } catch {}
-      } else if (team.device_id !== payload.deviceId) {
-        isSessionValid = false;
-      }
-
-      if (!isSessionValid) {
-        const response = NextResponse.json(
-          { error: 'Session expired: logged in from another device' },
-          { status: 401 }
-        );
-        response.cookies.delete('team_session');
-        return response;
-      }
+    // Strictly enforce max 1 device for Field Scout and max 1 device for Base Decoder
+    if (!isRoleSessionValid(team.device_id, payload.deviceId, payload.operativeRole)) {
+      const response = NextResponse.json(
+        { error: 'Session expired: logged in from another device' },
+        { status: 401 }
+      );
+      response.cookies.delete('team_session');
+      return response;
     }
 
     // Fetch completions strictly from this team's route database

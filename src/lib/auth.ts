@@ -56,3 +56,35 @@ export async function verifyAdminToken(token: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Strictly verifies that the current device token matches the active session registered
+ * in the database for the user's specific operative role (Field Scout or Base Decoder).
+ * If a new device logs in under the same role, the previous device's ID will no longer match
+ * and will immediately be invalidated (401 session expired).
+ */
+export function isRoleSessionValid(
+  teamDeviceId: string | null | undefined,
+  payloadDeviceId: string | undefined,
+  operativeRole: 'Field Scout' | 'Base Decoder' | undefined
+): boolean {
+  if (!payloadDeviceId || !teamDeviceId) {
+    return false;
+  }
+
+  const roleKey = operativeRole === 'Field Scout' ? 'scout' : 'decoder';
+
+  if (teamDeviceId.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(teamDeviceId);
+      // The registered deviceId in DB for this role must match the token's deviceId
+      return Boolean(parsed[roleKey] && parsed[roleKey] === payloadDeviceId);
+    } catch {
+      return false;
+    }
+  }
+
+  // Legacy fallback if device_id is a single string (not JSON)
+  return teamDeviceId === payloadDeviceId;
+}
+

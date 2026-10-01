@@ -58,36 +58,41 @@ export default function HuntHUD() {
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
-    const prof = await api.getProfile();
-    if (!prof || prof.status !== 'approved') {
-      router.push('/login');
-      return;
-    }
-    setProfile(prof);
-    
-    const prog = await api.getProgress();
-    if (prog) {
-      // Check if team just advanced stage (Base Decoder solved a question!)
-      setPrevStage((prev) => {
-        if (prev !== null && prog.currentStage > prev) {
-          const nextTarget = Math.min(prog.currentStage, 12);
-          setStageClearedNotice(
-            prof.operativeRole === 'Field Scout'
-              ? `⚡ CHALLENGE SOLVED! Target updated to Node 0${nextTarget}`
-              : `✓ NODE 0${prev} OVERRIDDEN! Target: Node 0${nextTarget}`
-          );
-          setTimeout(() => setStageClearedNotice(null), 8000);
-        }
-        return prog.currentStage;
-      });
-
-      setProgress(prog);
-      if (prog.currentStage <= 12) {
-        const cp = await api.getCheckpoint(prog.currentStage);
-        setActiveCheckpoint(cp);
+    try {
+      const prof = await api.getProfile();
+      if (!prof || prof.status !== 'approved') {
+        router.push('/login');
+        return;
       }
+      setProfile(prof);
+      
+      const prog = await api.getProgress();
+      if (prog) {
+        // Check if team just advanced stage (Base Decoder solved a question!)
+        setPrevStage((prev) => {
+          if (prev !== null && prog.currentStage > prev) {
+            const nextTarget = Math.min(prog.currentStage, 12);
+            setStageClearedNotice(
+              prof.operativeRole === 'Field Scout'
+                ? `⚡ CHALLENGE SOLVED! Target updated to Node 0${nextTarget}`
+                : `✓ NODE 0${prev} OVERRIDDEN! Target: Node 0${nextTarget}`
+            );
+            setTimeout(() => setStageClearedNotice(null), 8000);
+          }
+          return prog.currentStage;
+        });
+
+        setProgress(prog);
+        if (prog.currentStage <= 12) {
+          const cp = await api.getCheckpoint(prog.currentStage);
+          setActiveCheckpoint(cp);
+        }
+      }
+    } catch (err) {
+      console.warn('Network error during polling, skipping iteration.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

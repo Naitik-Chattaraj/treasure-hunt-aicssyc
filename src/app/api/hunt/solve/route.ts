@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
-import { verifyTeamToken } from '@/lib/auth';
+import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
 import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
@@ -55,25 +55,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    if (team.device_id && payload.deviceId) {
-      let isSessionValid = true;
-      if (team.device_id.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(team.device_id);
-          const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
-          if (parsed[roleKey] && parsed[roleKey] !== payload.deviceId) {
-            isSessionValid = false;
-          }
-        } catch {}
-      } else if (team.device_id !== payload.deviceId) {
-        isSessionValid = false;
-      }
+    // Strictly enforce max 1 device for Field Scout and max 1 device for Base Decoder
+    if (!isRoleSessionValid(team.device_id, payload.deviceId, payload.operativeRole)) {
+      const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
+      response.cookies.delete('team_session');
+      return response;
+    }
 
-      if (!isSessionValid) {
-        const response = NextResponse.json({ error: 'Session expired: logged in from another device' }, { status: 401 });
-        response.cookies.delete('team_session');
-        return response;
-      }
+    // Role restriction: Only Base Decoders can submit challenge solutions
+    if (payload.operativeRole === 'Field Scout') {
+      return NextResponse.json({
+        error: 'role_forbidden',
+        message: 'FIELD SCOUT DETECTED: Only Base Decoders in the command room can decode challenges!',
+      }, { status: 403 });
     }
 
     if (team.status !== 'approved') {
@@ -138,6 +132,8 @@ export async function POST(req: NextRequest) {
         `)
         .eq('team_id', team.id)
         .eq('node_id', cpId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (activeChallenge && activeChallenge.questions_pool) {

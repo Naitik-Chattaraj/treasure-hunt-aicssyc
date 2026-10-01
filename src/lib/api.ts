@@ -176,14 +176,21 @@ export const api = {
       if (!res.ok) {
         if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
           if (typeof window !== 'undefined') {
-            alert('Your session has expired because your team logged in from another device. Only one device can be active at a time.');
+            alert('Your session has expired because your team logged in from another device. Only one device per role can be active at a time.');
           }
+          return null; // Expired, trigger logout
         }
-        return null;
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          return null; // Unauthorized or missing, trigger logout
+        }
+        throw new Error('Server error'); // 500 or other errors, don't logout
       }
       return data.team || null;
-    } catch {
-      return null;
+    } catch (e: any) {
+      if (e.message !== 'Server error') {
+        throw new Error('network_error');
+      }
+      throw e;
     }
   },
 
@@ -242,8 +249,16 @@ export const api = {
 
     try {
       const res = await fetch('/api/hunt/checkpoint');
-      if (!res.ok) return null;
       const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
+          if (typeof window !== 'undefined') {
+            alert('Your session has expired because another device logged in with your role. Only one device per role is allowed.');
+            window.location.href = '/login';
+          }
+        }
+        return null;
+      }
       return data.checkpoint || null;
     } catch {
       return null;
@@ -315,6 +330,12 @@ export const api = {
     });
 
     const data = await res.json();
+    if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
+      if (typeof window !== 'undefined') {
+        alert('Your session has expired because another device logged in with your role. Only one device per role is allowed.');
+        window.location.href = '/login';
+      }
+    }
     return data;
   },
 
@@ -363,6 +384,12 @@ export const api = {
     });
 
     const data = await res.json();
+    if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
+      if (typeof window !== 'undefined') {
+        alert('Your session has expired because another device logged in with your role. Only one device per role is allowed.');
+        window.location.href = '/login';
+      }
+    }
     return data;
   },
 
