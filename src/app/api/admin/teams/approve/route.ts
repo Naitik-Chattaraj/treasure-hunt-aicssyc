@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('API /admin/teams/approve error:', error);
+      return NextResponse.json({ error: 'Failed to update team approval status' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, team: updated });

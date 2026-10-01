@@ -33,7 +33,8 @@ export async function GET() {
         .eq('status', 'approved');
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('Leaderboard query error:', error);
+        return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
       }
       allTeams = teams || [];
     }
@@ -100,7 +101,7 @@ export async function GET() {
 
     return NextResponse.json({ leaderboard: formatted });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('API /leaderboard error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
