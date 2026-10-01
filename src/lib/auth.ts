@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const MIN_SECRET_LENGTH = 32;
 let cachedSecret: Uint8Array | null = null;
@@ -101,3 +102,67 @@ export function isRoleSessionValid(
   return teamDeviceId === payloadDeviceId;
 }
 
+export type DeviceMap = Record<string, string>;
+
+function parseDeviceMap(stored: string | null): DeviceMap {
+  if (!stored) return {};
+  if (!stored.startsWith('{')) return { decoder: stored }; // Legacy single-device value
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return {};
+  }
+}
+
+const DEVICE_MAP_MAX_ATTEMPTS = 5;
+
+/**
+ * Changes one team's device-session map (teams.device_id) without losing a concurrent change.
+ * The write only succeeds if device_id still holds the value we read (compare-and-swap); if
+ * another device changed it in between, the map is re-read and `mutate` is applied again.
+ * This stops a Field Scout and Base Decoder logging in at the same moment from kicking each other.
+ *
+ * `mutate` edits the map in place and returns false when nothing needs to be written.
+ * Returns true once the change is stored (or none was needed), false if it could not be saved.
+ */
+export async function updateDeviceMap(
+  db: SupabaseClient,
+  teamId: string,
+  storedValue: string | null,
+  mutate: (map: DeviceMap) => boolean
+): Promise<boolean> {
+  let stored = storedValue;
+
+  for (let attempt = 0; attempt < DEVICE_MAP_MAX_ATTEMPTS; attempt++) {
+    const map = parseDeviceMap(stored);
+    if (!mutate(map)) return true;
+
+    const update = db.from('teams').update({ device_id: JSON.stringify(map) }).eq('id', teamId);
+    const { data: written, error: writeError } = await (stored === null
+      ? update.is('device_id', null)
+      : update.eq('device_id', stored)
+    ).select('id');
+
+    if (writeError) {
+      console.error('Failed to update device sessions:', writeError);
+      return false;
+    }
+    if (written && written.length > 0) return true;
+
+    // Another device changed device_id since we read it: re-read and try again
+    const { data: fresh, error: readError } = await db
+      .from('teams')
+      .select('device_id')
+      .eq('id', teamId)
+      .maybeSingle();
+
+    if (readError || !fresh) {
+      console.error('Failed to re-read device sessions:', readError);
+      return false;
+    }
+    stored = fresh.device_id ?? null;
+  }
+
+  console.error(`Device session update for team ${teamId} kept conflicting; giving up`);
+  return false;
+}
