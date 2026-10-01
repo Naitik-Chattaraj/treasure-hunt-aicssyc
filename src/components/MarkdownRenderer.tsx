@@ -48,6 +48,8 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
                     style={vscDarkPlus}
                     language={match ? match[1] : 'javascript'}
                     PreTag="div"
+                    wrapLongLines
+                    codeTagProps={{ style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }}
                     className="!m-0 !p-4 !text-sm"
                     {...props}
                   >

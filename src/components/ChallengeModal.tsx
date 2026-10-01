@@ -117,8 +117,8 @@ export default function ChallengeModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="challenge-title"
-        className={`relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-raised sm:rounded-xl sm:p-6 ${
-          isCode ? 'sm:max-w-2xl lg:max-w-5xl' : 'sm:max-w-lg'
+        className={`relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-raised sm:rounded-xl sm:p-6 lg:max-h-[88dvh] lg:p-8 ${
+          isCode ? 'sm:max-w-2xl lg:max-w-6xl' : 'sm:max-w-2xl lg:max-w-5xl'
         } ${error ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -150,8 +150,8 @@ export default function ChallengeModal({
         </div>
 
         {!cleared && (
-          <div className={isCode ? 'lg:grid lg:grid-cols-2 lg:gap-6' : ''}>
-            <div className="mb-5 rounded-lg border border-line bg-sunken p-4 lg:mb-0">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
+            <div className="mb-5 rounded-lg border border-line bg-sunken p-4 lg:sticky lg:top-0 lg:mb-0 lg:max-h-[68dvh] lg:overflow-y-auto lg:p-5">
               <MarkdownRenderer content={challenge.question} />
             </div>
 
