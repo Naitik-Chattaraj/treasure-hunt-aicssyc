@@ -775,7 +775,7 @@ export default function AdminQRGeneratorTab({
 
         <div className="flex items-center gap-2">
           <a
-            href="/test-qr"
+            href="/admin/print?route=1"
             target="_blank"
             className="flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-extrabold uppercase transition-colors shadow"
           >
@@ -785,7 +785,7 @@ export default function AdminQRGeneratorTab({
           </a>
 
           <a
-            href="/test-qr"
+            href="/admin/print?route=2"
             target="_blank"
             className="flex items-center gap-1.5 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-xs font-extrabold uppercase transition-colors shadow"
           >
