@@ -369,9 +369,9 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-lg sm:text-xl font-bold tracking-widest text-cyber-pink uppercase flex items-center gap-2">
               MISSION CONTROL TERMINAL
-              <span className="text-[10px] bg-cyber-pink text-white px-2 py-0.5 font-bold rounded">ADMIN</span>
+              
             </h1>
-            <p className="text-[11px] text-gray-400">AICSSYC TREASURE HUNT 2026</p>
+            <p className="text-[11px] text-gray-400">AICSSYC 2026</p>
           </div>
         </div>
 
