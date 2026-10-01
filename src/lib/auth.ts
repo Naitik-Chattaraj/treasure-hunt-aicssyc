@@ -1,8 +1,21 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || 'aicssyc-treasure-hunt-secure-secret-key-2026-minimum-32-bytes'
-);
+const MIN_SECRET_LENGTH = 32;
+let cachedSecret: Uint8Array | null = null;
+
+// Read lazily so builds work without the env var, but never fall back to a default:
+// a secret committed to the repo would let anyone forge admin and team tokens.
+function getJwtSecret(): Uint8Array {
+  if (cachedSecret) return cachedSecret;
+
+  const secret = process.env.ADMIN_JWT_SECRET?.trim();
+  if (!secret || secret.length < MIN_SECRET_LENGTH) {
+    throw new Error(`ADMIN_JWT_SECRET must be set to a random string of at least ${MIN_SECRET_LENGTH} characters`);
+  }
+
+  cachedSecret = new TextEncoder().encode(secret);
+  return cachedSecret;
+}
 
 export interface TeamJWTPayload {
   teamId: string;
@@ -19,12 +32,12 @@ export async function signTeamToken(payload: TeamJWTPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyTeamToken(token: string): Promise<TeamJWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     if (payload.role !== 'team') return null;
     return {
       teamId: payload.teamId as string,
@@ -45,12 +58,12 @@ export async function signAdminToken(): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('1d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyAdminToken(token: string): Promise<boolean> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload.role === 'admin';
   } catch {
     return false;
