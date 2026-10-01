@@ -22,7 +22,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required question parameters' }, { status: 400 });
     }
 
+    // Checkpoint IDs are 1..12 for Route 1 and 13..24 for Route 2
     const numNodeId = Number(nodeId);
+    if (!Number.isInteger(numNodeId) || numNodeId < 1 || numNodeId > 24) {
+      return NextResponse.json({ error: 'Valid checkpoint ID (1-24) required' }, { status: 400 });
+    }
+
     const targetRoute: 1 | 2 = numNodeId <= 12 ? 1 : 2;
     const supabase = getSupabaseAdmin(targetRoute);
 
