@@ -29,11 +29,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Fetch team from route database
-    let { data: team, error: teamError } = await supabase
+    const { data: initialTeam, error: teamError } = await supabase
       .from('teams')
       .select('id, status, current_stage, cooldown_until, wrong_attempts, start_time, assigned_route, device_id')
       .eq('id', payload.teamId)
       .maybeSingle();
+
+    let team = initialTeam;
 
     if (!team && isRoute2Configured()) {
       const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);

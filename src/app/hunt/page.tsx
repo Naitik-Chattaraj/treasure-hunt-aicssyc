@@ -42,18 +42,18 @@ export default function HuntHUD() {
   const [showScanner, setShowScanner] = useState(false);
   
   // Dynamic interaction states
-  const [scannedNode, setScannedNode] = useState<number | null>(null);
   const [violationNode, setViolationNode] = useState<number | null>(null);
   const [showChallenge, setShowChallenge] = useState(false);
   const autoOpenedCheckpointRef = useRef<number | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
-  const [prevStage, setPrevStage] = useState<number | null>(null);
+  const prevStageRef = useRef<number | null>(null);
   const [stageClearedNotice, setStageClearedNotice] = useState<string | null>(null);
 
   // Manual code entry state (for room team receiving code from field runners)
   const [manualCode, setManualCode] = useState('');
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
+  const [now, setNow] = useState<number>(0);
 
   const isFieldScout = profile?.operativeRole === 'Field Scout';
   const isBaseDecoder = !isFieldScout;
@@ -105,18 +105,17 @@ export default function HuntHUD() {
       
       if (prog) {
         // Check if team just advanced stage (Base Decoder solved a question!)
-        setPrevStage((prev) => {
-          if (prev !== null && prog.currentStage > prev) {
-            const nextTarget = Math.min(prog.currentStage, 12);
-            setStageClearedNotice(
-              prof.operativeRole === 'Field Scout'
-                ? `Challenge solved! Next stop: checkpoint ${nextTarget}`
-                : `Checkpoint ${prev} cleared! Next stop: checkpoint ${nextTarget}`
-            );
-            setTimeout(() => setStageClearedNotice(null), 8000);
-          }
-          return prog.currentStage;
-        });
+        const prev = prevStageRef.current;
+        if (prev !== null && prog.currentStage > prev) {
+          const nextTarget = Math.min(prog.currentStage, 12);
+          setStageClearedNotice(
+            prof.operativeRole === 'Field Scout'
+              ? `Challenge solved! Next stop: checkpoint ${nextTarget}`
+              : `Checkpoint ${prev} cleared! Next stop: checkpoint ${nextTarget}`
+          );
+          setTimeout(() => setStageClearedNotice(null), 8000);
+        }
+        prevStageRef.current = prog.currentStage;
 
         setProgress(prog);
         if (cp) {
@@ -132,7 +131,7 @@ export default function HuntHUD() {
           }
         }
       }
-    } catch (err) {
+    } catch {
       console.warn('Network error during polling, skipping iteration.');
     } finally {
       setLoading(false);
@@ -140,7 +139,11 @@ export default function HuntHUD() {
   };
 
   useEffect(() => {
+    setNow(Date.now());
     loadData();
+
+    // 1-second clock tick for active cooldown timers
+    const clockInterval = setInterval(() => setNow(Date.now()), 1000);
 
     // Adaptive polling: 2.5s for fast sync
     const interval = setInterval(() => {
@@ -151,12 +154,14 @@ export default function HuntHUD() {
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        setNow(Date.now());
         loadData(true);
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      clearInterval(clockInterval);
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
@@ -188,7 +193,6 @@ export default function HuntHUD() {
 
     if (result.success && result.nodeId) {
       const normNode = result.nodeId > 12 ? result.nodeId - 12 : result.nodeId;
-      setScannedNode(normNode);
       if (result.challenge) {
         setActiveCheckpoint((prev) => {
           const updated = prev ? { ...prev, qrScanned: true, challenge: result.challenge } : null;
@@ -258,8 +262,8 @@ export default function HuntHUD() {
     return <VictoryScreen progress={progress} teamName={profile.teamName} />;
   }
 
-  const cooldownSeconds = progress.cooldownUntil && progress.cooldownUntil > Date.now()
-    ? Math.ceil((progress.cooldownUntil - Date.now()) / 1000)
+  const cooldownSeconds = progress.cooldownUntil && now > 0 && progress.cooldownUntil > now
+    ? Math.ceil((progress.cooldownUntil - now) / 1000)
     : 0;
 
   const isQrUnlocked = !!activeCheckpoint?.qrScanned;

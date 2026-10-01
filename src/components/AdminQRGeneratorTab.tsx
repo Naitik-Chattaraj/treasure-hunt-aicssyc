@@ -9,17 +9,13 @@ import {
   Copy, 
   Check, 
   RefreshCw, 
-  Layers, 
   Sparkles, 
   Plus, 
   Compass, 
-  Footprints, 
   HelpCircle,
   ExternalLink,
   Save,
-  Search,
-  CheckCircle2,
-  AlertCircle
+  Search
 } from 'lucide-react';
 
 interface QuestionPoolItem {
@@ -426,7 +422,7 @@ export default function AdminQRGeneratorTab({
                   <label className="text-xs text-muted block mb-1">Challenge Type</label>
                   <select
                     value={newBlockType}
-                    onChange={(e) => setNewBlockType(e.target.value as any)}
+                    onChange={(e) => setNewBlockType(e.target.value as 'passcode' | 'mcq' | 'riddle')}
                     className="w-full bg-sunken border border-line focus:border-primary px-2.5 py-1.5 text-ink text-base sm:text-sm"
                   >
                     <option value="passcode">Passcode</option>
@@ -584,7 +580,7 @@ export default function AdminQRGeneratorTab({
                         <span className={`text-xs font-bold px-1.5 py-0.2 uppercase ${
                           r === 1 ? 'bg-accent/20 text-accent border border-accent/40' : 'bg-route-2/20 text-route-2 border border-route-2/40'
                         }`}>
-                          R0{r} // N0{st}
+                          R0{r} {'//'} N0{st}
                         </span>
                         <span className="text-xs text-muted truncate">{cp.area}</span>
                       </div>
@@ -613,7 +609,7 @@ export default function AdminQRGeneratorTab({
               <span className={`text-xs font-bold px-3 py-1 uppercase tracking-wider ${
                 routeNumber === 1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
               }`}>
-                ROUTE 0{routeNumber} // NODE 0{stageNumber}
+                ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
               </span>
               <span className="text-xs bg-sunken text-ink px-2.5 py-1 border border-line font-bold">
                 CHECKPOINT #{selectedCheckpoint?.id || 1}
@@ -701,7 +697,7 @@ export default function AdminQRGeneratorTab({
                 <span className="text-muted text-xs uppercase font-bold">Error Correction:</span>
                 <select
                   value={errorLevel}
-                  onChange={(e) => setErrorLevel(e.target.value as any)}
+                  onChange={(e) => setErrorLevel(e.target.value as 'L' | 'M' | 'Q' | 'H')}
                   className="bg-sunken border border-line px-2 py-1 text-ink text-xs"
                 >
                   <option value="L">L (7% Recovery)</option>

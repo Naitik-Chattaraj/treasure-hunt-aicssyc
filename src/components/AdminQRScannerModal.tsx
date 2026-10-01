@@ -313,7 +313,7 @@ export default function AdminQRScannerModal({
                   ? 'bg-accent text-on-primary' 
                   : 'bg-route-2 text-on-primary'
               }`}>
-                ROUTE 0{matchedCp.route_id || (matchedCp.id <= 12 ? 1 : 2)} // NODE 0{matchedCp.stage || (matchedCp.id <= 12 ? matchedCp.id : matchedCp.id - 12)}
+                ROUTE 0{matchedCp.route_id || (matchedCp.id <= 12 ? 1 : 2)} {'//'} NODE 0{matchedCp.stage || (matchedCp.id <= 12 ? matchedCp.id : matchedCp.id - 12)}
               </span>
             </div>
 

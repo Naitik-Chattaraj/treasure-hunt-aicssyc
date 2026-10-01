@@ -9,7 +9,7 @@ function serverError(publicMessage: string, err: unknown) {
 }
 
 // In-memory cache to reduce repeated database queries under multiple admin dashboard views
-let cachedTeams: any[] | null = null;
+let cachedTeams: Record<string, unknown>[] | null = null;
 let lastTeamsFetch = 0;
 const TEAMS_CACHE_TTL = 4000; // 4-second memory cache
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    let allTeams: any[] = [];
+    let allTeams: Record<string, unknown>[] = [];
     const teamSelectQuery = 'id, uid, team_name, team_lead, members, status, assigned_route, current_stage, start_time, completed_at, wrong_attempts, cooldown_until, created_at, updated_at';
 
     if (isMultiDb && db2) {
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       const teams1 = res1.data || [];
       const teams2 = res2.data || [];
       allTeams = [...teams1, ...teams2];
-      allTeams.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      allTeams.sort((a, b) => new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime());
     } else {
       const { data: teams, error } = await db1
         .from('teams')

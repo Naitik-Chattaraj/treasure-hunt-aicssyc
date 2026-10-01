@@ -37,7 +37,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, className, children, ...props }: any) {
+          code({ className, children, ...props }: React.ComponentPropsWithoutRef<'code'>) {
             const match = /language-(\w+)/.exec(className || '');
             const isBlock = match || String(children).includes('\n');
             
@@ -45,13 +45,12 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               return (
                 <div className="my-3 overflow-hidden rounded-lg border border-line">
                   <SyntaxHighlighter
-                    style={vscDarkPlus}
+                    style={vscDarkPlus as unknown as { [key: string]: React.CSSProperties }}
                     language={match ? match[1] : 'javascript'}
                     PreTag="div"
                     wrapLongLines
                     codeTagProps={{ style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }}
                     className="!m-0 !p-4 !text-sm"
-                    {...props}
                   >
                     {String(children).replace(/\n$/, '')}
                   </SyntaxHighlighter>
@@ -67,10 +66,10 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
             );
           },
           // Customize paragraphs and links for cyber aesthetic
-          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          a: ({ node, ...props }) => <a className="text-accent underline underline-offset-2 transition-colors hover:text-primary" {...props} />,
-          ul: ({ node, ...props }) => <ul className="mb-2 list-disc space-y-1 pl-5" {...props} />,
-          ol: ({ node, ...props }) => <ol className="mb-2 list-decimal space-y-1 pl-5" {...props} />,
+          p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+          a: ({ ...props }) => <a className="text-accent underline underline-offset-2 transition-colors hover:text-primary" {...props} />,
+          ul: ({ ...props }) => <ul className="mb-2 list-disc space-y-1 pl-5" {...props} />,
+          ol: ({ ...props }) => <ol className="mb-2 list-decimal space-y-1 pl-5" {...props} />,
         }}
       >
         {processedContent}

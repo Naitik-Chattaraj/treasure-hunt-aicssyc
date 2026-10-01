@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBothSupabaseAdmins, isRoute2Configured } from '@/lib/supabase';
+import { getBothSupabaseAdmins } from '@/lib/supabase';
 import { signTeamToken, updateDeviceMap } from '@/lib/auth';
+
+interface TeamDbRow {
+  id: string;
+  uid?: string;
+  team_name: string;
+  team_lead: string;
+  members: unknown;
+  status: string;
+  current_stage: number;
+  assigned_route?: number;
+  device_id?: string | null;
+}
 
 // Log the real error on the server; send only a generic message to the client
 function serverError(publicMessage: string, err: unknown) {
@@ -20,7 +32,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let team: any = null;
+    let team: TeamDbRow | null = null;
     let activeDb = db1;
     let resolvedRoute: 1 | 2 = 1;
 
@@ -158,6 +170,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (!team) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    }
+
     // Determine current operative info
     const currentOperativeRole: 'Field Scout' | 'Base Decoder' = operativeRole === 'Field Scout' ? 'Field Scout' : 'Base Decoder';
     const currentOperativeName = operativeName?.trim() || (currentOperativeRole === 'Base Decoder' ? team.team_lead : 'Field Scout Operative');
@@ -209,7 +225,7 @@ export async function POST(req: NextRequest) {
 
     const token = await signTeamToken({
       teamId: team.id,
-      uid: team.uid,
+      uid: team.uid || uid || '',
       teamName: team.team_name,
       assignedRoute: resolvedRoute,
       operativeName: currentOperativeName,

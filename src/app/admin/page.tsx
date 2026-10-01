@@ -25,8 +25,7 @@ import {
   Copy,
   Check,
   Camera,
-  QrCode,
-  Printer
+  QrCode
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -825,7 +824,7 @@ export default function AdminDashboard() {
                         <span className={`text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${
                           routeNumber === 1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
                         }`}>
-                          ROUTE 0{routeNumber} // NODE 0{stageNumber}
+                          ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
                         </span>
                         <div>
                           <h3 className="font-bold text-ink text-base sm:text-lg">{cp.title}</h3>
@@ -1105,7 +1104,7 @@ export default function AdminDashboard() {
                 <label className="text-xs uppercase text-muted font-bold block mb-1">Challenge Type</label>
                 <select
                   value={editingQuestion.challenge_type}
-                  onChange={e => setEditingQuestion(prev => ({ ...prev, challenge_type: e.target.value as any }))}
+                  onChange={e => setEditingQuestion(prev => ({ ...prev, challenge_type: e.target.value as 'passcode' | 'mcq' | 'riddle' }))}
                   className="w-full bg-sunken border border-line px-3 py-2 text-ink outline-none focus:border-primary font-bold uppercase"
                 >
                   <option value="passcode">Passcode / Cryptographic Cipher</option>

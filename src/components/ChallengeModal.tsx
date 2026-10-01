@@ -28,10 +28,9 @@ export default function ChallengeModal({
   const [cooldown, setCooldown] = useState(initialCooldown);
   const [terminalOutput, setTerminalOutput] = useState('');
   const [runningCode, setRunningCode] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -57,7 +56,7 @@ export default function ChallengeModal({
       } else {
         setTerminalOutput('Code execution failed.');
       }
-    } catch (err) {
+    } catch {
       setTerminalOutput('Network error.');
     } finally {
       setRunningCode(false);

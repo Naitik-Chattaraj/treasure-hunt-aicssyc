@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { HuntProgress } from '@/types/hunt';
 import { CheckCircle2, Trophy } from 'lucide-react';
@@ -13,7 +13,15 @@ export default function VictoryScreen({
   progress: HuntProgress;
   teamName: string;
 }) {
-  const [elapsed, setElapsed] = useState<string>('');
+  const elapsed = useMemo(() => {
+    if (!progress?.startTime) return '00:00:00';
+    const finalTime = progress.completedNodes[progress.completedNodes.length - 1]?.timestamp || progress.startTime;
+    const diff = Math.max(0, Math.floor((finalTime - progress.startTime) / 1000));
+    const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }, [progress]);
 
   useEffect(() => {
     // Confetti in the active theme's colours; skipped for users who prefer reduced motion
@@ -32,7 +40,6 @@ export default function VictoryScreen({
     // Fire celebratory confetti sequence periodically for 5 seconds
     const duration = 5000;
     const end = Date.now() + duration;
-    let intervalId: NodeJS.Timeout;
 
     const fire = () => {
       if (Date.now() > end) {
@@ -58,25 +65,13 @@ export default function VictoryScreen({
       });
     };
 
-    intervalId = setInterval(fire, 250);
+    const intervalId = setInterval(fire, 250);
 
     return () => {
       clearInterval(intervalId);
       confetti.reset();
     };
   }, []);
-
-  useEffect(() => {
-    // Calculate final elapsed time
-    if (progress?.startTime) {
-      const finalTime = progress.completedNodes[progress.completedNodes.length - 1]?.timestamp || Date.now();
-      const diff = Math.max(0, Math.floor((finalTime - progress.startTime) / 1000));
-      const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-      const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-      const s = (diff % 60).toString().padStart(2, '0');
-      setElapsed(`${h}:${m}:${s}`);
-    }
-  }, [progress]);
 
   return (
     <main className="bg-map flex min-h-dvh items-center justify-center px-4 pt-16 pb-10 text-ink sm:py-16">

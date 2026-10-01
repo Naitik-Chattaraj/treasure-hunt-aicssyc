@@ -30,11 +30,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Fetch team info from their route database
-    let { data: team, error: teamError } = await teamDb
+    const { data: initialTeam, error: teamError } = await teamDb
       .from('teams')
       .select('*')
       .eq('id', payload.teamId)
       .maybeSingle();
+
+    let team = initialTeam;
 
     if (!team && isRoute2Configured()) {
       const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);
@@ -233,7 +235,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Exact stage match! Get or assign this team's question in its route database
-    let challengeData: any = null;
+    let challengeData: Record<string, unknown> | null = null;
 
     try {
       const { challenge } = await getTeamChallenge(teamDb, team.id, matchedNode.id, { assignIfMissing: true });
@@ -257,7 +259,7 @@ export async function POST(req: NextRequest) {
 
 
     // Batch auxiliary updates to reduce server execution time
-    const updates: any[] = [];
+    const updates: PromiseLike<unknown>[] = [];
 
     // Safely log successful scan in submissions audit
     updates.push(
@@ -270,7 +272,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    const teamUpdates: any = {};
+    const teamUpdates: Record<string, unknown> = {};
     // Reset wrong attempts on successful scan
     if ((team.wrong_attempts || 0) > 0) {
       teamUpdates.wrong_attempts = 0;
