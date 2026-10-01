@@ -237,41 +237,58 @@ export async function POST(req: NextRequest) {
 
     try {
       const { challenge } = await getTeamChallenge(teamDb, team.id, matchedNode.id, { assignIfMissing: true });
-      if (challenge) {
-        challengeData = {
-          ...challenge,
-          nodeId: matchedNode.stage,
-          checkpointId: matchedNode.id,
-        };
+      if (!challenge) {
+        return NextResponse.json({
+          success: false,
+          error: 'no_question',
+          message: `CRITICAL: No questions configured for Node 0${matchedNode.stage}. Contact Admins.`,
+        });
       }
+      
+      challengeData = {
+        ...challenge,
+        nodeId: matchedNode.stage,
+        checkpointId: matchedNode.id,
+      };
     } catch (e) {
       console.warn('team_active_challenges process warning:', e);
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 
 
+    // Batch auxiliary updates to reduce server execution time
+    const updates: any[] = [];
+
     // Safely log successful scan in submissions audit
-    try {
-      await teamDb.from('submissions_log').insert({
+    updates.push(
+      teamDb.from('submissions_log').insert({
         team_id: team.id,
         node_id: matchedNode.id,
         submission_type: 'scan',
         submitted_value: cleanQrHash,
         is_correct: true,
-      });
-    } catch {}
+      })
+    );
 
+    const teamUpdates: any = {};
     // Reset wrong attempts on successful scan
     if ((team.wrong_attempts || 0) > 0) {
-      try {
-        await teamDb.from('teams').update({ wrong_attempts: 0, updated_at: new Date().toISOString() }).eq('id', team.id);
-      } catch {}
+      teamUpdates.wrong_attempts = 0;
     }
-
     // Set start time on first scan
     if (!team.start_time) {
-      try {
-        await teamDb.from('teams').update({ start_time: new Date().toISOString() }).eq('id', team.id);
-      } catch {}
+      teamUpdates.start_time = new Date().toISOString();
+    }
+
+    if (Object.keys(teamUpdates).length > 0) {
+      teamUpdates.updated_at = new Date().toISOString();
+      updates.push(teamDb.from('teams').update(teamUpdates).eq('id', team.id));
+    }
+
+    try {
+      await Promise.all(updates);
+    } catch (e) {
+      console.warn('Background updates failed:', e);
     }
 
     return NextResponse.json({

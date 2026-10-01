@@ -37,10 +37,11 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }: any) {
+          code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
+            const isBlock = match || String(children).includes('\n');
             
-            if (!inline) {
+            if (isBlock) {
               return (
                 <div className="rounded border border-cyber-border overflow-hidden my-4 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
                   <SyntaxHighlighter

@@ -61,7 +61,42 @@ export default function HuntHUD() {
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const { team: prof, progress: prog } = await api.getMe();
+      // Egress & Latency Optimization: Parallelize getMe and getCheckpoint if stage is known
+      let prof, prog;
+      let cp = null;
+      const knownStage = progress?.currentStage || activeCheckpointRef.current?.stage;
+      const isDecoderLocal = profile ? profile.operativeRole !== 'Field Scout' : false;
+      const currentCp = activeCheckpointRef.current;
+      const waitingForUnlock = isDecoderLocal && (!currentCp?.qrScanned || !currentCp?.challenge);
+
+      if (knownStage && knownStage <= 12) {
+        const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== knownStage);
+        const shouldFetchCp = stageChanged || waitingForUnlock;
+
+        const results = await Promise.all([
+          api.getMe(),
+          shouldFetchCp ? api.getCheckpoint(knownStage) : Promise.resolve(currentCp)
+        ]);
+        
+        prof = results[0].team;
+        prog = results[0].progress;
+        
+        // If stage unexpectedly advanced during getMe, fetch new checkpoint
+        if (prog && prog.currentStage > knownStage && prog.currentStage <= 12) {
+           cp = await api.getCheckpoint(prog.currentStage);
+        } else {
+           cp = results[1];
+        }
+      } else {
+        // Fallback for initial load
+        const res = await api.getMe();
+        prof = res.team;
+        prog = res.progress;
+        if (prog && prog.currentStage <= 12) {
+          cp = await api.getCheckpoint(prog.currentStage);
+        }
+      }
+
       if (!prof || prof.status !== 'approved') {
         router.push('/login');
         return;
@@ -84,29 +119,16 @@ export default function HuntHUD() {
         });
 
         setProgress(prog);
-        if (prog.currentStage <= 12) {
-          const currentCp = activeCheckpointRef.current;
-          const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== prog.currentStage);
+        if (cp) {
+          activeCheckpointRef.current = cp;
+          setActiveCheckpoint(cp);
+
           const isDecoder = prof.operativeRole !== 'Field Scout';
-          const waitingForUnlock = isDecoder && (!currentCp?.qrScanned || !currentCp?.challenge);
-
-          // Egress optimization: Only fetch checkpoint from server if:
-          // 1. Stage has changed or not yet loaded
-          // 2. Base Decoder is still waiting for Field Scout's QR scan to unlock the question
-          // Once a challenge is active and open, skip fetching to save database bandwidth.
-          if (stageChanged || waitingForUnlock) {
-            const cp = await api.getCheckpoint(prog.currentStage);
-            if (cp) {
-              activeCheckpointRef.current = cp;
-              setActiveCheckpoint(cp);
-
-              // The Field Scout scans on campus; pop the question open on the Base Decoder's screen
-              // once per checkpoint as soon as it arrives through polling
-              if (isDecoder && cp.challenge && autoOpenedCheckpointRef.current !== cp.id) {
-                autoOpenedCheckpointRef.current = cp.id;
-                setShowChallenge(true);
-              }
-            }
+          // The Field Scout scans on campus; pop the question open on the Base Decoder's screen
+          // once per checkpoint as soon as it arrives through polling
+          if (isDecoder && cp.challenge && autoOpenedCheckpointRef.current !== cp.id) {
+            autoOpenedCheckpointRef.current = cp.id;
+            setShowChallenge(true);
           }
         }
       }
@@ -119,14 +141,25 @@ export default function HuntHUD() {
 
   useEffect(() => {
     loadData();
-    // Auto-poll checkpoint status every 5 seconds (paused when tab is hidden to save egress)
-    // Allows Base Decoders to be notified when Field Scouts scan, and Scouts to see stage progression
+
+    // Adaptive polling: 2.5s for fast sync
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         loadData(true);
       }
-    }, 5000);
-    return () => clearInterval(interval);
+    }, 2500);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [router]);
 
   const processScanCode = async (rawCode: string): Promise<boolean> => {
