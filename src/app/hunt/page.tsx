@@ -4,21 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { TeamProfile, HuntProgress, Checkpoint } from '@/types/hunt';
-import { 
-  User, 
-  Map as MapIcon, 
-  ScanLine, 
-  Crosshair, 
-  Compass, 
-  Radio, 
-  AlertOctagon, 
-  KeyRound, 
-  Send, 
-  ShieldAlert, 
-  BrainCircuit, 
-  Footprints,
+import {
+  AlertOctagon,
+  BrainCircuit,
   CheckCircle2,
-  Lock
+  ChevronDown,
+  ChevronRight,
+  Compass,
+  Footprints,
+  KeyRound,
+  Lock,
+  Map as MapIcon,
+  MapPin,
+  ScanLine,
+  ScrollText,
+  Send,
 } from 'lucide-react';
 import TeamProfileModal from '@/components/TeamProfileModal';
 import TacticalMapModal from '@/components/TacticalMapModal';
@@ -110,8 +110,8 @@ export default function HuntHUD() {
             const nextTarget = Math.min(prog.currentStage, 12);
             setStageClearedNotice(
               prof.operativeRole === 'Field Scout'
-                ? `⚡ CHALLENGE SOLVED! Target updated to Node 0${nextTarget}`
-                : `✓ NODE 0${prev} OVERRIDDEN! Target: Node 0${nextTarget}`
+                ? `Challenge solved! Next stop: checkpoint ${nextTarget}`
+                : `Checkpoint ${prev} cleared! Next stop: checkpoint ${nextTarget}`
             );
             setTimeout(() => setStageClearedNotice(null), 8000);
           }
@@ -201,10 +201,10 @@ export default function HuntHUD() {
       setManualCode('');
 
       if (profile?.operativeRole === 'Field Scout') {
-        setScanNotice(`QR SCANNED: Node 0${normNode} verified! Waiting for Base Decoders.`);
+        setScanNotice(`Checkpoint ${normNode} scanned. Waiting for your Base Decoders.`);
       } else {
         setShowChallenge(true);
-        setScanNotice(`QR VERIFIED: Node 0${normNode} unlocked!`);
+        setScanNotice(`Checkpoint ${normNode} unlocked!`);
       }
       setTimeout(() => setScanNotice(null), 6000); return true;
     } else if (result.error === 'route_mismatch') {
@@ -245,9 +245,14 @@ export default function HuntHUD() {
     await loadData(false);
   };
 
-  if (loading && !profile) return <div className="bg-canvas min-h-screen"></div>;
-
-  if (!profile || !progress) return <div className="bg-canvas min-h-screen"></div>;
+  if ((loading && !profile) || !profile || !progress) {
+    return (
+      <main className="bg-map flex min-h-dvh items-center justify-center text-muted" aria-busy="true">
+        <Compass className="h-6 w-6 animate-spin" style={{ animationDuration: '3s' }} aria-hidden="true" />
+        <span className="sr-only">Loading the hunt…</span>
+      </main>
+    );
+  }
 
   if (progress.currentStage > 12) {
     return <VictoryScreen progress={progress} teamName={profile.teamName} />;
@@ -260,267 +265,249 @@ export default function HuntHUD() {
   const isQrUnlocked = !!activeCheckpoint?.qrScanned;
   const hasChallenge = !!activeCheckpoint?.challenge;
   const currentStageDisplay = progress.currentStage;
+  const stageLabel = currentStageDisplay.toString().padStart(2, '0');
+  const route = profile.assignedRoute || progress.assignedRoute || 1;
+
+  // Role- and phase-specific main action; shown in the phone bottom bar and the desktop side panel
+  const primaryAction = isFieldScout ? (
+    isQrUnlocked ? (
+      <div className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-success/50 bg-success/10 px-4 py-3 text-center text-sm font-semibold text-success">
+        <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+        <span>QR scanned · waiting for your decoders</span>
+      </div>
+    ) : (
+      <button
+        onClick={() => setShowScanner(true)}
+        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
+      >
+        <ScanLine className="h-5 w-5" aria-hidden="true" />
+        Scan checkpoint QR
+      </button>
+    )
+  ) : isQrUnlocked && !hasChallenge ? (
+    <div role="alert" className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-danger/50 bg-danger/10 px-4 py-3 text-center text-sm font-semibold text-danger">
+      <AlertOctagon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span>No question is set for this checkpoint. Please call an organizer.</span>
+    </div>
+  ) : isQrUnlocked ? (
+    <button
+      onClick={() => setShowChallenge(true)}
+      className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
+    >
+      <BrainCircuit className="h-5 w-5" aria-hidden="true" />
+      Solve the challenge
+    </button>
+  ) : (
+    <button
+      onClick={() => setShowScanner(true)}
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface text-sm font-medium text-ink transition-colors hover:border-ink/40 cursor-pointer"
+    >
+      <ScanLine className="h-4 w-4 text-muted" aria-hidden="true" />
+      Waiting for the field scan · scan here instead
+    </button>
+  );
 
   return (
-    <main className="h-[100dvh] max-h-[100dvh] bg-canvas text-ink flex flex-col relative overflow-hidden font-mono transition-colors">
-      
-      {/* Top Header */}
-      <header className="shrink-0 z-10 bg-surface border-b border-accent/40 p-2 sm:p-3 flex justify-between items-center shadow-[0_4px_15px_rgba(0,240,255,0.08)]">
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowProfile(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-sunken border border-accent text-accent hover:bg-accent hover:text-on-primary transition-colors rounded-lg text-xs sm:text-sm font-bold cursor-pointer"
-            title="View Team Profile & Telemetry"
-          >
-            <User className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[90px] sm:max-w-[140px]">{profile.teamName}</span>
-          </button>
+    <main className="bg-map flex h-dvh flex-col overflow-hidden text-ink md:h-auto md:min-h-dvh md:overflow-visible">
+      <header className="sticky top-0 z-30 shrink-0 border-b border-line bg-surface/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg border border-line px-2.5 py-1 text-left transition-colors hover:border-line-strong cursor-pointer"
+              title="Team profile"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                {isFieldScout ? <Footprints className="h-4 w-4" aria-hidden="true" /> : <BrainCircuit className="h-4 w-4" aria-hidden="true" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block max-w-[7.5rem] truncate text-sm font-semibold sm:max-w-[14rem]">{profile.teamName}</span>
+                <span className="block text-xs text-muted">{isFieldScout ? 'Field Scout' : 'Base Decoder'}</span>
+              </span>
+            </button>
 
-          <span className={`px-2 py-0.5 sm:py-1 text-[10px] font-bold uppercase tracking-wider border ${
-            (profile.assignedRoute || progress.assignedRoute || 1) === 1
-              ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
-              : 'bg-purple-500/15 border-purple-400 text-purple-400'
-          }`}>
-            R-0{profile.assignedRoute || progress.assignedRoute || 1}
-          </span>
-
-          {/* Active Operative Role Badge */}
-          <span className={`hidden xs:flex items-center gap-1 px-2 py-0.5 sm:py-1 text-[10px] font-bold uppercase tracking-wider border ${
-            isFieldScout 
-              ? 'bg-yellow-500/15 border-yellow-400 text-yellow-300'
-              : 'bg-cyan-500/15 border-cyan-400 text-cyan-300'
-          }`}>
-            {isFieldScout ? <Footprints className="w-3 h-3" /> : <BrainCircuit className="w-3 h-3" />}
-            <span>{isFieldScout ? 'FIELD SCOUT' : 'BASE DECODER'}</span>
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <ThemeToggle />
-          <div className="text-right">
-            <div className="text-[9px] sm:text-[10px] text-muted font-bold tracking-widest uppercase">STAGE</div>
-            <div className="text-primary font-bold tracking-widest text-sm sm:text-base animate-pulse" style={{ animationDuration: '2s' }}>
-              NODE {currentStageDisplay.toString().padStart(2, '0')}/12
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Floating Notice Toast */}
-      {scanNotice && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-sunken border-2 border-accent text-white p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(0,240,255,0.4)] backdrop-blur-md animate-bounce">
-          <AlertOctagon className="w-4 h-4 text-accent shrink-0" />
-          <span className="leading-tight">{scanNotice}</span>
-        </div>
-      )}
-
-      {/* Stage Cleared Real-time Notification Banner (Sync between Base Decoder & Field Scout) */}
-      {stageClearedNotice && (
-        <div className="fixed top-28 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] bg-green-950/90 border-2 border-green-400 text-green-200 p-3 font-mono text-xs uppercase flex items-center gap-2.5 shadow-[0_0_25px_rgba(34,197,94,0.5)] backdrop-blur-md animate-pulse">
-          <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 animate-bounce" />
-          <span className="font-bold leading-tight">{stageClearedNotice}</span>
-        </div>
-      )}
-
-      {/* Middle Scrollable Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4 sm:space-y-5 max-w-lg w-full mx-auto">
-        {/* Active Stage Container */}
-        <div className="space-y-4 sm:space-y-6">
-          
-          {/* Phase Status Banner (Field Scout vs Base Decoder) */}
-          <div className={`p-3 border text-xs flex items-center shadow-md ${
-            isQrUnlocked 
-              ? 'bg-primary/15 border-primary text-primary'
-              : 'bg-accent/15 border-accent text-accent'
-          }`}>
-            <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
-              {isQrUnlocked ? (
-                <>
-                  <BrainCircuit className="w-4 h-4" />
-                  <span>PHASE 2: DECODE</span>
-                </>
-              ) : (
-                <>
-                  <Footprints className="w-4 h-4" />
-                  <span>PHASE 1: SEARCH</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Active Objective Card */}
-          <div className="rounded-xl bg-surface border-l-4 border-accent p-4 sm:p-5 relative shadow-lg">
-            <div className="absolute top-0 right-0 bg-accent text-on-primary text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
-              Node 0{currentStageDisplay}
-            </div>
-            
-            <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest mt-1">
-              <Crosshair className="w-4 h-4 text-accent" />
-              <span>{activeCheckpoint?.area || `Sector 0${currentStageDisplay}`}</span>
-            </div>
-
-            <h2 className="text-xl sm:text-2xl font-bold text-ink mt-2 mb-2">
-              {activeCheckpoint?.title || `Node 0${currentStageDisplay}`}
-            </h2>
-            
-            {/* Clue box for field runners */}
-            <div className="bg-sunken p-3 border border-line/70 text-xs sm:text-sm text-ink/90 leading-relaxed font-sans mb-4">
-              <div className="text-[10px] text-accent font-mono font-bold uppercase mb-1 flex items-center gap-1">
-                <Footprints className="w-3 h-3" /> Intel:
-              </div>
-              {activeCheckpoint?.clue}
-            </div>
-
-            {/* Stage Status Indicator: Role-Differentiated */}
-            {isQrUnlocked ? (
-              <div className="p-3 bg-green-500/10 border border-green-500/50 text-green-400 text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                    <span className="font-bold">QR Verified ✓</span>
-                  </div>
-                  {isBaseDecoder && hasChallenge && (
-                    <button
-                      onClick={() => setShowChallenge(true)}
-                      className="px-3 py-1 bg-green-500 text-black font-bold uppercase text-[11px] hover:bg-white transition-colors cursor-pointer flex items-center gap-1"
-                    >
-                      <BrainCircuit className="w-3 h-3" />
-                      Open Challenge
-                    </button>
-                  )}
-                </div>
-
-                {isFieldScout ? (
-                  <div className="text-[11px] text-primary bg-sunken/90 p-2.5 border border-primary/40 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-ping shrink-0" style={{ animationDuration: '2s' }}></div>
-                    <span>WAITING FOR DECODER...</span>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-gray-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                    <span>READY FOR DECODE</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-2.5 bg-sunken border border-line text-xs text-muted flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>
-                  {isFieldScout 
-                    ? `LOCATE AND SCAN QR`
-                    : `AWAITING FIELD SCAN...`}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Mini-Map Radar Widget */}
-          <div 
-            onClick={() => setShowMap(true)}
-            className="cursor-pointer group relative bg-surface border border-accent/50 hover:border-accent p-3 rounded-xl transition-all shadow-md flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-full border-2 border-accent/60 bg-sunken flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-accent/20 to-transparent rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-accent z-10"></div>
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-ping" style={{ animationDuration: '3s' }}></div>
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary"></div>
-              </div>
-
-              <div>
-                <div className="text-xs font-bold text-accent group-hover:text-primary transition-colors flex items-center gap-1.5 uppercase tracking-wider">
-                  <Compass className="w-3.5 h-3.5" />
-                  Treasure Map
-                </div>
-                <p className="text-[11px] text-muted">View Map</p>
-              </div>
-            </div>
-
-            <span className="text-[10px] uppercase font-bold text-accent bg-accent/10 border border-accent/30 px-2 py-1">
-              MAP
+            <span className={`shrink-0 rounded-md border px-2 py-1 text-xs font-semibold ${
+              route === 1 ? 'border-route-1/50 bg-route-1/10 text-route-1' : 'border-route-2/50 bg-route-2/10 text-route-2'
+            }`}>
+              Route {route}
             </span>
           </div>
 
-          {/* Manual Code Input Box (Only for Base Decoders in Room) */}
-          {isBaseDecoder && !isQrUnlocked && (
-            <div className="bg-surface border border-line p-3.5">
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowManualCode(!showManualCode)}>
-                <label className="text-xs uppercase text-accent font-bold tracking-wider flex items-center gap-1.5 cursor-pointer">
-                  <KeyRound className="w-3.5 h-3.5 text-primary" />
-                  Manual Code
-                </label>
-                <span className="text-[10px] text-gray-400 hover:text-white transition-colors underline decoration-dashed">
-                  {showManualCode ? 'Hide' : 'Enter code manually'}
-                </span>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <ThemeToggle />
+            <div className="text-right leading-tight">
+              <div className="text-xs text-muted">Stage</div>
+              <div className="font-mono text-base font-semibold tabular-nums text-primary">
+                {stageLabel}<span className="text-muted">/12</span>
               </div>
-              
-              {showManualCode && (
-                <form onSubmit={handleManualCodeSubmit} className="flex gap-2 mt-3">
-                  <input
-                    type="text"
-                    value={manualCode}
-                    onChange={e => setManualCode(e.target.value)}
-                    placeholder="Enter QR token..."
-                    className="flex-1 bg-sunken border border-line focus:border-accent px-3 py-2 text-xs font-mono text-ink outline-none uppercase tracking-wider"
-                  />
-                  <button
-                    type="submit"
-                    disabled={manualSubmitting || !manualCode.trim()}
-                    className="bg-accent text-on-primary hover:bg-accent font-bold px-4 text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                  >
-                    <Send className="w-3 h-3" />
-                    Send
-                  </button>
-                </form>
+            </div>
+          </div>
+        </div>
+        <div className="h-1 bg-line" aria-hidden="true">
+          <div className="h-full bg-primary transition-all" style={{ width: `${((currentStageDisplay - 1) / 12) * 100}%` }} />
+        </div>
+      </header>
+
+      {/* Toasts */}
+      <div className="pointer-events-none fixed inset-x-0 top-20 z-50 flex flex-col items-center gap-2 px-4" aria-live="polite">
+        {scanNotice && (
+          <div className="flex w-full max-w-sm items-center gap-2.5 rounded-lg border border-line border-l-4 border-l-accent bg-surface p-3 text-sm shadow-raised">
+            <ScanLine className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+            <span>{scanNotice}</span>
+          </div>
+        )}
+        {stageClearedNotice && (
+          <div className="flex w-full max-w-sm items-center gap-2.5 rounded-lg border border-line border-l-4 border-l-success bg-surface p-3 text-sm font-semibold shadow-raised">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+            <span>{stageClearedNotice}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto md:overflow-visible">
+        <div className="mx-auto grid w-full max-w-6xl gap-4 px-3 py-4 sm:px-6 sm:py-6 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] md:items-start md:gap-6 lg:py-8">
+          {/* Checkpoint card */}
+          <section className="rounded-xl border border-line bg-surface p-4 shadow-card sm:p-6" aria-labelledby="checkpoint-title">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
+                <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+                {activeCheckpoint?.area || `Sector ${stageLabel}`}
+              </span>
+              <span className="rounded-md border border-dashed border-primary/60 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+                Checkpoint {stageLabel}
+              </span>
+            </div>
+
+            <h2 id="checkpoint-title" className="mt-3 text-2xl font-bold sm:text-3xl">
+              {activeCheckpoint?.title || `Checkpoint ${stageLabel}`}
+            </h2>
+
+            <div className="mt-4 rounded-lg border border-line bg-sunken p-4">
+              <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+                <ScrollText className="h-4 w-4" aria-hidden="true" /> Clue
+              </div>
+              <p className="text-base leading-relaxed">{activeCheckpoint?.clue}</p>
+            </div>
+
+            <div className={`mt-4 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm ${
+              isQrUnlocked ? 'border-success/40 bg-success/10 text-success' : 'border-line bg-surface-2 text-muted'
+            }`}>
+              {isQrUnlocked ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> : <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              <span>
+                {isQrUnlocked
+                  ? isFieldScout ? 'QR verified. Your decoders are solving the challenge.' : 'QR verified. The challenge is ready to solve.'
+                  : isFieldScout ? 'Find this spot on campus and scan its QR code.' : 'Waiting for your Field Scout to scan this checkpoint.'}
+              </span>
+              {isBaseDecoder && isQrUnlocked && hasChallenge && (
+                <button
+                  onClick={() => setShowChallenge(true)}
+                  className="ml-auto inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md bg-success px-3 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 cursor-pointer"
+                >
+                  Open
+                </button>
               )}
             </div>
-          )}
+          </section>
+
+          {/* Side panel: progress, phase and actions */}
+          <aside className="space-y-4">
+            <div className="rounded-xl border border-line bg-surface p-4 shadow-card sm:p-5">
+              <h3 className="text-sm font-semibold text-muted">Progress</h3>
+              <ol className="mt-3 grid grid-cols-12 gap-1" aria-label={`Stage ${currentStageDisplay} of 12`}>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const n = i + 1;
+                  const state = n < currentStageDisplay ? 'done' : n === currentStageDisplay ? 'current' : 'todo';
+                  return (
+                    <li
+                      key={n}
+                      className={`h-2.5 rounded-full ${state === 'done' ? 'bg-primary' : state === 'current' ? 'bg-accent ring-2 ring-accent/30' : 'bg-line'}`}
+                      aria-label={`Checkpoint ${n}: ${state === 'done' ? 'found' : state === 'current' ? 'current' : 'ahead'}`}
+                    />
+                  );
+                })}
+              </ol>
+
+              <ol className="mt-4 space-y-2 text-sm">
+                {[
+                  { step: 1, label: 'Find & scan the QR', active: !isQrUnlocked, done: isQrUnlocked, Icon: Footprints },
+                  { step: 2, label: 'Solve the challenge', active: isQrUnlocked, done: false, Icon: BrainCircuit },
+                ].map(({ step, label, active, done, Icon }) => (
+                  <li key={step} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 ${active ? 'bg-primary/10 font-semibold text-ink' : 'text-muted'}`}>
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                      done ? 'bg-success text-on-primary' : active ? 'bg-primary text-on-primary' : 'border border-line-strong'
+                    }`}>
+                      {done ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                    </span>
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {label}
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-4 hidden md:block">{primaryAction}</div>
+            </div>
+
+            <button
+              onClick={() => setShowMap(true)}
+              className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left shadow-card transition-colors hover:border-line-strong cursor-pointer"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+                <MapIcon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">Treasure map</span>
+                <span className="block text-sm text-muted">See every checkpoint on your route</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+            </button>
+
+            {isBaseDecoder && !isQrUnlocked && (
+              <div className="rounded-xl border border-line bg-surface p-3 shadow-card">
+                <button
+                  type="button"
+                  onClick={() => setShowManualCode(!showManualCode)}
+                  aria-expanded={showManualCode}
+                  className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-1 text-left cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+                    Enter a code manually
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-muted transition-transform ${showManualCode ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+
+                {showManualCode && (
+                  <form onSubmit={handleManualCodeSubmit} className="mt-2 flex gap-2">
+                    <label htmlFor="manualCode" className="sr-only">QR token</label>
+                    <input
+                      id="manualCode"
+                      type="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={manualCode}
+                      onChange={e => setManualCode(e.target.value)}
+                      placeholder="QR token from your scout"
+                      className="h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-sunken px-3 font-mono text-base text-ink placeholder:font-sans placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow sm:text-sm"
+                    />
+                    <button
+                      type="submit"
+                      disabled={manualSubmitting || !manualCode.trim()}
+                      className="flex h-11 shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="h-4 w-4" aria-hidden="true" />
+                      Send
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </aside>
         </div>
       </div>
 
-      {/* Persistent Bottom Action Bar (Fixed at bottom of 100dvh viewport, role-tailored) */}
-      <div className="shrink-0 pb-6 pt-4 px-4 bg-surface/95 border-t border-accent/30 backdrop-blur-md z-20 max-w-lg w-full mx-auto shadow-[0_-4px_15px_rgba(0,0,0,0.5)]">
-        {isFieldScout ? (
-          /* Field Scout View */
-          isQrUnlocked ? (
-            <div className="w-full flex items-center justify-center gap-2.5 bg-sunken border-2 border-green-500/70 text-green-400 py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>QR SCANNED // WAITING FOR DECODE</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 rounded-lg bg-primary text-on-primary hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_15px_rgba(252,238,10,0.4)] cursor-pointer active:scale-[0.99]"
-            >
-              <ScanLine className="w-5 h-5" />
-              Scan Checkpoint QR Code
-            </button>
-          )
-        ) : (
-          /* Base Decoder View */
-          isQrUnlocked && !hasChallenge ? (
-            <div className="w-full flex items-center justify-center gap-2.5 bg-sunken border-2 border-danger/70 text-danger py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest text-center">
-              <AlertOctagon className="w-4 h-4 shrink-0" />
-              <span>QR SCANNED // NO QUESTION SET FOR THIS NODE. CALL AN ORGANIZER</span>
-            </div>
-          ) : isQrUnlocked ? (
-            <button
-              onClick={() => setShowChallenge(true)}
-              className="w-full flex items-center justify-center gap-3 rounded-lg bg-green-500 text-black hover:bg-white py-3 sm:py-3.5 text-sm sm:text-base uppercase font-bold tracking-widest transition-all shadow-[0_0_20px_rgba(34,197,94,0.4)] cursor-pointer active:scale-[0.99]"
-            >
-              <BrainCircuit className="w-5 h-5" />
-              SOLVE CHALLENGE
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 rounded-lg bg-accent/20 border border-accent text-accent hover:bg-accent hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
-            >
-              <ScanLine className="w-4 h-4" />
-              AWAITING QR SCAN
-            </button>
-          )
-        )}
+      {/* Phone action bar */}
+      <div className="z-20 shrink-0 border-t border-line bg-surface px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
+        {primaryAction}
       </div>
 
       {/* Modals */}
@@ -553,6 +540,3 @@ export default function HuntHUD() {
     </main>
   );
 }
-
-
-
