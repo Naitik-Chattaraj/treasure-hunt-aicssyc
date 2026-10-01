@@ -4,23 +4,23 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { 
-  Terminal, 
-  Lock, 
-  AlertCircle, 
-  ShieldCheck, 
-  Clock, 
-  RefreshCw, 
-  ShieldAlert, 
-  Users, 
-  Plus, 
-  Trash2, 
-  BrainCircuit, 
+import {
+  AlertCircle,
+  BrainCircuit,
+  CheckCircle2,
+  ChevronDown,
+  Compass,
   Footprints,
-  UserCheck,
+  Hourglass,
   LogIn,
+  Map as MapIcon,
+  Plus,
+  RefreshCw,
+  ShieldAlert,
+  Trash2,
+  UserCheck,
   UserPlus,
-  Zap
+  Users,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { TeamMember } from '@/types/hunt';
@@ -277,63 +277,78 @@ export default function LoginPage() {
     }
   };
 
+  const inputClass = (hasError?: string) =>
+    `w-full h-12 rounded-lg bg-sunken border px-4 text-base text-ink placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow ${
+      hasError ? 'border-danger' : 'border-line-strong'
+    }`;
+  const smallInputClass =
+    'w-full h-11 rounded-md bg-surface border border-line-strong px-3 text-base sm:text-sm text-ink placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow';
+
+  const fieldError = (message?: string) =>
+    message ? (
+      <p className="mt-1.5 flex items-center gap-1.5 text-sm text-danger">
+        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {message}
+      </p>
+    ) : null;
+
+  const validMark = (show: boolean) =>
+    show ? (
+      <span className="flex items-center gap-1 text-xs font-medium text-success">
+        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Looks good
+      </span>
+    ) : null;
+
   return (
-    <main className="min-h-screen bg-canvas text-ink flex items-center justify-center p-4 relative overflow-hidden transition-colors">
-      
-      {/* Top Controls Bar */}
-      <div className="absolute top-4 right-4 z-20">
+    <main className="bg-map min-h-dvh text-ink flex flex-col items-center justify-center px-4 pt-16 pb-10 sm:py-16">
+      <div className="fixed top-3 right-3 z-20 sm:top-4 sm:right-4">
         <ThemeToggle />
       </div>
 
-      <div className="z-10 w-full max-w-md bg-surface rounded-xl border-t-2 border-b-2 border-accent p-6 sm:p-8 shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all">
-        <div className="flex justify-center mb-4">
-          <Terminal className="w-12 h-12 text-accent animate-pulse" />
-        </div>
-        
-        <h1 className="text-2xl sm:text-3xl text-center font-bold mb-1 tracking-widest text-accent uppercase font-mono">
-          TREASURE HUNT 2026
-        </h1>
-        <p className="text-center text-xs tracking-widest text-muted mb-4 font-mono">
-          AICSSYC // PARTICIPANT LOGIN
-        </p>
-
-        {/* 4-5 Members Role Banner */}
-        <div className="bg-sunken border border-accent/20 p-3 mb-6 text-center text-[12px] font-mono text-gray-300 rounded">
-          <span className="text-primary font-bold">TEAM FORMATION (4-5 MEMBERS):</span>
-          <div className="text-[11px] text-muted mt-1">
-            2 Base Decoders + 2-3 Field Scouts
+      <div className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-raised sm:p-8">
+        <header className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+            <Compass className="h-7 w-7" aria-hidden="true" />
           </div>
+          <h1 className="text-2xl font-bold sm:text-3xl">Treasure Hunt 2026</h1>
+          <p className="mt-1 text-sm text-muted">AICSSYC campus hunt · participant entry</p>
+        </header>
+
+        <div className="mb-6 flex items-start gap-3 rounded-lg border border-line bg-sunken p-3 text-sm">
+          <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <p className="text-muted">
+            <span className="font-semibold text-ink">Teams of 4–5:</span> 2 Base Decoders in the room and 2–3 Field Scouts on campus.
+          </p>
         </div>
 
         {authError && (
-          <div className="bg-danger/15 border border-danger text-danger px-4 py-2.5 mb-6 font-mono text-xs uppercase flex items-center gap-2">
-            <Lock className="w-4 h-4 shrink-0" />
+          <div role="alert" className="mb-6 flex items-start gap-2 rounded-lg border border-danger/50 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{authError}</span>
           </div>
         )}
 
         {pendingApproval ? (
-          <div className="space-y-6 text-center font-mono">
-            <div className="p-5 bg-sunken border border-primary/60 text-primary relative">
-              <Clock className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" style={{ animationDuration: '6s' }} />
-              <h2 className="text-sm font-bold tracking-widest uppercase mb-1">
-                APPROVAL PENDING
-              </h2>
-              <p className="text-xs text-gray-300 leading-relaxed mt-2">
-                Team <span className="text-primary font-bold">{teamName}</span> is pending approval.
+          <div className="space-y-4 text-center">
+            <div className="rounded-lg border border-primary/40 bg-primary/10 p-5">
+              <Hourglass className="mx-auto mb-3 h-9 w-9 text-primary" aria-hidden="true" />
+              <h2 className="text-lg font-semibold">Waiting for approval</h2>
+              <p className="mt-2 text-sm text-muted">
+                Team <span className="font-semibold text-ink">{teamName}</span> is registered and waiting for an organizer to approve it.
               </p>
-              <p className="text-[11px] text-gray-400 mt-2">
-                An organizer will approve your team and provide a <strong className="text-accent">6-digit access code</strong> for login.
+              <p className="mt-2 text-sm text-muted">
+                This page will continue automatically once you&apos;re approved. Organizers will also give you a{' '}
+                <strong className="text-ink">6-digit access code</strong> for your other devices.
               </p>
             </div>
 
             <button
               onClick={handleManualCheck}
               disabled={checkingStatus}
-              className="w-full rounded-lg bg-primary hover:bg-yellow-400 text-on-primary font-bold text-sm py-3 uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${checkingStatus ? 'animate-spin' : ''}`} />
-              {checkingStatus ? 'Checking...' : 'CHECK STATUS NOW'}
+              <RefreshCw className={`h-4 w-4 ${checkingStatus ? 'animate-spin' : ''}`} aria-hidden="true" />
+              {checkingStatus ? 'Checking…' : 'Check status now'}
             </button>
 
             <button
@@ -341,381 +356,315 @@ export default function LoginPage() {
                 setPendingApproval(false);
                 setIsLoginMode(true);
               }}
-              className="text-xs text-gray-400 hover:text-accent transition-colors underline cursor-pointer"
+              className="text-sm text-muted underline underline-offset-4 transition-colors hover:text-ink cursor-pointer"
             >
-              Back to login (I have my access code)
+              I have my access code
             </button>
           </div>
         ) : (
           <>
-            <div className="flex w-full mb-8 border-b border-line">
-              <button
-                type="button"
-                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${!isLoginMode ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-white'}`}
-                onClick={() => { setIsLoginMode(false); setAuthError(''); }}
-              >
-                <UserPlus className="w-4 h-4" />
-                REGISTER
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-3 text-sm font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 ${isLoginMode ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-white'}`}
-                onClick={() => { setIsLoginMode(true); setAuthError(''); }}
-              >
-                <LogIn className="w-4 h-4" />
-                LOGIN
-              </button>
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-sunken p-1" role="group" aria-label="Choose register or log in">
+              {[
+                { login: false, label: 'Register', Icon: UserPlus },
+                { login: true, label: 'Log in', Icon: LogIn },
+              ].map(({ login, label, Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={isLoginMode === login}
+                  onClick={() => { setIsLoginMode(login); setAuthError(''); }}
+                  className={`flex h-11 items-center justify-center gap-2 rounded-md text-sm font-semibold transition-colors cursor-pointer ${
+                    isLoginMode === login ? 'bg-surface text-ink shadow-card' : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
             </div>
-            
-            <form onSubmit={handleLogin} className="space-y-6 font-mono" noValidate>
-              {/* Team Name */}
+
+            <form onSubmit={handleLogin} className="space-y-5" noValidate>
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
-                    Team Name
-                  </label>
-                  {touched.teamName && !fieldErrors.teamName && teamName.trim() && (
-                    <span className="text-[10px] text-green-500 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> VALID
-                    </span>
-                  )}
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label htmlFor="teamName" className="text-sm font-medium">Team name</label>
+                  {validMark(!!(touched.teamName && !fieldErrors.teamName && teamName.trim()))}
                 </div>
                 <input
+                  id="teamName"
                   type="text"
+                  autoComplete="organization"
                   placeholder="e.g. BinaryBrains"
                   value={teamName}
                   onChange={e => handleChange('teamName', e.target.value)}
                   onBlur={() => handleBlur('teamName')}
-                  className={`w-full bg-sunken border ${
-                    fieldErrors.teamName ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
-                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                  aria-invalid={!!fieldErrors.teamName}
+                  className={inputClass(fieldErrors.teamName)}
                 />
-                {touched.teamName && fieldErrors.teamName && (
-                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    {fieldErrors.teamName}
-                  </p>
-                )}
+                {touched.teamName && fieldError(fieldErrors.teamName)}
               </div>
 
-            {/* Team Lead */}
-            {!isLoginMode && (
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
-                    Team Lead (Base Decoder)
-                  </label>
-                  {touched.teamLead && !fieldErrors.teamLead && teamLead.trim() && (
-                    <span className="text-[10px] text-green-500 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> VALID
-                    </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  placeholder="e.g. Alex Mercer"
-                  value={teamLead}
-                  onChange={e => handleChange('teamLead', e.target.value)}
-                  onBlur={() => handleBlur('teamLead')}
-                  className={`w-full bg-sunken border ${
-                    fieldErrors.teamLead ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
-                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
-                />
-                {touched.teamLead && fieldErrors.teamLead && (
-                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    {fieldErrors.teamLead}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Unique Identification ID (UID) */}
-            {isLoginMode && (
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs uppercase text-accent font-bold tracking-wider">
-                    6-Digit Access Code
-                  </label>
-                  {touched.uid && !fieldErrors.uid && uid.trim() && (
-                    <span className="text-[10px] text-green-500 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> VALID
-                    </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  placeholder="e.g. A1B2C3"
-                  value={uid}
-                  onChange={e => handleChange('uid', e.target.value.toUpperCase())}
-                  onBlur={() => handleBlur('uid')}
-                  className={`w-full bg-sunken border ${
-                    fieldErrors.uid ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
-                  } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500 uppercase`}
-                />
-                {touched.uid && fieldErrors.uid && (
-                  <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    {fieldErrors.uid}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Operative Name & Role Assignment on this Device */}
-            {isLoginMode && (
-              <div className="space-y-3 pt-1 border-t border-line/60">
+              {!isLoginMode && (
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs uppercase text-accent font-bold tracking-wider">
-                      Team Leader's Name
-                    </label>
-                    {touched.operativeName && !fieldErrors.operativeName && operativeName.trim() && (
-                      <span className="text-[10px] text-green-500 flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" /> VALID
-                      </span>
-                    )}
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <label htmlFor="teamLead" className="text-sm font-medium">Team lead <span className="text-muted">(Base Decoder)</span></label>
+                    {validMark(!!(touched.teamLead && !fieldErrors.teamLead && teamLead.trim()))}
                   </div>
                   <input
+                    id="teamLead"
                     type="text"
+                    autoComplete="name"
                     placeholder="e.g. Alex Mercer"
-                    value={operativeName}
-                    onChange={e => handleChange('operativeName', e.target.value)}
-                    onBlur={() => handleBlur('operativeName')}
-                    className={`w-full bg-sunken border ${
-                      fieldErrors.operativeName ? 'border-danger focus:border-danger' : 'border-line focus:border-accent'
-                    } text-ink px-4 py-2.5 outline-none text-sm focus:shadow-[0_0_10px_rgba(0,240,255,0.25)] transition-all placeholder:text-gray-500`}
+                    value={teamLead}
+                    onChange={e => handleChange('teamLead', e.target.value)}
+                    onBlur={() => handleBlur('teamLead')}
+                    aria-invalid={!!fieldErrors.teamLead}
+                    className={inputClass(fieldErrors.teamLead)}
                   />
-                  {touched.operativeName && fieldErrors.operativeName && (
-                    <p className="text-[11px] text-danger mt-1 flex items-center gap-1 font-mono">
-                      <AlertCircle className="w-3 h-3 shrink-0" />
-                      {fieldErrors.operativeName}
-                    </p>
-                  )}
+                  {touched.teamLead && fieldError(fieldErrors.teamLead)}
                 </div>
+              )}
 
+              {isLoginMode && (
                 <div>
-                  <label className="block text-xs uppercase text-accent font-bold tracking-wider mb-2">
-                    Your Role
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setOperativeRole('Base Decoder')}
-                      className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
-                        operativeRole === 'Base Decoder'
-                          ? 'bg-accent/15 border-accent shadow-[0_0_12px_rgba(0,240,255,0.25)]'
-                          : 'bg-sunken border-line text-gray-400 hover:border-accent/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <BrainCircuit className={`w-5 h-5 ${operativeRole === 'Base Decoder' ? 'text-accent' : 'text-gray-400'}`} />
-                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
-                          operativeRole === 'Base Decoder' ? 'bg-accent text-on-primary border-accent' : 'border-gray-700 text-gray-500'
-                        }`}>
-                          Room
-                        </span>
-                      </div>
-                      <div>
-                        <div className={`text-sm font-bold ${operativeRole === 'Base Decoder' ? 'text-accent' : 'text-ink'}`}>
-                          Base Decoder
-                        </div>
-                        <div className="text-[10px] text-gray-400 mt-1 leading-tight">
-                          Solves questions in room
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setOperativeRole('Field Scout')}
-                      className={`p-3.5 border rounded-sm text-left flex flex-col justify-between transition-all cursor-pointer ${
-                        operativeRole === 'Field Scout'
-                          ? 'bg-primary/15 border-primary shadow-[0_0_12px_rgba(252,238,10,0.25)]'
-                          : 'bg-sunken border-line text-gray-400 hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <Footprints className={`w-5 h-5 ${operativeRole === 'Field Scout' ? 'text-primary' : 'text-gray-400'}`} />
-                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${
-                          operativeRole === 'Field Scout' ? 'bg-primary text-on-primary border-primary' : 'border-gray-700 text-gray-500'
-                        }`}>
-                          Campus
-                        </span>
-                      </div>
-                      <div>
-                        <div className={`text-sm font-bold ${operativeRole === 'Field Scout' ? 'text-primary' : 'text-ink'}`}>
-                          Field Scout
-                        </div>
-                        <div className="text-[10px] text-gray-400 mt-1 leading-tight">
-                          Scans QR codes on field
-                        </div>
-                      </div>
-                    </button>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <label htmlFor="uid" className="text-sm font-medium">6-digit access code</label>
+                    {validMark(!!(touched.uid && !fieldErrors.uid && uid.trim()))}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-                    Limit: 1 active device per role (1 Field Scout + 1 Base Decoder per team). Logging in on another device will disconnect the previous device for that role.
-                  </p>
+                  <input
+                    id="uid"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    placeholder="A1B2C3"
+                    value={uid}
+                    onChange={e => handleChange('uid', e.target.value.toUpperCase())}
+                    onBlur={() => handleBlur('uid')}
+                    aria-invalid={!!fieldErrors.uid}
+                    className={`${inputClass(fieldErrors.uid)} font-mono tracking-[0.3em] uppercase`}
+                  />
+                  {touched.uid && fieldError(fieldErrors.uid)}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Operatives Roster Collapsible for Registration */}
-            {!isLoginMode && (
-              <div className="pt-1 space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setShowMembers(!showMembers)}
-                  className="w-full flex items-center justify-between text-xs text-accent bg-sunken border border-line p-3.5 rounded-sm hover:border-accent transition-colors cursor-pointer"
-                >
-                  <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
-                    <Users className="w-4 h-4 text-primary" />
-                    Team Members ({members.length})
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {showMembers ? 'COLLAPSE ▲' : 'CONFIGURE ▼'}
-                  </span>
-                </button>
+              {isLoginMode && (
+                <div className="space-y-5 border-t border-line pt-5">
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <label htmlFor="operativeName" className="text-sm font-medium">Team leader&apos;s name</label>
+                      {validMark(!!(touched.operativeName && !fieldErrors.operativeName && operativeName.trim()))}
+                    </div>
+                    <input
+                      id="operativeName"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="e.g. Alex Mercer"
+                      value={operativeName}
+                      onChange={e => handleChange('operativeName', e.target.value)}
+                      onBlur={() => handleBlur('operativeName')}
+                      aria-invalid={!!fieldErrors.operativeName}
+                      className={inputClass(fieldErrors.operativeName)}
+                    />
+                    {touched.operativeName && fieldError(fieldErrors.operativeName)}
+                  </div>
 
-                {showMembers && (
-                  <div className="p-4 bg-sunken border border-line/70 space-y-4 text-xs rounded-sm">
-                    <p className="text-[11px] text-gray-400 mb-2">
-                      4-5 members required
-                    </p>
-                    {members.map((m, idx) => (
-                      <div key={idx} className="flex flex-col gap-2 items-start border-b border-line/50 pb-3 mb-2">
-                        <div className="flex w-full gap-2 items-center">
-                          <span className="text-[10px] text-accent font-bold w-4">{idx + 1}.</span>
-                          <input
-                            type="text"
-                            placeholder={`Member ${idx + 1}`}
-                            value={m.name}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
-                            }}
-                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent"
-                          />
-                          <select
-                            value={m.role}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
-                            }}
-                            className="bg-surface border border-line px-2 py-1.5 text-[11px] text-primary outline-none"
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-medium">Your role on this device</legend>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { role: 'Base Decoder' as const, Icon: BrainCircuit, where: 'In the room', what: 'Solves the questions', tone: 'accent' },
+                        { role: 'Field Scout' as const, Icon: Footprints, where: 'On campus', what: 'Scans the QR codes', tone: 'primary' },
+                      ].map(({ role, Icon, where, what, tone }) => {
+                        const selected = operativeRole === role;
+                        return (
+                          <button
+                            key={role}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => setOperativeRole(role)}
+                            className={`flex min-h-28 flex-col justify-between rounded-lg border p-3.5 text-left transition-colors cursor-pointer ${
+                              selected
+                                ? tone === 'accent' ? 'border-accent bg-accent/10' : 'border-primary bg-primary/10'
+                                : 'border-line-strong bg-sunken hover:border-ink/40'
+                            }`}
                           >
-                            <option value="Base Decoder">Base Decoder</option>
-                            <option value="Field Scout">Field Scout</option>
-                          </select>
-                          {members.length > 4 && idx >= 4 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMember(idx)}
-                              className="text-danger hover:text-white p-1 ml-auto cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex w-full gap-2 pl-6">
-                          <input
-                            type="text"
-                            placeholder="Reg No (e.g. IEEE/College)"
-                            value={m.regNo}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
-                            }}
-                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent placeholder-gray-500"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Phone No."
-                            value={m.phone}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
-                            }}
-                            className="flex-1 bg-surface border border-line px-2 py-1.5 text-ink text-xs outline-none focus:border-accent placeholder-gray-500"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                            <div className="mb-2 flex items-center justify-between">
+                              <Icon className={`h-5 w-5 ${selected ? (tone === 'accent' ? 'text-accent' : 'text-primary') : 'text-muted'}`} aria-hidden="true" />
+                              <span className="text-xs text-muted">{where}</span>
+                            </div>
+                            <div>
+                              <div className="font-semibold">{role}</div>
+                              <div className="mt-0.5 text-xs text-muted">{what}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-xs text-muted">
+                      One device per role: logging in on another device signs out the previous one for that role.
+                    </p>
+                  </fieldset>
+                </div>
+              )}
 
-                    {members.length < 5 && (
+              {!isLoginMode && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowMembers(!showMembers)}
+                    aria-expanded={showMembers}
+                    className="flex h-12 w-full items-center justify-between rounded-lg border border-line-strong bg-sunken px-4 text-sm transition-colors hover:border-ink/40 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2 font-medium">
+                      <Users className="h-4 w-4 text-primary" aria-hidden="true" />
+                      Team members ({members.length})
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted transition-transform ${showMembers ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </button>
+
+                  {showMembers && (
+                    <div className="space-y-3 rounded-lg border border-line bg-sunken p-3 sm:p-4">
+                      <p className="text-xs text-muted">4–5 members required. Every member needs a registration number and phone number.</p>
+                      {members.map((m, idx) => (
+                        <div key={idx} className="space-y-2 rounded-md border border-line bg-surface p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">{idx + 1}</span>
+                            <input
+                              type="text"
+                              aria-label={`Member ${idx + 1} name`}
+                              placeholder={`Member ${idx + 1} name`}
+                              value={m.name}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setMembers(prev => prev.map((item, i) => i === idx ? { ...item, name: val } : item));
+                              }}
+                              className={smallInputClass}
+                            />
+                            {members.length > 4 && idx >= 4 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMember(idx)}
+                                aria-label={`Remove member ${idx + 1}`}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-danger transition-colors hover:bg-danger/10 cursor-pointer"
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <select
+                              aria-label={`Member ${idx + 1} role`}
+                              value={m.role}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setMembers(prev => prev.map((item, i) => i === idx ? { ...item, role: val } : item));
+                              }}
+                              className={smallInputClass}
+                            >
+                              <option value="Base Decoder">Base Decoder</option>
+                              <option value="Field Scout">Field Scout</option>
+                            </select>
+                            <input
+                              type="text"
+                              aria-label={`Member ${idx + 1} registration number`}
+                              placeholder="Reg. no."
+                              value={m.regNo}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setMembers(prev => prev.map((item, i) => i === idx ? { ...item, regNo: val } : item));
+                              }}
+                              className={smallInputClass}
+                            />
+                            <input
+                              type="tel"
+                              aria-label={`Member ${idx + 1} phone number`}
+                              placeholder="Phone"
+                              value={m.phone}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setMembers(prev => prev.map((item, i) => i === idx ? { ...item, phone: val } : item));
+                              }}
+                              className={smallInputClass}
+                            />
+                          </div>
+                        </div>
+                      ))}
+
+                      {members.length < 5 && (
+                        <button
+                          type="button"
+                          onClick={handleAddMember}
+                          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-primary/60 text-sm font-medium text-primary transition-colors hover:bg-primary/10 cursor-pointer"
+                        >
+                          <Plus className="h-4 w-4" aria-hidden="true" /> Add a 5th member
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <fieldset className="rounded-lg border border-line bg-sunken p-3">
+                    <legend className="sr-only">This device&apos;s role</legend>
+                    <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                      <UserCheck className="h-4 w-4 text-primary" aria-hidden="true" />
+                      This device will be used by
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={handleAddMember}
-                        className="w-full border border-dashed border-primary/60 text-primary hover:bg-primary/10 py-1.5 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer mt-1"
+                        aria-pressed={operativeRole === 'Base Decoder'}
+                        onClick={() => {
+                          setOperativeRole('Base Decoder');
+                          setOperativeName(teamLead || 'Team Lead');
+                        }}
+                        className={`flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
+                          operativeRole === 'Base Decoder'
+                            ? 'border-accent bg-accent text-on-primary'
+                            : 'border-line-strong bg-surface text-muted hover:text-ink'
+                        }`}
                       >
-                        <Plus className="w-3 h-3" /> Add 5th Member
+                        <BrainCircuit className="h-4 w-4" aria-hidden="true" />
+                        Base Decoder
                       </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Device active role for registration */}
-                <div className="p-3 bg-sunken border border-line">
-                  <label className="block text-[11px] uppercase text-accent font-bold tracking-wider mb-2 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-primary" />
-                    This Device Role:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOperativeRole('Base Decoder');
-                        setOperativeName(teamLead || 'Team Lead');
-                      }}
-                      className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        operativeRole === 'Base Decoder'
-                          ? 'bg-accent text-on-primary border-accent shadow-[0_0_10px_rgba(0,240,255,0.3)] font-extrabold'
-                          : 'bg-surface border-line text-gray-400 hover:border-accent'
-                      }`}
-                    >
-                      <BrainCircuit className="w-3.5 h-3.5" />
-                      Base Decoder
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOperativeRole('Field Scout');
-                        setOperativeName(members[2]?.name || 'Field Scout');
-                      }}
-                      className={`px-3 py-2 border text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        operativeRole === 'Field Scout'
-                          ? 'bg-primary text-on-primary border-primary shadow-[0_0_10px_rgba(252,238,10,0.3)] font-extrabold'
-                          : 'bg-surface border-line text-gray-400 hover:border-primary'
-                      }`}
-                    >
-                      <Footprints className="w-3.5 h-3.5" />
-                      Field Scout
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        aria-pressed={operativeRole === 'Field Scout'}
+                        onClick={() => {
+                          setOperativeRole('Field Scout');
+                          setOperativeName(members[2]?.name || 'Field Scout');
+                        }}
+                        className={`flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
+                          operativeRole === 'Field Scout'
+                            ? 'border-primary bg-primary text-on-primary'
+                            : 'border-line-strong bg-surface text-muted hover:text-ink'
+                        }`}
+                      >
+                        <Footprints className="h-4 w-4" aria-hidden="true" />
+                        Field Scout
+                      </button>
+                    </div>
+                  </fieldset>
                 </div>
-              </div>
-            )}
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-accent hover:bg-accent text-on-primary font-bold text-base py-4 uppercase tracking-widest transition-all mt-6 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.2)] flex items-center justify-center gap-2"
-            >
-              <Zap className="w-5 h-5" />
-              {loading ? 'TRANSMITTING CREDENTIALS...' : 'INITIALIZE LINK'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
+              >
+                {isLoginMode ? <LogIn className="h-5 w-5" aria-hidden="true" /> : <MapIcon className="h-5 w-5" aria-hidden="true" />}
+                {loading ? 'Please wait…' : isLoginMode ? 'Log in' : 'Register team'}
+              </button>
+            </form>
           </>
         )}
 
-        <div className="mt-6 pt-4 border-t border-line/40 text-center">
+        <div className="mt-6 border-t border-line pt-4 text-center">
           <Link
             href="/admin/login"
-            className="text-[11px] text-gray-500 hover:text-danger transition-colors font-mono tracking-wider flex items-center justify-center gap-1.5"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
           >
-            <ShieldAlert className="w-3 h-3" />
-            Staff / Admin Login
+            <ShieldAlert className="h-4 w-4" aria-hidden="true" />
+            Organizer login
           </Link>
         </div>
       </div>

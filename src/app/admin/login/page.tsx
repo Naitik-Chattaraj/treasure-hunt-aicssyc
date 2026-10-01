@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Lock, AlertTriangle, KeyRound, Terminal } from 'lucide-react';
+import Link from 'next/link';
+import { AlertCircle, ArrowLeft, KeyRound, LogIn, ShieldCheck } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function AdminLoginPage() {
@@ -39,71 +40,63 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-canvas text-ink flex items-center justify-center p-4 relative overflow-hidden font-mono transition-colors">
-
-      <div className="absolute top-4 right-4 z-20">
+    <main className="bg-map min-h-dvh text-ink flex flex-col items-center justify-center px-4 pt-16 pb-10 sm:py-16">
+      <div className="fixed top-3 right-3 z-20 sm:top-4 sm:right-4">
         <ThemeToggle />
       </div>
 
-      <div className="z-10 w-full max-w-md bg-surface rounded-xl border-t-2 border-b-2 border-danger p-6 sm:p-8 shadow-[0_0_25px_rgba(255,0,60,0.25)]">
-        <div className="flex justify-center mb-4">
-          <div className="w-14 h-14 rounded-full border-2 border-danger flex items-center justify-center bg-sunken shadow-[0_0_15px_rgba(255,0,60,0.3)]">
-            <Lock className="w-7 h-7 text-danger animate-pulse" />
+      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-raised sm:p-8">
+        <header className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+            <ShieldCheck className="h-7 w-7" aria-hidden="true" />
           </div>
-        </div>
-
-        <h1 className="text-xl sm:text-2xl text-center font-bold mb-1 tracking-widest text-danger uppercase">
-          MISSION CONTROL
-        </h1>
-        <p className="text-center text-[11px] tracking-widest text-gray-400 mb-6">
-          ADMIN ACCESS
-        </p>
+          <h1 className="text-2xl font-bold">Organizer login</h1>
+          <p className="mt-1 text-sm text-muted">Mission control for the AICSSYC hunt</p>
+        </header>
 
         {error && (
-          <div className="bg-danger/20 border border-danger text-danger px-4 py-3 mb-5 text-xs flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div role="alert" className="mb-5 flex items-start gap-2 rounded-lg border border-danger/50 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="text-xs uppercase text-danger font-bold tracking-wider block mb-1">
-              Admin Password
-            </label>
+            <label htmlFor="adminPassword" className="mb-1.5 block text-sm font-medium">Admin password</label>
             <div className="relative">
-              <KeyRound className="w-4 h-4 text-danger/70 absolute left-3 top-3.5" />
+              <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
               <input
+                id="adminPassword"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Enter password"
-                className="w-full bg-sunken border border-line focus:border-danger text-ink pl-10 pr-4 py-3 outline-none text-sm tracking-widest focus:shadow-[0_0_10px_rgba(255,0,60,0.25)] transition-all placeholder:text-gray-600"
+                className="h-12 w-full rounded-lg border border-line-strong bg-sunken pl-10 pr-4 text-base text-ink placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow"
                 required
               />
             </div>
-            <p className="text-[10px] text-gray-500 mt-1">
-              Secure access
-            </p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-danger hover:bg-white text-white hover:text-black font-bold text-sm py-3.5 uppercase tracking-widest transition-all mt-4 disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(255,0,60,0.3)] flex items-center justify-center gap-2"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
           >
-            <Lock className="w-4 h-4" />
-            {loading ? 'Verifying...' : 'AUTHORIZE ADMIN LINK'}
+            <LogIn className="h-5 w-5" aria-hidden="true" />
+            {loading ? 'Checking…' : 'Log in'}
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-line/40 text-center">
-          <a
+        <div className="mt-6 border-t border-line pt-4 text-center">
+          <Link
             href="/login"
-            className="text-xs text-gray-400 hover:text-accent transition-colors"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
           >
-            ← Participant Login
-          </a>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Participant login
+          </Link>
         </div>
       </div>
     </main>
