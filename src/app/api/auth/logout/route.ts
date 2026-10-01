@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyTeamToken } from '@/lib/auth';
+import { verifyTeamToken, updateDeviceMap } from '@/lib/auth';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
@@ -34,17 +34,13 @@ export async function POST(req: NextRequest) {
           }
 
           if (team?.device_id && team.device_id.startsWith('{')) {
-            try {
-              const parsed = JSON.parse(team.device_id);
-              const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
-              if (parsed[roleKey] === payload.deviceId) {
-                delete parsed[roleKey];
-                await db
-                  .from('teams')
-                  .update({ device_id: JSON.stringify(parsed) })
-                  .eq('id', team.id);
-              }
-            } catch {}
+            const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
+            // Remove only this device's entry, without overwriting a concurrent login for the other role
+            await updateDeviceMap(db, team.id, team.device_id, (map) => {
+              if (map[roleKey] !== payload.deviceId) return false;
+              delete map[roleKey];
+              return true;
+            });
           }
         }
       }

@@ -4,6 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import { signAdminToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 function getAdminPasswordHash(): string | null {
   // 1. If process.env already has a valid uncorrupted bcrypt hash (starts with $2)
   const envHash = process.env.ADMIN_PASSWORD_HASH?.trim();
@@ -46,25 +52,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password required' }, { status: 400 });
     }
 
+    // Only a bcrypt hash is accepted: no plain-text password and no built-in default,
+    // since a default committed to the repo would be a public admin password.
     const hash = getAdminPasswordHash();
+    if (!hash || !hash.startsWith('$2')) {
+      console.error('Admin login disabled: ADMIN_PASSWORD_HASH is missing or not a bcrypt hash');
+      return NextResponse.json({ error: 'Admin login is not configured' }, { status: 500 });
+    }
+
     let isValid = false;
-
-    if (hash && hash.startsWith('$2')) {
-      try {
-        isValid = bcrypt.compareSync(password, hash);
-      } catch (err) {
-        console.error('Bcrypt comparison error:', err);
-      }
-    }
-
-    // Direct plain-text matches if ADMIN_PASSWORD is set or dev fallback
-    if (!isValid && process.env.ADMIN_PASSWORD) {
-      isValid = password === process.env.ADMIN_PASSWORD.trim();
-    }
-
-    // Dev fallback only if neither hash nor admin password configured
-    if (!isValid && !hash && !process.env.ADMIN_PASSWORD) {
-      isValid = password === 'admin2026!';
+    try {
+      isValid = bcrypt.compareSync(String(password), hash);
+    } catch (err) {
+      console.error('Bcrypt comparison error:', err);
     }
 
     if (!isValid) {
@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Admin login failed', err);
   }
 }

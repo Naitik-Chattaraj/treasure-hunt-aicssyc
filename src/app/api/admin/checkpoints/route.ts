@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins, getSupabaseAdmin } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const adminToken = req.cookies.get('admin_session')?.value;
@@ -53,15 +59,14 @@ export async function GET(req: NextRequest) {
         .order('id', { ascending: true });
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return serverError('Failed to load checkpoints', error);
       }
       allCheckpoints = checkpoints || [];
     }
 
     return NextResponse.json({ checkpoints: allCheckpoints });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to load checkpoints', err);
   }
 }
 
@@ -100,12 +105,11 @@ export async function PUT(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return serverError('Failed to update checkpoint', error);
     }
 
     return NextResponse.json({ success: true, checkpoint: updated });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to update checkpoint', err);
   }
 }

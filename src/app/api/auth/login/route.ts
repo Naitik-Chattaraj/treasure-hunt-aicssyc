@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins, isRoute2Configured } from '@/lib/supabase';
-import { signTeamToken } from '@/lib/auth';
+import { signTeamToken, updateDeviceMap } from '@/lib/auth';
+
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (errorR1) {
-        return NextResponse.json({ error: errorR1.message }, { status: 500 });
+        return serverError('Login failed. Please try again.', errorR1);
       }
 
       if (teamR1) {
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
 
         if (errorR2) {
-          return NextResponse.json({ error: errorR2.message }, { status: 500 });
+          return serverError('Login failed. Please try again.', errorR2);
         }
 
         if (teamR2) {
@@ -143,7 +149,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (insertError) {
-          return NextResponse.json({ error: insertError.message }, { status: 500 });
+          return serverError('Registration failed. Please try again.', insertError);
         }
 
         team = newTeam;
@@ -183,26 +189,22 @@ export async function POST(req: NextRequest) {
 
     // Team is approved - generate deviceId, update DB with dual session map, sign JWT
     const deviceId = crypto.randomUUID();
-    let deviceMap: Record<string, string> = {};
-    try {
-      if (team.device_id && typeof team.device_id === 'string' && team.device_id.startsWith('{')) {
-        deviceMap = JSON.parse(team.device_id);
-      } else if (team.device_id) {
-        deviceMap = { decoder: team.device_id };
-      }
-    } catch {}
-
     const roleKey = currentOperativeRole === 'Field Scout' ? 'scout' : 'decoder';
-    deviceMap[roleKey] = deviceId;
-    const serializedDeviceMap = JSON.stringify(deviceMap);
 
-    const { error: deviceError } = await activeDb
-      .from('teams')
-      .update({ device_id: serializedDeviceMap })
-      .eq('id', team.id);
+    // Only this role's entry changes; a concurrent login for the other role is kept
+    const deviceSaved = await updateDeviceMap(
+      activeDb,
+      team.id,
+      typeof team.device_id === 'string' ? team.device_id : null,
+      (map) => {
+        map[roleKey] = deviceId;
+        return true;
+      }
+    );
 
-    if (deviceError) {
-      console.error('Failed to update device ID in database:', deviceError);
+    // A token whose deviceId isn't stored would be rejected on the very next request
+    if (!deviceSaved) {
+      return serverError('Login failed. Please try again.', new Error('Could not save device session'));
     }
 
     const token = await signTeamToken({
@@ -240,7 +242,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Login failed. Please try again.', error);
   }
 }

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins, getSupabaseAdmin } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 
+// Log the real error on the server; send only a generic message to the client
+function serverError(publicMessage: string, err: unknown) {
+  console.error(publicMessage, err);
+  return NextResponse.json({ error: publicMessage }, { status: 500 });
+}
+
 // POST: Add new question to a node's pool
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +22,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required question parameters' }, { status: 400 });
     }
 
+    // Checkpoint IDs are 1..12 for Route 1 and 13..24 for Route 2
     const numNodeId = Number(nodeId);
+    if (!Number.isInteger(numNodeId) || numNodeId < 1 || numNodeId > 24) {
+      return NextResponse.json({ error: 'Valid checkpoint ID (1-24) required' }, { status: 400 });
+    }
+
     const targetRoute: 1 | 2 = numNodeId <= 12 ? 1 : 2;
     const supabase = getSupabaseAdmin(targetRoute);
 
@@ -37,13 +48,12 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return serverError('Failed to add question', error);
     }
 
     return NextResponse.json({ success: true, question: newQuestion });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to add question', err);
   }
 }
 
@@ -101,18 +111,17 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ success: true, question: updated2 });
       }
       if (error2) {
-        return NextResponse.json({ error: error2.message }, { status: 500 });
+        return serverError('Failed to update question', error2);
       }
     }
 
     if (error1) {
-      return NextResponse.json({ error: error1.message }, { status: 500 });
+      return serverError('Failed to update question', error1);
     }
 
     return NextResponse.json({ error: 'Question not found' }, { status: 404 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to update question', err);
   }
 }
 
@@ -154,18 +163,17 @@ export async function DELETE(req: NextRequest) {
         .eq('id', id);
 
       if (error2) {
-        return NextResponse.json({ error: error2.message }, { status: 500 });
+        return serverError('Failed to delete question', error2);
       }
       return NextResponse.json({ success: true, message: 'Question deleted from Route 2 database' });
     }
 
     if (error1) {
-      return NextResponse.json({ error: error1.message }, { status: 500 });
+      return serverError('Failed to delete question', error1);
     }
 
     return NextResponse.json({ success: true, message: 'Question deleted' });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('Failed to delete question', err);
   }
 }
