@@ -16,6 +16,10 @@ export interface TeamChallengeState {
 
 const UNIQUE_VIOLATION = '23505';
 
+// Server-side in-memory cache for static question records (5-minute TTL)
+const questionCache = new Map<string, { challenge: AssignedChallenge; cachedAt: number }>();
+const QUESTION_CACHE_TTL = 300000;
+
 async function findActiveRow(db: SupabaseClient, teamId: string, checkpointId: number) {
   // UNIQUE (team_id, node_id) guarantees at most one row, so no ordering is needed
   const { data, error } = await db
@@ -73,6 +77,14 @@ export async function getTeamChallenge(
 
   if (!row) return { unlocked: false, challenge: null };
 
+  const cached = questionCache.get(row.question_id);
+  if (cached && Date.now() - cached.cachedAt < QUESTION_CACHE_TTL) {
+    return {
+      unlocked: true,
+      challenge: cached.challenge,
+    };
+  }
+
   const { data: q, error: questionError } = await db
     .from('questions_pool')
     .select('id, challenge_type, question, options')
@@ -82,13 +94,20 @@ export async function getTeamChallenge(
   if (questionError) console.error('questions_pool question lookup error:', questionError);
   if (!q) return { unlocked: true, challenge: null };
 
+  const assignedChallenge: AssignedChallenge = {
+    id: q.id,
+    type: q.challenge_type,
+    question: q.question,
+    options: q.options ?? undefined,
+  };
+
+  questionCache.set(row.question_id, {
+    challenge: assignedChallenge,
+    cachedAt: Date.now(),
+  });
+
   return {
     unlocked: true,
-    challenge: {
-      id: q.id,
-      type: q.challenge_type,
-      question: q.question,
-      options: q.options ?? undefined,
-    },
+    challenge: assignedChallenge,
   };
 }

@@ -33,6 +33,7 @@ export default function HuntHUD() {
   const [profile, setProfile] = useState<TeamProfile | null>(null);
   const [progress, setProgress] = useState<HuntProgress | null>(null);
   const [activeCheckpoint, setActiveCheckpoint] = useState<Checkpoint | null>(null);
+  const activeCheckpointRef = useRef<Checkpoint | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals state
@@ -84,14 +85,28 @@ export default function HuntHUD() {
 
         setProgress(prog);
         if (prog.currentStage <= 12) {
-          const cp = await api.getCheckpoint(prog.currentStage);
-          setActiveCheckpoint(cp);
+          const currentCp = activeCheckpointRef.current;
+          const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== prog.currentStage);
+          const isDecoder = prof.operativeRole !== 'Field Scout';
+          const waitingForUnlock = isDecoder && (!currentCp?.qrScanned || !currentCp?.challenge);
 
-          // The Field Scout scans on campus; pop the question open on the Base Decoder's screen
-          // once per checkpoint as soon as it arrives through polling
-          if (prof.operativeRole !== 'Field Scout' && cp?.challenge && autoOpenedCheckpointRef.current !== cp.id) {
-            autoOpenedCheckpointRef.current = cp.id;
-            setShowChallenge(true);
+          // Egress optimization: Only fetch checkpoint from server if:
+          // 1. Stage has changed or not yet loaded
+          // 2. Base Decoder is still waiting for Field Scout's QR scan to unlock the question
+          // Once a challenge is active and open, skip fetching to save database bandwidth.
+          if (stageChanged || waitingForUnlock) {
+            const cp = await api.getCheckpoint(prog.currentStage);
+            if (cp) {
+              activeCheckpointRef.current = cp;
+              setActiveCheckpoint(cp);
+
+              // The Field Scout scans on campus; pop the question open on the Base Decoder's screen
+              // once per checkpoint as soon as it arrives through polling
+              if (isDecoder && cp.challenge && autoOpenedCheckpointRef.current !== cp.id) {
+                autoOpenedCheckpointRef.current = cp.id;
+                setShowChallenge(true);
+              }
+            }
           }
         }
       }
@@ -104,14 +119,13 @@ export default function HuntHUD() {
 
   useEffect(() => {
     loadData();
-    // Auto-poll checkpoint status every 3.5 seconds
-    // This allows the Room Base Decoders' screen to instantly refresh as soon as Field Scouts scan on campus,
-    // and allows Field Scouts on campus to instantly get notified when Base Decoders solve challenges!
+    // Auto-poll checkpoint status every 5 seconds (paused when tab is hidden to save egress)
+    // Allows Base Decoders to be notified when Field Scouts scan, and Scouts to see stage progression
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         loadData(true);
       }
-    }, 3500);
+    }, 5000);
     return () => clearInterval(interval);
   }, [router]);
 
@@ -143,7 +157,11 @@ export default function HuntHUD() {
       const normNode = result.nodeId > 12 ? result.nodeId - 12 : result.nodeId;
       setScannedNode(normNode);
       if (result.challenge) {
-        setActiveCheckpoint((prev) => prev ? { ...prev, qrScanned: true, challenge: result.challenge } : null);
+        setActiveCheckpoint((prev) => {
+          const updated = prev ? { ...prev, qrScanned: true, challenge: result.challenge } : null;
+          activeCheckpointRef.current = updated;
+          return updated;
+        });
       }
       // Reload checkpoint to sync with server state
       await loadData(true);

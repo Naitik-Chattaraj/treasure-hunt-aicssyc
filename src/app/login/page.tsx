@@ -74,19 +74,53 @@ export default function LoginPage() {
     }
   }, [teamLead, isLoginMode, operativeName]);
 
-  // Auto-poll when pending approval
+  // Auto-poll when pending approval (8s interval, paused when tab is hidden)
   useEffect(() => {
     if (!pendingApproval) return;
 
-    const interval = setInterval(async () => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const checkApproval = async () => {
       // Poll in login mode with the access code issued at registration
       const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, true, operativeName.trim(), operativeRole);
       if (res.status === 'approved') {
         router.push('/hunt');
       }
-    }, 4000);
+    };
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (!interval) {
+        interval = setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            checkApproval();
+          }
+        }, 8000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkApproval();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [pendingApproval, uid, teamName, teamLead, members, operativeName, operativeRole, router]);
 
   const validateField = (name: string, value: string): string => {

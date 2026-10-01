@@ -3,6 +3,19 @@ import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
 import { getTeamChallenge } from '@/lib/challenges';
 
+interface CheckpointMeta {
+  id: number;
+  route_id?: number;
+  stage?: number;
+  title: string;
+  area: string;
+  clue: string;
+}
+
+// Server in-memory cache for static checkpoint metadata (5-minute TTL) to eliminate repetitive DB queries
+const checkpointCache = new Map<string, { cp: CheckpointMeta; cachedAt: number }>();
+const CP_CACHE_TTL = 300000;
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get('team_session')?.value;
@@ -22,10 +35,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    // 1. Fetch team's profile from the route database
+    const teamColumns = 'id, status, assigned_route, current_stage, device_id, cooldown_until';
+
+    // 1. Fetch team's profile from the route database (trimmed columns to save DB egress)
     let { data: team, error: teamError } = await supabase
       .from('teams')
-      .select('*')
+      .select(teamColumns)
       .eq('id', payload.teamId)
       .maybeSingle();
 
@@ -34,7 +49,7 @@ export async function GET(req: NextRequest) {
       if (altDb) {
         const { data: altTeam } = await altDb
           .from('teams')
-          .select('*')
+          .select(teamColumns)
           .eq('id', payload.teamId)
           .maybeSingle();
         if (altTeam) {
@@ -67,43 +82,46 @@ export async function GET(req: NextRequest) {
 
     const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
 
-    // 2. Fetch checkpoint from the team's route database
-    let cp: {
-      id: number;
-      route_id?: number;
-      stage?: number;
-      title: string;
-      area: string;
-      clue: string;
-    } | null = null;
-
-    try {
-      const { data: routeCp } = await supabase
-        .from('checkpoints')
-        .select('*')
-        .eq('route_id', assignedRoute)
-        .eq('stage', currentStage)
-        .maybeSingle();
-
-      if (routeCp) {
-        cp = routeCp;
-      }
-    } catch (e) {
-      console.warn('DB route_id checkpoint query warning:', e);
-    }
+    // 2. Fetch checkpoint from in-memory cache or route database
+    const cacheKey = `${assignedRoute}_${currentStage}`;
+    const cachedEntry = checkpointCache.get(cacheKey);
+    let cp: CheckpointMeta | null = (cachedEntry && Date.now() - cachedEntry.cachedAt < CP_CACHE_TTL)
+      ? cachedEntry.cp
+      : null;
 
     if (!cp) {
       try {
-        const { data: idCp } = await supabase
+        const { data: routeCp } = await supabase
           .from('checkpoints')
-          .select('*')
+          .select('id, route_id, stage, title, area, clue')
+          .eq('route_id', assignedRoute)
           .eq('stage', currentStage)
           .maybeSingle();
-        if (idCp) {
-          cp = idCp;
+
+        if (routeCp) {
+          cp = routeCp;
         }
       } catch (e) {
-        console.warn('DB stage checkpoint query warning:', e);
+        console.warn('DB route_id checkpoint query warning:', e);
+      }
+
+      if (!cp) {
+        try {
+          const { data: idCp } = await supabase
+            .from('checkpoints')
+            .select('id, route_id, stage, title, area, clue')
+            .eq('stage', currentStage)
+            .maybeSingle();
+          if (idCp) {
+            cp = idCp;
+          }
+        } catch (e) {
+          console.warn('DB stage checkpoint query warning:', e);
+        }
+      }
+
+      if (cp) {
+        checkpointCache.set(cacheKey, { cp, cachedAt: Date.now() });
       }
     }
 

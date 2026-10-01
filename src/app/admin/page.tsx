@@ -141,15 +141,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchDashboardData = async (silent = false) => {
+  const fetchDashboardData = async (silent = false, includeCheckpoints = true) => {
     if (!silent) setRefreshing(true);
     try {
-      const [teamsRes, cpRes] = await Promise.all([
+      const promises: [Promise<Response>, Promise<Response>?] = [
         fetch('/api/admin/teams'),
-        fetch('/api/admin/checkpoints'),
+        includeCheckpoints ? fetch('/api/admin/checkpoints') : undefined,
+      ];
+      const [teamsRes, cpRes] = await Promise.all([
+        promises[0],
+        promises[1] ?? Promise.resolve(null as Response | null),
       ]);
 
-      if (teamsRes.status === 401 || cpRes.status === 401) {
+      if (teamsRes.status === 401 || (cpRes && cpRes.status === 401)) {
         router.push('/admin/login');
         return;
       }
@@ -159,7 +163,7 @@ export default function AdminDashboard() {
         setTeams(teamsData.teams || []);
       }
 
-      if (cpRes.ok) {
+      if (cpRes && cpRes.ok) {
         const cpData = await cpRes.json();
         setCheckpoints(cpData.checkpoints || []);
       }
@@ -172,11 +176,43 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(() => {
-      fetchDashboardData(true);
-    }, 6000);
-    return () => clearInterval(interval);
+    // Initial fetch includes both teams and static checkpoints
+    fetchDashboardData(false, true);
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (!pollInterval) {
+        // Poll teams only every 10s to minimize egress (checkpoints are static)
+        pollInterval = setInterval(() => {
+          fetchDashboardData(true, false);
+        }, 10000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData(true, false);
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleApproveReject = async (teamId: string, status: 'approved' | 'rejected') => {
@@ -189,7 +225,7 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        await fetchDashboardData(true);
+        await fetchDashboardData(true, false);
       }
     } catch {
       alert('Failed to update team authorization status.');
@@ -207,7 +243,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ teamId, assignedRoute: newRoute }),
       });
       if (res.ok) {
-        await fetchDashboardData(true);
+        await fetchDashboardData(true, false);
       }
     } catch {
       alert('Failed to reassign team route.');

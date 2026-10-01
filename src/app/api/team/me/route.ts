@@ -21,10 +21,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
+    const teamSelectColumns = 'id, uid, team_name, team_lead, members, status, assigned_route, current_stage, start_time, completion_token, cooldown_until, wrong_attempts, device_id';
+
     // Fetch team profile from assigned route database
     let { data: team, error } = await supabase
       .from('teams')
-      .select('*')
+      .select(teamSelectColumns)
       .eq('id', payload.teamId)
       .maybeSingle();
 
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
       if (altDb) {
         const { data: altTeam } = await altDb
           .from('teams')
-          .select('*')
+          .select(teamSelectColumns)
           .eq('id', payload.teamId)
           .maybeSingle();
         if (altTeam) {

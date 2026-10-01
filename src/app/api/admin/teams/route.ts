@@ -8,11 +8,26 @@ function serverError(publicMessage: string, err: unknown) {
   return NextResponse.json({ error: publicMessage }, { status: 500 });
 }
 
+// In-memory cache to reduce repeated database queries under multiple admin dashboard views
+let cachedTeams: any[] | null = null;
+let lastTeamsFetch = 0;
+const TEAMS_CACHE_TTL = 4000; // 4-second memory cache
+
+export function invalidateAdminTeamsCache() {
+  cachedTeams = null;
+  lastTeamsFetch = 0;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const adminToken = req.cookies.get('admin_session')?.value;
     if (!adminToken || !(await verifyAdminToken(adminToken))) {
       return NextResponse.json({ error: 'Unauthorized administrative access' }, { status: 401 });
+    }
+
+    const now = Date.now();
+    if (cachedTeams && now - lastTeamsFetch < TEAMS_CACHE_TTL) {
+      return NextResponse.json({ teams: cachedTeams });
     }
 
     const { db1, db2, isMultiDb } = getBothSupabaseAdmins();
@@ -21,11 +36,12 @@ export async function GET(req: NextRequest) {
     }
 
     let allTeams: any[] = [];
+    const teamSelectQuery = 'id, uid, team_name, team_lead, members, status, assigned_route, current_stage, start_time, completed_at, wrong_attempts, cooldown_until, created_at, updated_at';
 
     if (isMultiDb && db2) {
       const [res1, res2] = await Promise.all([
-        db1.from('teams').select('*').order('created_at', { ascending: false }),
-        db2.from('teams').select('*').order('created_at', { ascending: false }),
+        db1.from('teams').select(teamSelectQuery).order('created_at', { ascending: false }),
+        db2.from('teams').select(teamSelectQuery).order('created_at', { ascending: false }),
       ]);
 
       const teams1 = res1.data || [];
@@ -35,7 +51,7 @@ export async function GET(req: NextRequest) {
     } else {
       const { data: teams, error } = await db1
         .from('teams')
-        .select('*')
+        .select(teamSelectQuery)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -43,6 +59,9 @@ export async function GET(req: NextRequest) {
       }
       allTeams = teams || [];
     }
+
+    cachedTeams = allTeams;
+    lastTeamsFetch = now;
 
     return NextResponse.json({ teams: allTeams });
   } catch (err: unknown) {
@@ -88,6 +107,7 @@ export async function PUT(req: NextRequest) {
           .single();
 
         if (error) return serverError('Failed to change team route', error);
+        invalidateAdminTeamsCache();
         return NextResponse.json({ success: true, team: updated });
       } else {
         // Migrate team from DB 1 to DB 2
@@ -109,6 +129,7 @@ export async function PUT(req: NextRequest) {
 
         // Remove from DB 1 now that it's moved to DB 2
         await db1.from('teams').delete().eq('id', teamId);
+        invalidateAdminTeamsCache();
         return NextResponse.json({ success: true, team: inserted });
       }
     }
@@ -135,6 +156,7 @@ export async function PUT(req: NextRequest) {
             .single();
 
           if (error) return serverError('Failed to change team route', error);
+          invalidateAdminTeamsCache();
           return NextResponse.json({ success: true, team: updated });
         } else {
           // Migrate team from DB 2 to DB 1
@@ -156,6 +178,7 @@ export async function PUT(req: NextRequest) {
 
           // Remove from DB 2
           await db2.from('teams').delete().eq('id', teamId);
+          invalidateAdminTeamsCache();
           return NextResponse.json({ success: true, team: inserted });
         }
       }
