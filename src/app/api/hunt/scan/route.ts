@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
-import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
   try {
@@ -132,21 +131,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (!otherRouteId) {
-        const mockMatch = MOCK_CHECKPOINTS.find((c) => c.qrHash?.toLowerCase() === cleanQrHash.toLowerCase());
-        if (mockMatch && mockMatch.routeId !== assignedRoute) {
-          otherRouteId = mockMatch.routeId;
-        } else if (mockMatch && mockMatch.routeId === assignedRoute) {
-          matchedNode = {
-            id: mockMatch.id,
-            route_id: mockMatch.routeId,
-            stage: mockMatch.stage,
-            title: mockMatch.title,
-            area: mockMatch.area,
-            clue: mockMatch.clue,
-          };
-        }
-      }
+
 
       if (otherRouteId) {
         // Log cross-route scan attempt in team's database
@@ -301,13 +286,7 @@ export async function POST(req: NextRequest) {
       console.warn('team_active_challenges process warning:', e);
     }
 
-    // Fallback challenge from mock data if DB questions pool is unpopulated
-    if (!challengeData) {
-      const mockNode = MOCK_CHECKPOINTS.find((c) => c.id === matchedNode?.id);
-      if (mockNode?.challenge) {
-        challengeData = mockNode.challenge;
-      }
-    }
+
 
     // Safely log successful scan in submissions audit
     try {

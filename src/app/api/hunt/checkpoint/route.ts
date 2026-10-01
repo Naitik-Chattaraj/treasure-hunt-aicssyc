@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
-import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function GET(req: NextRequest) {
   try {
@@ -107,21 +106,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fallback to MOCK_CHECKPOINTS if database checkpoints table is unpopulated
-    if (!cp) {
-      const mockCp = MOCK_CHECKPOINTS.find((c) => c.routeId === assignedRoute && c.stage === currentStage) 
-                  || MOCK_CHECKPOINTS.find((c) => c.id === currentStage);
-      if (mockCp) {
-        cp = {
-          id: mockCp.id,
-          route_id: mockCp.routeId,
-          stage: mockCp.stage,
-          title: mockCp.title,
-          area: mockCp.area,
-          clue: mockCp.clue,
-        };
-      }
-    }
+
 
     if (!cp) {
       return NextResponse.json({ error: 'Checkpoint not configured' }, { status: 404 });
@@ -190,13 +175,7 @@ export async function GET(req: NextRequest) {
       console.warn('team_active_challenges check warning:', e);
     }
 
-    // Fallback challenge from mock data if etched challenge not in DB
-    if (qrScanned && !etchedChallenge) {
-      const mockNode = MOCK_CHECKPOINTS.find(c => c.id === cp?.id);
-      if (mockNode?.challenge) {
-        etchedChallenge = mockNode.challenge;
-      }
-    }
+
 
     return NextResponse.json({
       checkpoint: {

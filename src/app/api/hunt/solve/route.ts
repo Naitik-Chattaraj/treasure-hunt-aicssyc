@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
-import { MOCK_CHECKPOINTS } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
   try {
@@ -102,9 +101,10 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     if (!cpId) {
-      const mockCp = MOCK_CHECKPOINTS.find((c) => c.routeId === assignedRoute && c.stage === team.current_stage)
-                  || MOCK_CHECKPOINTS.find((c) => c.id === team.current_stage);
-      if (mockCp) cpId = mockCp.id;
+      return NextResponse.json({
+        error: 'checkpoint_not_found',
+        message: 'Could not find active checkpoint in database.',
+      }, { status: 500 });
     }
 
     // 3. Verify node matches team's current stage (or checkpoint id)
@@ -147,17 +147,11 @@ export async function POST(req: NextRequest) {
       console.warn('team_active_challenges lookup warning:', e);
     }
 
-    // Fallback if challenge was served from MOCK_CHECKPOINTS
     if (!activeChallengeId) {
-      const mockCp = MOCK_CHECKPOINTS.find((c) => c.id === cpId || (c.stage === team.current_stage && c.routeId === assignedRoute));
-      if (mockCp && mockCp.challenge && mockCp.challenge.answer) {
-        isMatch = mockCp.challenge.answer.trim().toLowerCase() === cleanAnswer.toLowerCase();
-      } else {
-        return NextResponse.json({
-          error: 'challenge_not_unlocked',
-          message: 'QR code must be scanned on campus before submitting answers!',
-        }, { status: 400 });
-      }
+      return NextResponse.json({
+        error: 'challenge_not_unlocked',
+        message: 'QR code must be scanned on campus before submitting answers!',
+      }, { status: 400 });
     }
 
     // Log the submission attempt in team's route database
@@ -246,3 +240,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
