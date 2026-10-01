@@ -8,10 +8,7 @@ import {
   Download, 
   Copy, 
   Check, 
-  RefreshCw, 
-  Layers, 
-  Sparkles,
-  QrCode
+  RefreshCw
 } from 'lucide-react';
 
 interface QuestionPoolItem {
@@ -178,7 +175,7 @@ export default function QuestionBlockQRModal({
           <span className={`text-xs font-bold px-2.5 py-0.5 uppercase tracking-wider ${
             routeNumber === 1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
           }`}>
-            ROUTE 0{routeNumber} // NODE 0{stageNumber}
+            ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
           </span>
           <span className="text-[10px] bg-cyber-darker text-gray-400 px-2 py-0.5 border border-cyber-border font-bold">
             CHECKPOINT #{checkpoint.id}

@@ -7,15 +7,8 @@ export default function ThemeToggle({ className = '' }: { className?: string }) 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('aicssyc_theme') as 'dark' | 'light' | null;
-    const initial = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-    setTheme(initial);
-    applyTheme(initial);
-  }, []);
-
   const applyTheme = (t: 'dark' | 'light') => {
+    if (typeof document === 'undefined') return;
     const root = document.documentElement;
     if (t === 'light') {
       root.classList.add('light');
@@ -29,6 +22,14 @@ export default function ThemeToggle({ className = '' }: { className?: string }) 
       document.body.classList.remove('light');
     }
   };
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? (localStorage.getItem('aicssyc_theme') as 'dark' | 'light' | null) : null;
+    const initial = saved || (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    setTheme(initial);
+    applyTheme(initial);
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';

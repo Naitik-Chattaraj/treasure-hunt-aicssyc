@@ -24,11 +24,13 @@ export async function GET(req: NextRequest) {
     const teamSelectColumns = 'id, uid, team_name, team_lead, members, status, assigned_route, current_stage, start_time, completion_token, cooldown_until, wrong_attempts, device_id';
 
     // Fetch team profile from assigned route database
-    let { data: team, error } = await supabase
+    const { data: initialTeam, error } = await supabase
       .from('teams')
       .select(teamSelectColumns)
       .eq('id', payload.teamId)
       .maybeSingle();
+
+    let team = initialTeam;
 
     // Fallback check on alternate database if not found in primary (handles route migrations or legacy sessions)
     if (!team && isRoute2Configured()) {

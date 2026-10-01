@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       )
     `;
 
-    let allCheckpoints: any[] = [];
+    let allCheckpoints: Record<string, unknown>[] = [];
 
     if (isMultiDb && db2) {
       // Query checkpoints from both databases in parallel
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       const cps1 = res1.data || [];
       const cps2 = res2.data || [];
       allCheckpoints = [...cps1, ...cps2];
-      allCheckpoints.sort((a, b) => a.id - b.id);
+      allCheckpoints.sort((a, b) => Number(a.id) - Number(b.id));
     } else {
       const { data: checkpoints, error } = await db1
         .from('checkpoints')

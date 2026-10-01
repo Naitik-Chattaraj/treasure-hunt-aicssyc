@@ -38,11 +38,13 @@ export async function GET(req: NextRequest) {
     const teamColumns = 'id, status, assigned_route, current_stage, device_id, cooldown_until';
 
     // 1. Fetch team's profile from the route database (trimmed columns to save DB egress)
-    let { data: team, error: teamError } = await supabase
+    const { data: initialTeam, error: teamError } = await supabase
       .from('teams')
       .select(teamColumns)
       .eq('id', payload.teamId)
       .maybeSingle();
+
+    let team = initialTeam;
 
     if (!team && isRoute2Configured()) {
       const altDb = getSupabaseAdmin(primaryRoute === 1 ? 2 : 1);

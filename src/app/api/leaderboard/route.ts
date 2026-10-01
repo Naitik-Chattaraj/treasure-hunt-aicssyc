@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getBothSupabaseAdmins } from '@/lib/supabase';
 
+interface LeaderboardTeamRow {
+  id: string;
+  team_name: string;
+  team_lead: string;
+  current_stage: number;
+  start_time: string | null;
+  completed_at: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  assigned_route?: number;
+  updated_at?: string | null;
+}
+
 // In-memory cache to reduce repeated database queries under high concurrent load
-let cachedData: any[] | null = null;
+let cachedData: unknown[] | null = null;
 let lastFetchTime = 0;
 const CACHE_TTL_MS = 5000; // 5-second server-side memory cache
 
@@ -26,7 +38,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
-    let allTeams: any[] = [];
+    let allTeams: LeaderboardTeamRow[] = [];
     const selectFields = 'id, team_name, team_lead, current_stage, start_time, completed_at, status, assigned_route, updated_at';
 
     if (isMultiDb && db2) {

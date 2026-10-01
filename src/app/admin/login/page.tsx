@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Lock, AlertTriangle, KeyRound, Terminal } from 'lucide-react';
+import { Lock, AlertTriangle, KeyRound } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function AdminLoginPage() {

@@ -13,8 +13,8 @@ export default function LeaderboardPage() {
   const [rawLeaderboard, setRawLeaderboard] = useState<ExtendedLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [now, setNow] = useState<number>(Date.now());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [now, setNow] = useState<number>(0);
 
   const fetchLeaderboard = useCallback(async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
@@ -35,6 +35,8 @@ export default function LeaderboardPage() {
 
   // Poll every 10s when tab is visible, pause when hidden to save database requests
   useEffect(() => {
+    setNow(Date.now());
+    setLastUpdated(new Date());
     fetchLeaderboard();
 
     let pollInterval: NodeJS.Timeout | null = null;
@@ -201,7 +203,7 @@ export default function LeaderboardPage() {
           <div className="text-right hidden sm:block">
             <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST SYNC</div>
             <div className="text-xs text-cyber-cyan font-bold">
-              {lastUpdated.toLocaleTimeString()}
+              {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}
             </div>
           </div>
           <button

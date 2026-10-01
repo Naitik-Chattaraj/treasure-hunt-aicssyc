@@ -9,17 +9,13 @@ import {
   Copy, 
   Check, 
   RefreshCw, 
-  Layers, 
   Sparkles, 
   Plus, 
   Compass, 
-  Footprints, 
   HelpCircle,
   ExternalLink,
   Save,
-  Search,
-  CheckCircle2,
-  AlertCircle
+  Search
 } from 'lucide-react';
 
 interface QuestionPoolItem {
@@ -426,7 +422,7 @@ export default function AdminQRGeneratorTab({
                   <label className="text-[10px] text-gray-400 block mb-1">Challenge Type</label>
                   <select
                     value={newBlockType}
-                    onChange={(e) => setNewBlockType(e.target.value as any)}
+                    onChange={(e) => setNewBlockType(e.target.value as 'passcode' | 'mcq' | 'riddle')}
                     className="w-full bg-black border border-cyber-border focus:border-green-400 px-2.5 py-1.5 text-foreground text-xs"
                   >
                     <option value="passcode">Passcode</option>
@@ -584,7 +580,7 @@ export default function AdminQRGeneratorTab({
                         <span className={`text-[9px] font-bold px-1.5 py-0.2 uppercase ${
                           r === 1 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
                         }`}>
-                          R0{r} // N0{st}
+                          R0{r} {'//'} N0{st}
                         </span>
                         <span className="text-[10px] text-gray-400 truncate">{cp.area}</span>
                       </div>
@@ -613,7 +609,7 @@ export default function AdminQRGeneratorTab({
               <span className={`text-xs font-bold px-3 py-1 uppercase tracking-wider ${
                 routeNumber === 1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
               }`}>
-                ROUTE 0{routeNumber} // NODE 0{stageNumber}
+                ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
               </span>
               <span className="text-xs bg-cyber-darker text-gray-300 px-2.5 py-1 border border-cyber-border font-bold">
                 CHECKPOINT #{selectedCheckpoint?.id || 1}
@@ -701,7 +697,7 @@ export default function AdminQRGeneratorTab({
                 <span className="text-gray-400 text-[10px] uppercase font-bold">Error Correction:</span>
                 <select
                   value={errorLevel}
-                  onChange={(e) => setErrorLevel(e.target.value as any)}
+                  onChange={(e) => setErrorLevel(e.target.value as 'L' | 'M' | 'Q' | 'H')}
                   className="bg-black border border-cyber-border px-2 py-1 text-foreground text-xs"
                 >
                   <option value="L">L (7% Recovery)</option>

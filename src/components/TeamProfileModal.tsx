@@ -1,7 +1,7 @@
 'use client';
 
 import { TeamProfile, HuntProgress } from '@/types/hunt';
-import { X, LogOut, ShieldAlert, Award, Clock } from 'lucide-react';
+import { X, LogOut, Award, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';

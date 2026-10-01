@@ -37,7 +37,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, className, children, ...props }: any) {
+          code({ className, children, ...props }: React.ComponentPropsWithoutRef<'code'>) {
             const match = /language-(\w+)/.exec(className || '');
             const isBlock = match || String(children).includes('\n');
             
@@ -45,11 +45,10 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               return (
                 <div className="rounded border border-cyber-border overflow-hidden my-4 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
                   <SyntaxHighlighter
-                    style={vscDarkPlus}
+                    style={vscDarkPlus as unknown as { [key: string]: React.CSSProperties }}
                     language={match ? match[1] : 'javascript'}
                     PreTag="div"
                     className="!bg-black !m-0 !p-4 !text-sm"
-                    {...props}
                   >
                     {String(children).replace(/\n$/, '')}
                   </SyntaxHighlighter>
@@ -65,10 +64,10 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
             );
           },
           // Customize paragraphs and links for cyber aesthetic
-          p: ({ node, ...props }) => <p className="mb-2" {...props} />,
-          a: ({ node, ...props }) => <a className="text-cyber-cyan hover:text-cyber-yellow transition-colors underline" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1 mb-2" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1 mb-2" {...props} />,
+          p: ({ ...props }) => <p className="mb-2" {...props} />,
+          a: ({ ...props }) => <a className="text-cyber-cyan hover:text-cyber-yellow transition-colors underline" {...props} />,
+          ul: ({ ...props }) => <ul className="list-disc list-inside space-y-1 mb-2" {...props} />,
+          ol: ({ ...props }) => <ol className="list-decimal list-inside space-y-1 mb-2" {...props} />,
         }}
       >
         {processedContent}

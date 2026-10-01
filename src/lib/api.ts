@@ -1,4 +1,4 @@
-import { TeamProfile, HuntProgress, Checkpoint, LeaderboardEntry, Challenge } from '@/types/hunt';
+import { TeamProfile, HuntProgress, Checkpoint, LeaderboardEntry, Challenge, TeamMember } from '@/types/hunt';
 
 
 
@@ -34,7 +34,7 @@ export const api = {
     uid: string, 
     teamName: string, 
     teamLead: string, 
-    members?: any[], 
+    members?: TeamMember[], 
     isLoginMode?: boolean,
     operativeName?: string,
     operativeRole?: 'Field Scout' | 'Base Decoder'
@@ -102,8 +102,8 @@ export const api = {
         throw new Error('Server error');
       }
       return { team: data.team || null, progress: data.progress || null };
-    } catch (e: any) {
-      if (e.message !== 'Server error') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message !== 'Server error') {
         throw new Error('network_error');
       }
       throw e;
@@ -128,8 +128,8 @@ export const api = {
         throw new Error('Server error'); // 500 or other errors, don't logout
       }
       return data.team || null;
-    } catch (e: any) {
-      if (e.message !== 'Server error') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message !== 'Server error') {
         throw new Error('network_error');
       }
       throw e;
@@ -148,7 +148,7 @@ export const api = {
     }
   },
 
-  async getCheckpoint(stage: number, routeId?: 1 | 2): Promise<Checkpoint | null> {
+  async getCheckpoint(_stage?: number, _routeId?: 1 | 2): Promise<Checkpoint | null> {
 
     try {
       const res = await fetch('/api/hunt/checkpoint');

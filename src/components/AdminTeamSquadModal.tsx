@@ -12,12 +12,9 @@ import {
   Check, 
   CheckCircle2, 
   XCircle, 
-  Layers, 
   Trophy, 
-  Clock, 
   ShieldCheck,
-  ShieldAlert,
-  Compass
+  ShieldAlert
 } from 'lucide-react';
 
 export interface AdminTeamMember {
@@ -76,9 +73,6 @@ export default function AdminTeamSquadModal({
         { name: 'Operative 3', role: 'Field Scout', regNo: 'REG-003', phone: 'Not provided' },
         { name: 'Operative 4', role: 'Field Scout', regNo: 'REG-004', phone: 'Not provided' },
       ];
-
-  const baseDecoders = memberList.filter(m => m.role?.toLowerCase().includes('decoder') || m.role?.toLowerCase().includes('base'));
-  const fieldScouts = memberList.filter(m => m.role?.toLowerCase().includes('scout') || m.role?.toLowerCase().includes('field'));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm font-mono transition-colors">

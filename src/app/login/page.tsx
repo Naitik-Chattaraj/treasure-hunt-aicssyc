@@ -469,7 +469,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs uppercase text-cyber-cyan font-bold tracking-wider">
-                      Team Leader's Name
+                      {"Team Leader's Name"}
                     </label>
                     {touched.operativeName && !fieldErrors.operativeName && operativeName.trim() && (
                       <span className="text-[10px] text-green-500 flex items-center gap-1">
