@@ -79,34 +79,29 @@ export async function POST(req: NextRequest) {
       // Check if team name already exists across both databases
       const { data: existingTeamR1 } = await db1
         .from('teams')
-        .select('*')
+        .select('id')
         .eq('team_name', trimmedTeam)
         .maybeSingle();
 
       let existingTeam = existingTeamR1;
-      let existingDb = db1;
 
       if (!existingTeam && isMultiDb && db2) {
         const { data: existingTeamR2 } = await db2
           .from('teams')
-          .select('*')
+          .select('id')
           .eq('team_name', trimmedTeam)
           .maybeSingle();
-        if (existingTeamR2) {
-          existingTeam = existingTeamR2;
-          existingDb = db2;
-        }
+        existingTeam = existingTeamR2;
       }
 
+      // Registration never resumes an existing team: team name and team lead are public
+      // on the leaderboard, so matching them must not grant a session or reveal the access code.
+      // Existing teams sign in through login mode with their access code.
       if (existingTeam) {
-        // If they are just polling, return the pending status
-        if (existingTeam.team_lead === trimmedLead) {
-          team = existingTeam;
-          activeDb = existingDb;
-          resolvedRoute = existingTeam.assigned_route === 2 ? 2 : 1;
-        } else {
-          return NextResponse.json({ error: 'Team name already registered.' }, { status: 400 });
-        }
+        return NextResponse.json(
+          { error: 'Team name already registered. Log in with your 6-digit access code.' },
+          { status: 409 }
+        );
       } else {
         // Create a unique 6-digit alphanumeric code
         const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();

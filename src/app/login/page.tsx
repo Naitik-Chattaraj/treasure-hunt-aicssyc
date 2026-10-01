@@ -79,14 +79,15 @@ export default function LoginPage() {
     if (!pendingApproval) return;
 
     const interval = setInterval(async () => {
-      const res = await api.login('', teamName.trim(), teamLead.trim(), members, false, operativeName.trim(), operativeRole);
+      // Poll in login mode with the access code issued at registration
+      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, true, operativeName.trim(), operativeRole);
       if (res.status === 'approved') {
         router.push('/hunt');
       }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [pendingApproval, teamName, teamLead, members, operativeName, operativeRole, router]);
+  }, [pendingApproval, uid, teamName, teamLead, members, operativeName, operativeRole, router]);
 
   const validateField = (name: string, value: string): string => {
     const trimmed = value.trim();
@@ -148,7 +149,7 @@ export default function LoginPage() {
   const handleManualCheck = async () => {
     setCheckingStatus(true);
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, isLoginMode, operativeName.trim(), operativeRole);
+      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, true, operativeName.trim(), operativeRole);
       if (res.status === 'approved') {
         router.push('/hunt');
       } else if (res.status === 'rejected') {
@@ -229,6 +230,8 @@ export default function LoginPage() {
       if (res.status === 'approved') {
         router.push('/hunt');
       } else if (res.status === 'pending') {
+        // Keep the access code from registration so the approval poll can log in with it
+        if (res.team?.uid) setUid(res.team.uid);
         setPendingApproval(true);
       } else {
         setAuthError(res.error || 'ACCESS DENIED: REGISTRATION REJECTED.');
