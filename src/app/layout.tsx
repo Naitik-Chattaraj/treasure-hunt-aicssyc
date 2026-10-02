@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Lilita_One } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,8 +7,9 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const lilitaOne = Lilita_One({
+  variable: "--font-lilita",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -19,15 +20,15 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F6F2E8" },
-    { media: "(prefers-color-scheme: dark)", color: "#131412" },
+    { media: "(prefers-color-scheme: light)", color: "#F3D6A8" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A130C" },
   ],
   viewportFit: "cover",
 };
 
-// Applies the saved (or system) theme before first paint so pages never flash the wrong theme.
+// Applies the saved theme (sand by default) before first paint so pages never flash the wrong theme.
 // Keep the storage key in sync with ThemeToggle.
-const themeInitScript = `(function(){try{var t=localStorage.getItem('aicssyc_theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}var c=document.documentElement.classList;c.remove('light','dark');c.add(t)}catch(e){}})();`;
+const themeInitScript = `(function(){try{var t=localStorage.getItem('aicssyc_theme');if(t!=='light'&&t!=='dark'){t='light'}var c=document.documentElement.classList;c.remove('light','dark');c.add(t)}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -37,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} h-full antialiased`}
+      className={`${inter.variable} ${lilitaOne.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

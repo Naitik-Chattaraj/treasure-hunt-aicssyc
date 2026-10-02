@@ -3,8 +3,9 @@
 import { useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { HuntProgress } from '@/types/hunt';
-import { CheckCircle2, Trophy } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import TreasureChest from '@/components/TreasureChest';
 
 export default function VictoryScreen({ 
   progress, 
@@ -79,12 +80,10 @@ export default function VictoryScreen({
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-lg rounded-xl border border-primary/50 bg-surface p-6 text-center shadow-raised sm:p-10">
-        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 text-primary">
-          <Trophy className="h-10 w-10" aria-hidden="true" />
-        </div>
+      <div className="parchment w-full max-w-lg rounded-xl border border-primary/50 p-6 text-center sm:p-10">
+        <TreasureChest open className="mx-auto mb-2 h-32 w-36 sm:h-36 sm:w-40" />
 
-        <h1 className="text-3xl font-bold sm:text-4xl">Treasure found!</h1>
+        <h1 className="title-treasure text-4xl sm:text-5xl">Treasure found!</h1>
         <p className="mt-2 text-lg text-muted">
           Well played, <span className="font-semibold text-ink">{teamName}</span>
         </p>

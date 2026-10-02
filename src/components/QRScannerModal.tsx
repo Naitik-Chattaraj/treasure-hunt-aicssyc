@@ -397,7 +397,7 @@ export default function QRScannerModal({
               <button 
                 type="submit"
                 disabled={!manualCode.trim()}
-                className="h-11 shrink-0 rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                className="h-11 shrink-0 rounded-md bg-primary btn-treasure px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
               >
                 Submit
               </button>

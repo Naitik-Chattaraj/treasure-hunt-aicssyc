@@ -8,7 +8,6 @@ import {
   BrainCircuit,
   CheckCircle2,
   ChevronDown,
-  Compass,
   Footprints,
   Hourglass,
   LogIn,
@@ -21,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import TreasureChest from '@/components/TreasureChest';
 import { TeamMember } from '@/types/hunt';
 import { normalizeName, validateMembers, validatePersonName } from '@/lib/validation';
 
@@ -296,13 +296,14 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-raised sm:p-8">
+      <div className="w-full max-w-md rounded-xl border border-line bg-surface parchment p-5 shadow-raised sm:p-8">
         <header className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
-            <Compass className="h-7 w-7" aria-hidden="true" />
-          </div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Treasure Hunt 2026</h1>
-          <p className="mt-1 text-sm text-muted">AICSSYC campus hunt · participant entry</p>
+          <TreasureChest className="mx-auto -mt-2 mb-2 h-24 w-28 sm:h-28 sm:w-32" />
+          <h1 className="title-treasure text-4xl leading-none sm:text-5xl">
+            Treasure
+            <span className="block">Hunt 2026</span>
+          </h1>
+          <p className="mt-3 text-sm text-muted">AICSSYC campus hunt · participant entry</p>
         </header>
 
         <div className="mb-6 flex items-start gap-3 rounded-lg border border-line bg-sunken p-3 text-sm">
@@ -336,7 +337,7 @@ export default function LoginPage() {
             <button
               onClick={handleManualCheck}
               disabled={checkingStatus}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary btn-treasure font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
             >
               <RefreshCw className={`h-4 w-4 ${checkingStatus ? 'animate-spin' : ''}`} aria-hidden="true" />
               {checkingStatus ? 'Checking…' : 'Check status now'}
@@ -642,7 +643,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
               >
                 {isLoginMode ? <LogIn className="h-5 w-5" aria-hidden="true" /> : <MapIcon className="h-5 w-5" aria-hidden="true" />}
                 {loading ? 'Please wait…' : isLoginMode ? 'Log in' : 'Register team'}

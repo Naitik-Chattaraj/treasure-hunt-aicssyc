@@ -282,7 +282,7 @@ export default function HuntHUD() {
     ) : (
       <button
         onClick={() => setShowScanner(true)}
-        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
+        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
       >
         <ScanLine className="h-5 w-5" aria-hidden="true" />
         Scan checkpoint QR
@@ -296,7 +296,7 @@ export default function HuntHUD() {
   ) : isQrUnlocked ? (
     <button
       onClick={() => setShowChallenge(true)}
-      className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
+      className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover active:scale-[0.99] cursor-pointer"
     >
       <BrainCircuit className="h-5 w-5" aria-hidden="true" />
       Solve the challenge
@@ -371,7 +371,7 @@ export default function HuntHUD() {
       <div className="min-h-0 flex-1 overflow-y-auto md:overflow-visible">
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-3 py-4 sm:px-6 sm:py-6 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] md:items-start md:gap-6 lg:py-8">
           {/* Checkpoint card */}
-          <section className="rounded-xl border border-line bg-surface p-4 shadow-card sm:p-6" aria-labelledby="checkpoint-title">
+          <section className="rounded-xl border border-line bg-surface parchment p-4 shadow-card sm:p-6" aria-labelledby="checkpoint-title">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted">
                 <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -415,7 +415,7 @@ export default function HuntHUD() {
 
           {/* Side panel: progress, phase and actions */}
           <aside className="space-y-4">
-            <div className="rounded-xl border border-line bg-surface p-4 shadow-card sm:p-5">
+            <div className="rounded-xl border border-line bg-surface parchment p-4 shadow-card sm:p-5">
               <h3 className="text-sm font-semibold text-muted">Progress</h3>
               <ol className="mt-3 grid grid-cols-12 gap-1" aria-label={`Stage ${currentStageDisplay} of 12`}>
                 {Array.from({ length: 12 }, (_, i) => {
@@ -453,7 +453,7 @@ export default function HuntHUD() {
 
             <button
               onClick={() => setShowMap(true)}
-              className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left shadow-card transition-colors hover:border-line-strong cursor-pointer"
+              className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line bg-surface parchment p-3 text-left shadow-card transition-colors hover:border-line-strong cursor-pointer"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
                 <MapIcon className="h-5 w-5" aria-hidden="true" />
@@ -466,7 +466,7 @@ export default function HuntHUD() {
             </button>
 
             {isBaseDecoder && !isQrUnlocked && (
-              <div className="rounded-xl border border-line bg-surface p-3 shadow-card">
+              <div className="rounded-xl border border-line bg-surface parchment p-3 shadow-card">
                 <button
                   type="button"
                   onClick={() => setShowManualCode(!showManualCode)}
@@ -496,7 +496,7 @@ export default function HuntHUD() {
                     <button
                       type="submit"
                       disabled={manualSubmitting || !manualCode.trim()}
-                      className="flex h-11 shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                      className="flex h-11 shrink-0 items-center gap-1.5 rounded-md bg-primary btn-treasure px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
                     >
                       <Send className="h-4 w-4" aria-hidden="true" />
                       Send

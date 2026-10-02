@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-raised sm:p-8">
+      <div className="w-full max-w-sm rounded-xl border border-line bg-surface parchment p-5 shadow-raised sm:p-8">
         <header className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
             <ShieldCheck className="h-7 w-7" aria-hidden="true" />
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary btn-treasure font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
           >
             <LogIn className="h-5 w-5" aria-hidden="true" />
             {loading ? 'Checking…' : 'Log in'}

@@ -255,7 +255,7 @@ export default function ChallengeModal({
                 <button
                   type="submit"
                   disabled={loading || !answer || cooldown > 0}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? 'Checking…' : cooldown > 0 ? `Locked (${cooldown}s)` : 'Submit answer'}
                 </button>

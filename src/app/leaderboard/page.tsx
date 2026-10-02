@@ -274,7 +274,7 @@ export default function LeaderboardPage() {
           </section>
         )}
 
-        <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
+        <section className="overflow-hidden rounded-xl border border-line bg-surface parchment shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
             <h2 className="font-semibold">Standings <span className="text-muted">({leaderboard.length} teams)</span></h2>
             <p className="flex items-center gap-1.5 text-sm text-muted">

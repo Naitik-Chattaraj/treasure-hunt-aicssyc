@@ -48,7 +48,7 @@ export default function SequenceViolationModal({
 
         <button
           onClick={onClose}
-          className="flex h-12 w-full items-center justify-center rounded-lg bg-primary font-semibold text-on-primary transition-colors hover:bg-primary-hover cursor-pointer"
+          className="flex h-12 w-full items-center justify-center rounded-lg bg-primary btn-treasure font-semibold text-on-primary transition-colors hover:bg-primary-hover cursor-pointer"
         >
           Got it
         </button>
