@@ -7,7 +7,6 @@ import {
   X,
   Navigation,
   Crosshair,
-  Check,
   Compass,
   AlertCircle,
   Flag,
@@ -120,21 +119,21 @@ export default function TacticalMapModal({
   const distanceToTarget =
     userLocation && currentTargetNode && currentTargetNode.latitude && currentTargetNode.longitude
       ? calculateDistanceMeters(
-          userLocation.lat,
-          userLocation.lng,
-          Number(currentTargetNode.latitude),
-          Number(currentTargetNode.longitude)
-        )
+        userLocation.lat,
+        userLocation.lng,
+        Number(currentTargetNode.latitude),
+        Number(currentTargetNode.longitude)
+      )
       : null;
 
   const bearingToTarget =
     userLocation && currentTargetNode && currentTargetNode.latitude && currentTargetNode.longitude
       ? calculateBearing(
-          userLocation.lat,
-          userLocation.lng,
-          Number(currentTargetNode.latitude),
-          Number(currentTargetNode.longitude)
-        )
+        userLocation.lat,
+        userLocation.lng,
+        Number(currentTargetNode.latitude),
+        Number(currentTargetNode.longitude)
+      )
       : null;
 
   // Calculate total distance travelled between completed checkpoints
@@ -508,11 +507,10 @@ export default function TacticalMapModal({
                   Campus Tactical Radar
                 </h2>
                 <span
-                  className={`rounded border px-2 py-0.5 text-xs font-extrabold uppercase tracking-wider ${
-                    currentRoute === 1
+                  className={`rounded border px-2 py-0.5 text-xs font-extrabold uppercase tracking-wider ${currentRoute === 1
                       ? 'border-route-1/50 bg-route-1/15 text-route-1'
                       : 'border-route-2/50 bg-route-2/15 text-route-2'
-                  }`}
+                    }`}
                 >
                   Route 0{currentRoute}
                 </span>
@@ -567,11 +565,10 @@ export default function TacticalMapModal({
           <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
             <button
               onClick={handleCenterOnUser}
-              className={`p-2.5 rounded-lg border shadow-lg backdrop-blur-md transition-all cursor-pointer flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${
-                followingUser && userLocation
+              className={`p-2.5 rounded-lg border shadow-lg backdrop-blur-md transition-all cursor-pointer flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${followingUser && userLocation
                   ? 'bg-cyan-500 text-black border-cyan-300 ring-2 ring-cyan-400/50'
                   : 'bg-surface/90 text-ink border-line hover:border-accent'
-              }`}
+                }`}
               title="Locate my position on campus"
             >
               <Navigation className={`w-4 h-4 ${followingUser ? 'animate-spin' : ''}`} />
@@ -625,13 +622,12 @@ export default function TacticalMapModal({
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs font-extrabold px-2 py-0.5 rounded uppercase ${
-                      selectedNode.stage < progress.currentStage
+                    className={`text-xs font-extrabold px-2 py-0.5 rounded uppercase ${selectedNode.stage < progress.currentStage
                         ? 'bg-emerald-600 text-white'
                         : selectedNode.stage === progress.currentStage
-                        ? 'bg-amber-500 text-black'
-                        : 'bg-stone-800 text-stone-300'
-                    }`}
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-stone-800 text-stone-300'
+                      }`}
                   >
                     Checkpoint 0{selectedNode.stage}
                   </span>
@@ -639,8 +635,8 @@ export default function TacticalMapModal({
                     {selectedNode.stage < progress.currentStage
                       ? '✓ Cleared'
                       : selectedNode.stage === progress.currentStage
-                      ? '🎯 Active Target'
-                      : '🔒 Locked'}
+                        ? '🎯 Active Target'
+                        : '🔒 Locked'}
                   </span>
                 </div>
                 <button

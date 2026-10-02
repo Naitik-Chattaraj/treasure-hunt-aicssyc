@@ -254,9 +254,6 @@ export async function POST(req: NextRequest) {
             completed_at: new Date().toISOString(),
             completion_token: completionToken,
           } : {}),
-          ...(!team.start_time ? {
-            start_time: new Date().toISOString(),
-          } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', team.id);

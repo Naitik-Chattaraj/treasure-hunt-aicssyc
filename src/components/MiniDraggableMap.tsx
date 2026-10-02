@@ -22,7 +22,7 @@ export default function MiniDraggableMap({
   longitude,
   routeId,
   stage,
-  title,
+  title: _title,
   onChange,
   onOpenFullMap,
 }: MiniDraggableMapProps) {

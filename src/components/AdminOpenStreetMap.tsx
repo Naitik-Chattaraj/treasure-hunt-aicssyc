@@ -163,14 +163,14 @@ export default function AdminOpenStreetMap({
     const borderClass = isSelected
       ? 'border-amber-400 ring-4 ring-amber-400/80 scale-125 z-40'
       : isMoved
-      ? 'border-amber-400 ring-2 ring-amber-400 scale-110 z-30'
-      : 'border-white hover:scale-110 z-20';
+        ? 'border-amber-400 ring-2 ring-amber-400 scale-110 z-30'
+        : 'border-white hover:scale-110 z-20';
 
     const tagClass = isMoved
       ? 'bg-amber-950/95 text-amber-300 border-amber-400 font-bold animate-pulse'
       : hasCustom
-      ? 'bg-black/90 text-emerald-300 border-emerald-500/60'
-      : 'bg-black/90 text-amber-300 border-amber-500/60';
+        ? 'bg-black/90 text-emerald-300 border-emerald-500/60'
+        : 'bg-black/90 text-amber-300 border-amber-500/60';
 
     const tagLabel = isMoved
       ? `R${route}-0${stage} ● Unsaved`
@@ -348,13 +348,13 @@ export default function AdminOpenStreetMap({
       const origLat = moved
         ? moved.origLat
         : cp?.latitude
-        ? Number(cp.latitude)
-        : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat;
+          ? Number(cp.latitude)
+          : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat;
       const origLng = moved
         ? moved.origLng
         : cp?.longitude
-        ? Number(cp.longitude)
-        : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng;
+          ? Number(cp.longitude)
+          : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng;
 
       coordsRef.current.set(id, { lat: origLat, lng: origLng });
 
@@ -381,7 +381,44 @@ export default function AdminOpenStreetMap({
     [movedNodes, checkpoints, activeSelectedId, updatePolylines, showToast]
   );
 
-  // Save all moved nodes at once
+  // 7. Save a specific moved node to Database
+  const handleSaveMovedNode = useCallback(
+    async (id: number) => {
+      const moved = movedNodes[id];
+      if (!moved) return;
+
+      const cp = checkpoints.find((c) => c.id === id);
+      const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
+
+      setSavingId(id);
+      try {
+        const ok = await onUpdateCheckpoint({
+          id,
+          latitude: moved.lat,
+          longitude: moved.lng,
+        });
+
+        if (ok) {
+          showToast(`✓ Node 0${stage} location successfully saved to database!`, 'success');
+          setMovedNodes((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+          onRefresh();
+        } else {
+          showToast(`Failed to save Node 0${stage} to database`, 'error');
+        }
+      } catch (err) {
+        showToast(`Error saving node: ${err}`, 'error');
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [movedNodes, checkpoints, onUpdateCheckpoint, onRefresh, showToast]
+  );
+
+  // 8. Save All Moved Nodes in one batch
   const handleSaveAllMoved = useCallback(async () => {
     const ids = Object.keys(movedNodes).map(Number);
     if (ids.length === 0) return;
@@ -680,13 +717,12 @@ export default function AdminOpenStreetMap({
       {/* Toast Feedback */}
       {toast && (
         <div
-          className={`fixed top-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-xl text-xs font-bold font-mono flex items-center gap-2 border transition-all animate-in slide-in-from-top-2 ${
-            toast.type === 'success'
+          className={`fixed top-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-xl text-xs font-bold font-mono flex items-center gap-2 border transition-all animate-in slide-in-from-top-2 ${toast.type === 'success'
               ? 'bg-emerald-950/95 text-emerald-300 border-emerald-500/70'
               : toast.type === 'error'
-              ? 'bg-rose-950/95 text-rose-300 border-rose-500/70'
-              : 'bg-cyan-950/95 text-cyan-300 border-cyan-500/70'
-          }`}
+                ? 'bg-rose-950/95 text-rose-300 border-rose-500/70'
+                : 'bg-cyan-950/95 text-cyan-300 border-cyan-500/70'
+            }`}
         >
           {toast.type === 'success' ? (
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -722,11 +758,10 @@ export default function AdminOpenStreetMap({
           {/* Auto-Save Toggle */}
           <button
             onClick={() => setAutoSave(!autoSave)}
-            className={`px-3 py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer border transition-colors shadow-sm ${
-              autoSave
+            className={`px-3 py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer border transition-colors shadow-sm ${autoSave
                 ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/60 hover:bg-emerald-600/30'
                 : 'bg-sunken text-muted border-line hover:text-ink'
-            }`}
+              }`}
             title="Automatically update database when pin is dropped"
           >
             <Zap className={`w-3.5 h-3.5 ${autoSave ? 'text-emerald-400 fill-emerald-400' : ''}`} />
@@ -772,14 +807,21 @@ export default function AdminOpenStreetMap({
         <div className="lg:col-span-2 relative h-[500px] sm:h-[600px] rounded-lg border border-line overflow-hidden shadow-inner bg-zinc-900">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-          {/* Real-time Drag HUD Banner (Direct DOM overlay, 0 React lag) */}
-          <div
-            ref={dragHudRef}
-            style={{ display: 'none' }}
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md items-center gap-2.5 pointer-events-none"
-          />
+          {/* Live Dragging HUD Banner */}
+          {liveDrag && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md flex items-center gap-2.5 animate-pulse">
+              <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
+              <span>
+                Dragging{' '}
+                <strong className="text-accent">
+                  Route {liveDrag.route} // Node 0{liveDrag.stage}
+                </strong>{' '}
+                &rarr; Lat: {liveDrag.lat.toFixed(6)}, Lng: {liveDrag.lng.toFixed(6)}
+              </span>
+            </div>
+          )}
 
-          {/* Unsaved Changes Banner */}
+          {/* Unsaved Changes Floating Bar (When Auto-Save is OFF and nodes moved) */}
           {!autoSave && movedCount > 0 && (
             <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-3 z-20 bg-amber-950/95 border-2 border-amber-400 p-3 rounded-lg shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="flex items-center gap-2 text-amber-300">
@@ -826,11 +868,10 @@ export default function AdminOpenStreetMap({
               <div className="border-b border-line pb-3">
                 <div className="flex items-center justify-between mb-1">
                   <span
-                    className={`text-xs font-extrabold px-2 py-0.5 rounded text-white ${
-                      (selectedCp.route_id || (selectedCp.id <= 12 ? 1 : 2)) === 1
+                    className={`text-xs font-extrabold px-2 py-0.5 rounded text-white ${(selectedCp.route_id || (selectedCp.id <= 12 ? 1 : 2)) === 1
                         ? 'bg-cyan-600'
                         : 'bg-purple-600'
-                    }`}
+                      }`}
                   >
                     ROUTE 0{selectedCp.route_id || (selectedCp.id <= 12 ? 1 : 2)} {'//'} NODE 0
                     {selectedCp.stage || (selectedCp.id <= 12 ? selectedCp.id : selectedCp.id - 12)}
@@ -964,19 +1005,18 @@ export default function AdminOpenStreetMap({
                 <button
                   onClick={handleSaveManualCoordinates}
                   disabled={saving}
-                  className={`w-full py-2.5 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${
-                    movedNodes[selectedCp.id]
+                  className={`w-full py-2.5 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${movedNodes[selectedCp.id]
                       ? 'bg-amber-500 hover:bg-amber-400 text-black font-extrabold ring-2 ring-amber-400 animate-pulse'
                       : 'bg-danger hover:opacity-90'
-                  }`}
+                    }`}
                 >
                   <Save className="w-4 h-4" />
                   <span>
                     {saving
                       ? 'Persisting to Database...'
                       : movedNodes[selectedCp.id]
-                      ? 'Save Moved Position to Supabase'
-                      : 'Save Coordinates to Supabase'}
+                        ? 'Save Moved Position to Supabase'
+                        : 'Save Coordinates to Supabase'}
                   </span>
                 </button>
 
@@ -1027,15 +1067,14 @@ export default function AdminOpenStreetMap({
                         mapInstanceRef.current.setView(marker.getLatLng(), 18, { animate: true });
                       }
                     }}
-                    className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-colors cursor-pointer ${
-                      isSelected
+                    className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-colors cursor-pointer ${isSelected
                         ? 'bg-accent text-on-primary border-accent ring-2 ring-accent/60'
                         : isMoved
-                        ? 'bg-amber-950/80 text-amber-300 border-amber-400 ring-1 ring-amber-400 animate-pulse'
-                        : hasCoords
-                        ? 'bg-sunken text-emerald-400 border-line hover:border-accent'
-                        : 'bg-sunken text-muted border-dashed border-line hover:border-amber-400'
-                    }`}
+                          ? 'bg-amber-950/80 text-amber-300 border-amber-400 ring-1 ring-amber-400 animate-pulse'
+                          : hasCoords
+                            ? 'bg-sunken text-emerald-400 border-line hover:border-accent'
+                            : 'bg-sunken text-muted border-dashed border-line hover:border-amber-400'
+                      }`}
                   >
                     0{stage} {isMoved ? '●' : hasCoords ? '✓' : ''}
                   </button>

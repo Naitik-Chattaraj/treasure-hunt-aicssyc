@@ -277,10 +277,6 @@ export async function POST(req: NextRequest) {
     if ((team.wrong_attempts || 0) > 0) {
       teamUpdates.wrong_attempts = 0;
     }
-    // Set start time on first scan
-    if (!team.start_time) {
-      teamUpdates.start_time = new Date().toISOString();
-    }
 
     if (Object.keys(teamUpdates).length > 0) {
       teamUpdates.updated_at = new Date().toISOString();

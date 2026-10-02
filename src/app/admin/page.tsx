@@ -27,8 +27,6 @@ import {
   Camera,
   QrCode,
   MapPin,
-  Navigation,
-  Map as MapIcon,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -86,7 +84,6 @@ export default function AdminDashboard() {
   const [selectedMapNodeId, setSelectedMapNodeId] = useState<number | null>(null);
   const [showSqlSnippetModal, setShowSqlSnippetModal] = useState(false);
   const [copiedSqlFromModal, setCopiedSqlFromModal] = useState(false);
-  const [gettingGpsForEdit, setGettingGpsForEdit] = useState(false);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
