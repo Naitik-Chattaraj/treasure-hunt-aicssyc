@@ -37,7 +37,6 @@ import AdminTeamSquadModal from '@/components/AdminTeamSquadModal';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import AdminOpenStreetMap from '@/components/AdminOpenStreetMap';
 import MiniDraggableMap from '@/components/MiniDraggableMap';
-import { generateSqlMigrationSnippet } from '@/lib/coordinates';
 
 interface AdminTeam {
   id: string;
@@ -82,8 +81,6 @@ export default function AdminDashboard() {
   const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
   const [checkpointViewMode, setCheckpointViewMode] = useState<'list' | 'map'>('list');
   const [selectedMapNodeId, setSelectedMapNodeId] = useState<number | null>(null);
-  const [showSqlSnippetModal, setShowSqlSnippetModal] = useState(false);
-  const [copiedSqlFromModal, setCopiedSqlFromModal] = useState(false);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -863,15 +860,6 @@ export default function AdminDashboard() {
                 </div>
 
                 <button
-                  onClick={() => setShowSqlSnippetModal(true)}
-                  className="px-3 py-1.5 bg-sunken hover:bg-surface text-ink border border-line hover:border-accent text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5"
-                  title="View and copy SQL migration snippet for both databases"
-                >
-                  <Copy className="w-3.5 h-3.5 text-accent" />
-                  <span>SQL Snippet</span>
-                </button>
-
-                <button
                   onClick={() => setActiveTab('qr-generator')}
                   className="px-3 py-1.5 bg-primary hover:opacity-90 text-on-primary text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-card ml-auto"
                 >
@@ -1392,55 +1380,6 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* SQL Migration Snippet Modal */}
-      {showSqlSnippetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs font-mono">
-          <div className="w-full max-w-2xl bg-surface border-2 border-primary p-6 rounded-xl relative shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                <Copy className="w-5 h-5" />
-                Supabase OpenStreetMap SQL Migration Script
-              </h3>
-              <button
-                onClick={() => setShowSqlSnippetModal(false)}
-                className="text-muted hover:text-ink cursor-pointer p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-muted mb-3">
-              Run this SQL script in the Supabase SQL Editor for <strong className="text-ink">BOTH Route 1 and Route 2 databases</strong> to add latitude and longitude columns to the checkpoints table and seed exact campus locations:
-            </p>
-
-            <div className="relative flex-1 overflow-hidden rounded border border-line bg-black/80 p-3 mb-4">
-              <pre className="text-xs text-emerald-300 font-mono overflow-auto h-80 leading-relaxed">
-                {generateSqlMigrationSnippet()}
-              </pre>
-            </div>
-
-            <div className="flex justify-between items-center gap-3">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(generateSqlMigrationSnippet());
-                  setCopiedSqlFromModal(true);
-                  setTimeout(() => setCopiedSqlFromModal(false), 2500);
-                }}
-                className="flex-1 py-2.5 bg-primary hover:opacity-90 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-colors cursor-pointer flex items-center justify-center gap-2 shadow"
-              >
-                {copiedSqlFromModal ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedSqlFromModal ? 'Copied to Clipboard!' : 'Copy SQL Script'}</span>
-              </button>
-              <button
-                onClick={() => setShowSqlSnippetModal(false)}
-                className="px-4 py-2.5 border border-line text-muted hover:text-ink text-xs uppercase cursor-pointer rounded"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

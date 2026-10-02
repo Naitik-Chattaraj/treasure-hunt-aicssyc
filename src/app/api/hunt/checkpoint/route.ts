@@ -3,6 +3,9 @@ import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
 import { getTeamChallenge } from '@/lib/challenges';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface CheckpointMeta {
   id: number;
   route_id?: number;
@@ -85,6 +88,10 @@ export async function GET(req: NextRequest) {
     }
 
     const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
+    if (assignedRoute === 2 && isRoute2Configured()) {
+      const altDb = getSupabaseAdmin(2);
+      if (altDb) supabase = altDb;
+    }
 
     // 2. Fetch checkpoint from in-memory cache or route database
     const cacheKey = `${assignedRoute}_${currentStage}`;
@@ -184,6 +191,10 @@ export async function GET(req: NextRequest) {
         challenge: etchedChallenge,
       },
       cooldownUntil: team.cooldown_until ? new Date(team.cooldown_until).getTime() : null,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      },
     });
   } catch (err: unknown) {
     console.error('API /hunt/checkpoint: Internal Error', err);

@@ -88,7 +88,10 @@ export const api = {
   
   async getMe(): Promise<{ team: TeamProfile | null; progress: HuntProgress | null }> {
     try {
-      const res = await fetch('/api/team/me');
+      const res = await fetch(`/api/team/me?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
@@ -114,7 +117,10 @@ export const api = {
   async getProfile(): Promise<TeamProfile | null> {
 
     try {
-      const res = await fetch('/api/team/me');
+      const res = await fetch(`/api/team/me?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
@@ -140,7 +146,10 @@ export const api = {
   async getProgress(): Promise<HuntProgress | null> {
 
     try {
-      const res = await fetch('/api/team/me');
+      const res = await fetch(`/api/team/me?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
       if (!res.ok) return null;
       const data = await res.json();
       return data.progress || null;
@@ -152,7 +161,10 @@ export const api = {
   async getCheckpoint(_stage?: number, _routeId?: 1 | 2): Promise<Checkpoint | null> {
 
     try {
-      const res = await fetch('/api/hunt/checkpoint');
+      const res = await fetch(`/api/hunt/checkpoint?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store' },
+      });
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401 && data.error === 'Session expired: logged in from another device') {
@@ -169,9 +181,12 @@ export const api = {
     }
   },
 
-  async getMapNodes(): Promise<Checkpoint[]> {
+  async getMapNodes(routeId?: 1 | 2): Promise<Checkpoint[]> {
     try {
-      const res = await fetch('/api/hunt/map-nodes');
+      const url = routeId
+        ? `/api/hunt/map-nodes?route=${routeId}&_t=${Date.now()}`
+        : `/api/hunt/map-nodes?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return [];
       const data = await res.json();
       return data.nodes || [];

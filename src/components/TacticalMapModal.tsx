@@ -66,6 +66,18 @@ export default function TacticalMapModal({
   const [selectedNode, setSelectedNode] = useState<Checkpoint | null>(null);
   const [followingUser, setFollowingUser] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [routeSwitchedBanner, setRouteSwitchedBanner] = useState<string | null>(null);
+  const lastFittedRouteRef = useRef<number | null>(null);
+
+  // Reset selected node and show alert whenever route changes
+  useEffect(() => {
+    setSelectedNode(null);
+    if (lastFittedRouteRef.current !== null && lastFittedRouteRef.current !== currentRoute) {
+      setRouteSwitchedBanner(`Map updated: Now tracking Route 0${currentRoute}`);
+      const t = setTimeout(() => setRouteSwitchedBanner(null), 4500);
+      return () => clearTimeout(t);
+    }
+  }, [currentRoute]);
 
   // 1. Fetch exact checkpoint coordinates for this route
   useEffect(() => {
@@ -73,7 +85,9 @@ export default function TacticalMapModal({
 
     async function fetchRouteNodes() {
       try {
-        const res = await fetch('/api/hunt/map-nodes');
+        const res = await fetch(`/api/hunt/map-nodes?route=${currentRoute}&_t=${Date.now()}`, {
+          cache: 'no-store',
+        });
         if (res.ok) {
           const data = await res.json();
           if (isMounted && data.nodes && data.nodes.length > 0) {
@@ -259,9 +273,18 @@ export default function TacticalMapModal({
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    if (travelledLineRef.current) travelledLineRef.current.remove();
-    if (upcomingLineRef.current) upcomingLineRef.current.remove();
-    if (userGuideLineRef.current) userGuideLineRef.current.remove();
+    if (travelledLineRef.current) {
+      travelledLineRef.current.remove();
+      travelledLineRef.current = null;
+    }
+    if (upcomingLineRef.current) {
+      upcomingLineRef.current.remove();
+      upcomingLineRef.current = null;
+    }
+    if (userGuideLineRef.current) {
+      userGuideLineRef.current.remove();
+      userGuideLineRef.current = null;
+    }
 
     const bounds: [number, number][] = [];
     const completedCoords: [number, number][] = [];
@@ -368,11 +391,12 @@ export default function TacticalMapModal({
       }).addTo(map);
     }
 
-    // Initial fit bounds if valid
-    if (bounds.length > 0 && !userLocation) {
+    // Fit bounds on initial load OR whenever the route changes
+    if (bounds.length > 0 && (lastFittedRouteRef.current !== currentRoute || !userLocation)) {
+      lastFittedRouteRef.current = currentRoute;
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
     }
-  }, [nodes, progress, mapReady, userLocation]);
+  }, [nodes, progress, mapReady, userLocation, currentRoute]);
 
   // 7. Update User Live Location & Accuracy on Map
   useEffect(() => {
@@ -558,6 +582,14 @@ export default function TacticalMapModal({
               <p className="text-xs uppercase tracking-widest font-mono text-accent">
                 Synthesizing OpenStreetMap Nodes...
               </p>
+            </div>
+          )}
+
+          {/* Route Switched Notification Banner */}
+          {routeSwitchedBanner && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-full border border-primary/50 bg-surface/95 px-4 py-2 text-xs font-bold text-ink shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-3">
+              <span className="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+              <span>{routeSwitchedBanner}</span>
             </div>
           )}
 

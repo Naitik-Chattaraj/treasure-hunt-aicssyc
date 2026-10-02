@@ -9,7 +9,6 @@ import {
   RotateCcw,
   Check,
   AlertTriangle,
-  Copy,
   Info,
   CheckCircle,
   Zap,
@@ -21,7 +20,6 @@ import {
   CAMPUS_DEFAULT_COORDINATES,
   calculateDistanceMeters,
   formatDistance,
-  generateSqlMigrationSnippet,
 } from '@/lib/coordinates';
 
 export interface AdminCheckpointCoord {
@@ -66,6 +64,7 @@ export default function AdminOpenStreetMap({
   // Direct DOM ref for zero-latency dragging HUD banner (prevents 60fps React re-render lag)
   const dragHudRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const justDraggedRef = useRef<boolean>(false);
 
   // In-memory persistent map of latest coordinates per checkpoint ID
   const coordsRef = useRef<Map<number, { lat: number; lng: number }>>(new Map());
@@ -76,19 +75,19 @@ export default function AdminOpenStreetMap({
 
   // Track moved nodes pending save (when autoSave is false)
   const [movedNodes, setMovedNodes] = useState<Record<number, { lat: number; lng: number; origLat: number; origLng: number }>>({});
-  const [autoSave, setAutoSave] = useState<boolean>(true);
+  const [autoSave, setAutoSave] = useState<boolean>(false);
 
   // Sidebar form inputs
   const [latInput, setLatInput] = useState<string>('');
   const [lngInput, setLngInput] = useState<string>('');
+  const latInputRef = useRef<HTMLInputElement | null>(null);
+  const lngInputRef = useRef<HTMLInputElement | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // GPS & SQL modal
+  // GPS
   const [adminGps, setAdminGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gettingGps, setGettingGps] = useState(false);
-  const [showSqlModal, setShowSqlModal] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   // Filter checkpoints by route
   const filteredCheckpoints = checkpoints.filter((cp) => {
@@ -164,7 +163,7 @@ export default function AdminOpenStreetMap({
       ? 'border-amber-400 ring-4 ring-amber-400/80 scale-125 z-40'
       : isMoved
         ? 'border-amber-400 ring-2 ring-amber-400 scale-110 z-30'
-        : 'border-white hover:scale-110 z-20';
+        : 'border-white z-20';
 
     const tagClass = isMoved
       ? 'bg-amber-950/95 text-amber-300 border-amber-400 font-bold animate-pulse'
@@ -179,8 +178,8 @@ export default function AdminOpenStreetMap({
     return L.divIcon({
       className: `admin-marker-pin marker-id-${cp.id}`,
       html: `
-        <div class="group relative flex items-center justify-center cursor-grab active:cursor-grabbing transition-transform select-none" style="pointer-events: auto;">
-          <div class="w-8 h-8 rounded-full ${bgClass} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 transition-all ${borderClass}">
+        <div class="group relative flex items-center justify-center cursor-grab active:cursor-grabbing select-none" style="pointer-events: auto; transition: none;">
+          <div class="w-8 h-8 rounded-full ${bgClass} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 ${borderClass}" style="transition: none;">
             ${stage}
           </div>
           <span class="absolute -bottom-5 whitespace-nowrap font-mono text-[9px] px-1.5 py-0.5 rounded border shadow-sm ${tagClass}">
@@ -217,8 +216,12 @@ export default function AdminOpenStreetMap({
       const cp = checkpoints.find((c) => c.id === activeSelectedId);
       if (cp) {
         const coord = coordsRef.current.get(cp.id) || resolveCoord(cp);
-        setLatInput(coord.lat.toFixed(6));
-        setLngInput(coord.lng.toFixed(6));
+        const lStr = coord.lat.toFixed(6);
+        const gStr = coord.lng.toFixed(6);
+        setLatInput(lStr);
+        setLngInput(gStr);
+        if (latInputRef.current) latInputRef.current.value = lStr;
+        if (lngInputRef.current) lngInputRef.current.value = gStr;
       }
     }
   }, [activeSelectedId, checkpoints, resolveCoord]);
@@ -232,10 +235,16 @@ export default function AdminOpenStreetMap({
       coordsRef.current.set(id, { lat: cleanLat, lng: cleanLng });
       updatePolylines();
 
-      if (activeSelectedId === id) {
-        setLatInput(cleanLat.toFixed(6));
-        setLngInput(cleanLng.toFixed(6));
-      }
+      // ALWAYS select this node so inspector displays it
+      handleSelectCheckpoint(id);
+
+      // ALWAYS fill the text fields with the dropped coordinates
+      const latStr = cleanLat.toFixed(6);
+      const lngStr = cleanLng.toFixed(6);
+      setLatInput(latStr);
+      setLngInput(lngStr);
+      if (latInputRef.current) latInputRef.current.value = latStr;
+      if (lngInputRef.current) lngInputRef.current.value = lngStr;
 
       const cp = checkpoints.find((c) => c.id === id);
       const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
@@ -284,18 +293,20 @@ export default function AdminOpenStreetMap({
             origLng: cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng,
           },
         }));
-        showToast(`📍 Node 0${stage} moved to (${cleanLat}, ${cleanLng}). Click Save to persist.`, 'info');
+        showToast(`📍 Node 0${stage} moved to (${cleanLat}, ${cleanLng}). Press Save below to put in Supabase.`, 'info');
       }
     },
-    [autoSave, activeSelectedId, checkpoints, onUpdateCheckpoint, onRefresh, updatePolylines, showToast]
+    [autoSave, checkpoints, onUpdateCheckpoint, onRefresh, updatePolylines, showToast, handleSelectCheckpoint]
   );
 
   // Manual save coordinates button in sidebar
   const handleSaveManualCoordinates = useCallback(async () => {
     if (activeSelectedId == null) return;
 
-    const lat = parseFloat(latInput);
-    const lng = parseFloat(lngInput);
+    const latStr = latInputRef.current?.value || latInput;
+    const lngStr = lngInputRef.current?.value || lngInput;
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
 
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       alert('Please enter valid latitude (-90 to 90) and longitude (-180 to 180)');
@@ -559,6 +570,7 @@ export default function AdminOpenStreetMap({
 
         // Click map to reposition selected checkpoint
         map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
+          if (isDraggingRef.current || justDraggedRef.current) return;
           setInternalSelectedId((curr) => {
             const targetId = controlledSelectedId !== undefined ? controlledSelectedId : curr;
             if (targetId != null) {
@@ -628,34 +640,42 @@ export default function AdminOpenStreetMap({
       let marker = markersMapRef.current.get(cp.id);
 
       if (!marker) {
-        // Instantiate Draggable Marker
+        // Instantiate Draggable Marker with autoPan: false to prevent jitter
         marker = L.marker([coord.lat, coord.lng], {
           icon,
           draggable: true,
-          autoPan: true,
+          autoPan: false,
         }).addTo(map);
 
         // Marker Click -> Select checkpoint
         marker.on('click', () => {
+          if (isDraggingRef.current || justDraggedRef.current) return;
           handleSelectCheckpoint(cp.id);
         });
 
-        // Marker Drag Start -> Lock state, show HUD directly via DOM (Zero React lag)
+        // Marker Drag Start -> Lock state and show HUD directly via DOM (Zero React lag, no DOM destruction)
         marker.on('dragstart', () => {
           isDraggingRef.current = true;
-          handleSelectCheckpoint(cp.id);
+          justDraggedRef.current = true;
           if (dragHudRef.current) {
             dragHudRef.current.style.display = 'flex';
           }
         });
 
-        // Marker Dragging -> Update polyline & HUD directly in 60fps
+        // Marker Dragging -> Update polyline, live input text fields & HUD directly at 60fps
         marker.on('drag', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           const pos = e.target.getLatLng();
+          const cleanLat = pos.lat.toFixed(6);
+          const cleanLng = pos.lng.toFixed(6);
+
           coordsRef.current.set(cp.id, { lat: pos.lat, lng: pos.lng });
 
           // Update Leaflet polylines immediately
           updatePolylines();
+
+          // Immediately update sidebar coordinate text fields live as you drag
+          if (latInputRef.current) latInputRef.current.value = cleanLat;
+          if (lngInputRef.current) lngInputRef.current.value = cleanLng;
 
           // Update HUD directly
           if (dragHudRef.current) {
@@ -663,19 +683,34 @@ export default function AdminOpenStreetMap({
             const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
             dragHudRef.current.innerHTML = `
               <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-              <span><strong>R${route}-0${stage}</strong> &rarr; Lat: ${pos.lat.toFixed(6)}, Lng: ${pos.lng.toFixed(6)}</span>
+              <span><strong>R${route}-0${stage}</strong> &rarr; Lat: ${cleanLat}, Lng: ${cleanLng}</span>
             `;
           }
         });
 
-        // Marker Drag End -> Commit coordinates and unlock
+        // Marker Drag End -> Commit coordinates, fill text fields, and unlock
         marker.on('dragend', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           isDraggingRef.current = false;
           if (dragHudRef.current) {
             dragHudRef.current.style.display = 'none';
           }
           const finalPos = e.target.getLatLng();
-          handleNodeDropped(cp.id, finalPos.lat, finalPos.lng);
+          const cleanLat = Number(finalPos.lat.toFixed(6));
+          const cleanLng = Number(finalPos.lng.toFixed(6));
+
+          // Ensure input fields are completely filled and React state is in sync
+          setLatInput(cleanLat.toFixed(6));
+          setLngInput(cleanLng.toFixed(6));
+          if (latInputRef.current) latInputRef.current.value = cleanLat.toFixed(6);
+          if (lngInputRef.current) lngInputRef.current.value = cleanLng.toFixed(6);
+
+          // Focus this checkpoint and register drop
+          handleSelectCheckpoint(cp.id);
+          handleNodeDropped(cp.id, cleanLat, cleanLng);
+
+          setTimeout(() => {
+            justDraggedRef.current = false;
+          }, 400);
         });
 
         markersMapRef.current.set(cp.id, marker);
@@ -684,7 +719,9 @@ export default function AdminOpenStreetMap({
         if (!isDraggingRef.current && !movedNodes[cp.id]) {
           marker.setLatLng([coord.lat, coord.lng]);
         }
-        marker.setIcon(icon);
+        if (!isDraggingRef.current) {
+          marker.setIcon(icon);
+        }
       }
     });
 
@@ -787,16 +824,6 @@ export default function AdminOpenStreetMap({
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Fit Route</span>
-          </button>
-
-          {/* SQL Snippet Generator */}
-          <button
-            onClick={() => setShowSqlModal(true)}
-            className="px-3 py-1.5 bg-primary hover:opacity-90 text-on-primary text-xs font-extrabold uppercase rounded flex items-center gap-1.5 cursor-pointer shadow transition-colors"
-            title="Generate SQL migration snippet for Supabase"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            <span>SQL Snippet</span>
           </button>
         </div>
       </div>
@@ -912,6 +939,7 @@ export default function AdminOpenStreetMap({
                     <span className="text-[10px] text-muted font-mono">Updates as you drag</span>
                   </div>
                   <input
+                    ref={latInputRef}
                     type="number"
                     step="0.000001"
                     value={latInput}
@@ -921,14 +949,14 @@ export default function AdminOpenStreetMap({
                       if (!isNaN(num) && selectedCp) {
                         const marker = markersMapRef.current.get(selectedCp.id);
                         if (marker) {
-                          const curLng = parseFloat(lngInput) || CAMPUS_CENTER.lng;
+                          const curLng = parseFloat(lngInputRef.current?.value || lngInput) || CAMPUS_CENTER.lng;
                           marker.setLatLng([num, curLng]);
                           coordsRef.current.set(selectedCp.id, { lat: num, lng: curLng });
                           updatePolylines();
                         }
                       }
                     }}
-                    className="w-full bg-sunken border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent rounded"
+                    className="w-full bg-sunken border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent rounded text-xs"
                     placeholder="e.g. 12.823610"
                   />
                 </div>
@@ -941,6 +969,7 @@ export default function AdminOpenStreetMap({
                     <span className="text-[10px] text-muted font-mono">Updates as you drag</span>
                   </div>
                   <input
+                    ref={lngInputRef}
                     type="number"
                     step="0.000001"
                     value={lngInput}
@@ -950,14 +979,14 @@ export default function AdminOpenStreetMap({
                       if (!isNaN(num) && selectedCp) {
                         const marker = markersMapRef.current.get(selectedCp.id);
                         if (marker) {
-                          const curLat = parseFloat(latInput) || CAMPUS_CENTER.lat;
+                          const curLat = parseFloat(latInputRef.current?.value || latInput) || CAMPUS_CENTER.lat;
                           marker.setLatLng([curLat, num]);
                           coordsRef.current.set(selectedCp.id, { lat: curLat, lng: num });
                           updatePolylines();
                         }
                       }
                     }}
-                    className="w-full bg-sunken border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent rounded"
+                    className="w-full bg-sunken border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent rounded text-xs"
                     placeholder="e.g. 80.044200"
                   />
                 </div>
@@ -999,7 +1028,7 @@ export default function AdminOpenStreetMap({
                   onClick={handleSaveManualCoordinates}
                   disabled={saving}
                   className={`w-full py-2.5 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${movedNodes[selectedCp.id]
-                      ? 'bg-amber-500 hover:bg-amber-400 text-black font-extrabold ring-2 ring-amber-400 animate-pulse'
+                      ? 'bg-amber-500 hover:bg-amber-400 text-black font-extrabold ring-2 ring-amber-400 shadow-lg'
                       : 'bg-danger hover:opacity-90'
                     }`}
                 >
@@ -1008,7 +1037,7 @@ export default function AdminOpenStreetMap({
                     {saving
                       ? 'Persisting to Database...'
                       : movedNodes[selectedCp.id]
-                        ? 'Save Moved Position to Supabase'
+                        ? `Save Node 0${selectedCp.stage || (selectedCp.id <= 12 ? selectedCp.id : selectedCp.id - 12)} to Supabase`
                         : 'Save Coordinates to Supabase'}
                   </span>
                 </button>
@@ -1077,57 +1106,6 @@ export default function AdminOpenStreetMap({
           </div>
         </div>
       </div>
-
-      {/* SQL Migration Modal */}
-      {showSqlModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
-          <div className="w-full max-w-2xl bg-surface border-2 border-primary p-6 rounded-xl relative shadow-2xl max-h-[90vh] flex flex-col font-mono">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                <Copy className="w-5 h-5" />
-                OpenStreetMap Coordinates SQL Migration
-              </h3>
-              <button
-                onClick={() => setShowSqlModal(false)}
-                className="text-muted hover:text-ink cursor-pointer p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-muted mb-3">
-              Copy and execute this SQL snippet in the Supabase SQL Editor for BOTH Route 1 and Route 2 databases to populate exact coordinates in the <code className="text-accent">checkpoints</code> table:
-            </p>
-
-            <div className="relative flex-1 overflow-hidden rounded border border-line bg-black/80 p-3 mb-4">
-              <pre className="text-xs text-emerald-300 font-mono overflow-auto h-80 leading-relaxed">
-                {generateSqlMigrationSnippet()}
-              </pre>
-            </div>
-
-            <div className="flex justify-between items-center gap-3">
-              <button
-                onClick={() => {
-                  const snippet = generateSqlMigrationSnippet();
-                  navigator.clipboard.writeText(snippet);
-                  setCopiedSql(true);
-                  setTimeout(() => setCopiedSql(false), 2500);
-                }}
-                className="flex-1 py-2.5 bg-primary hover:opacity-90 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-colors cursor-pointer flex items-center justify-center gap-2 shadow"
-              >
-                {copiedSql ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedSql ? 'Copied to Clipboard!' : 'Copy SQL Script'}</span>
-              </button>
-              <button
-                onClick={() => setShowSqlModal(false)}
-                className="px-4 py-2.5 border border-line text-muted hover:text-ink text-xs uppercase cursor-pointer rounded"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

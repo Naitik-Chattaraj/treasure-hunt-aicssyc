@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins, getSupabaseAdmin } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
+import { invalidateMapNodesCache } from '@/app/api/hunt/map-nodes/route';
 
 // Log the real error on the server; send only a generic message to the client
 function serverError(publicMessage: string, err: unknown) {
@@ -139,6 +140,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: error.message || 'Failed to update checkpoint' }, { status: 500 });
     }
 
+    invalidateMapNodesCache(targetRoute);
     return NextResponse.json({ success: true, checkpoint: updated });
   } catch (err: unknown) {
     console.error('PUT /api/admin/checkpoints error:', err);

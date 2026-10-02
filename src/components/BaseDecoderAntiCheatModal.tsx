@@ -262,7 +262,7 @@ export default function BaseDecoderAntiCheatModal({ isBaseDecoder }: BaseDecoder
   // Initial Mandatory Fullscreen Entry Overlay
   if (!hasEnteredFullscreen || (!isFullscreen && !isPenalized)) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md font-mono select-none">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md font-mono select-none">
         <div className="w-full max-w-lg bg-cyber-panel border-2 border-cyber-pink shadow-[0_0_40px_rgba(255,0,60,0.4)] p-6 sm:p-8 text-center space-y-6 rounded-sm relative">
           <div className="w-16 h-16 border-2 border-cyber-pink bg-cyber-pink/10 text-cyber-pink flex items-center justify-center mx-auto rounded-full shadow-[0_0_20px_rgba(255,0,60,0.3)] animate-pulse">
             <Maximize2 className="w-8 h-8" />
@@ -304,7 +304,7 @@ export default function BaseDecoderAntiCheatModal({ isBaseDecoder }: BaseDecoder
   // Active Violation Penalty Modal
   if (isPenalized || penaltyRemaining > 0) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md font-mono select-none">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md font-mono select-none">
         <div className="w-full max-w-lg bg-cyber-darker border-2 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.6)] p-6 sm:p-8 text-center space-y-6 rounded-sm relative animate-[pulse_2s_ease-in-out_infinite]">
           {/* Header Icon */}
           <div className="w-16 h-16 border-2 border-red-500 bg-red-500/20 text-red-500 flex items-center justify-center mx-auto rounded-full shadow-[0_0_25px_rgba(239,68,68,0.5)]">

@@ -17,6 +17,17 @@ interface MapNodeItem {
 const cache = new Map<1 | 2, { nodes: MapNodeItem[]; cachedAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export function invalidateMapNodesCache(route?: 1 | 2) {
+  if (route) {
+    cache.delete(route);
+  } else {
+    cache.clear();
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get('team_session')?.value;
@@ -29,12 +40,62 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const assignedRoute: 1 | 2 = payload.assignedRoute === 2 ? 2 : 1;
+    // Determine route:
+    // 1. Explicit query param (?route=1 or ?route=2)
+    // 2. Live database lookup on team's assigned_route (for mid-game route changes where JWT is unchanged)
+    // 3. Fallback to JWT payload.assignedRoute
+    const reqRoute = req.nextUrl.searchParams.get('route');
+    let assignedRoute: 1 | 2;
 
-    // Check memory cache first
+    if (reqRoute === '1' || reqRoute === '2') {
+      assignedRoute = reqRoute === '2' ? 2 : 1;
+    } else {
+      let liveRoute: 1 | 2 | null = null;
+      try {
+        const primaryDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 2 : 1);
+        if (primaryDb) {
+          const { data: teamPrimary } = await primaryDb
+            .from('teams')
+            .select('assigned_route')
+            .eq('id', payload.teamId)
+            .maybeSingle();
+          if (teamPrimary?.assigned_route) {
+            liveRoute = teamPrimary.assigned_route === 2 ? 2 : 1;
+          }
+        }
+
+        if (!liveRoute && isRoute2Configured()) {
+          const altDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 1 : 2);
+          if (altDb) {
+            const { data: teamAlt } = await altDb
+              .from('teams')
+              .select('assigned_route')
+              .eq('id', payload.teamId)
+              .maybeSingle();
+            if (teamAlt?.assigned_route) {
+              liveRoute = teamAlt.assigned_route === 2 ? 2 : 1;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not query live team assigned_route for map-nodes:', err);
+      }
+
+      assignedRoute = liveRoute || (payload.assignedRoute === 2 ? 2 : 1);
+    }
+
+    // Check memory cache first unless cache-busting timestamp is provided
+    const hasCacheBuster = req.nextUrl.searchParams.has('_t');
     const cached = cache.get(assignedRoute);
-    if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
-      return NextResponse.json({ nodes: cached.nodes, assignedRoute });
+    if (!hasCacheBuster && cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+      return NextResponse.json(
+        { nodes: cached.nodes, assignedRoute },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        }
+      );
     }
 
     let supabase = getSupabaseAdmin(assignedRoute);
@@ -57,7 +118,14 @@ export async function GET(req: NextRequest) {
           longitude: node.lng,
         }));
 
-      return NextResponse.json({ nodes: fallbackNodes, assignedRoute });
+      return NextResponse.json(
+        { nodes: fallbackNodes, assignedRoute },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        }
+      );
     }
 
     const { data: dbCheckpoints, error } = await supabase
@@ -80,12 +148,26 @@ export async function GET(req: NextRequest) {
       const rawList = fallbackRange || [];
       const resolved = resolveWithDefaults(rawList, assignedRoute);
       cache.set(assignedRoute, { nodes: resolved, cachedAt: Date.now() });
-      return NextResponse.json({ nodes: resolved, assignedRoute });
+      return NextResponse.json(
+        { nodes: resolved, assignedRoute },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        }
+      );
     }
 
     const resolved = resolveWithDefaults(dbCheckpoints, assignedRoute);
     cache.set(assignedRoute, { nodes: resolved, cachedAt: Date.now() });
-    return NextResponse.json({ nodes: resolved, assignedRoute });
+    return NextResponse.json(
+      { nodes: resolved, assignedRoute },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (err) {
     console.error('API /hunt/map-nodes error:', err);
     // Graceful fallback to default campus coordinates
@@ -103,7 +185,14 @@ export async function GET(req: NextRequest) {
         longitude: node.lng,
       }));
 
-    return NextResponse.json({ nodes: fallbackNodes, assignedRoute: fallbackRoute });
+    return NextResponse.json(
+      { nodes: fallbackNodes, assignedRoute: fallbackRoute },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   }
 }
 

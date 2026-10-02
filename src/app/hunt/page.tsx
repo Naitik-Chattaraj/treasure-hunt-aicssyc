@@ -33,7 +33,9 @@ import BaseDecoderAntiCheatModal from '@/components/BaseDecoderAntiCheatModal';
 export default function HuntHUD() {
   const router = useRouter();
   const [profile, setProfile] = useState<TeamProfile | null>(null);
+  const profileRef = useRef<TeamProfile | null>(null);
   const [progress, setProgress] = useState<HuntProgress | null>(null);
+  const progressRef = useRef<HuntProgress | null>(null);
   const [activeCheckpoint, setActiveCheckpoint] = useState<Checkpoint | null>(null);
   const activeCheckpointRef = useRef<Checkpoint | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,8 @@ export default function HuntHUD() {
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const prevStageRef = useRef<number | null>(null);
   const [stageClearedNotice, setStageClearedNotice] = useState<string | null>(null);
+  const [routeNotice, setRouteNotice] = useState<string | null>(null);
+  const prevRouteRef = useRef<number | null>(null);
 
   // Manual code entry state (for room team receiving code from field runners)
   const [manualCode, setManualCode] = useState('');
@@ -64,50 +68,50 @@ export default function HuntHUD() {
   const loadData = async (silent = false, forceRefresh = false) => {
     if (!silent) setLoading(true);
     try {
-      // Egress & Latency Optimization: Parallelize getMe and getCheckpoint if stage is known
       let prof, prog;
-      let cp = null;
-      const knownStage = progress?.currentStage || activeCheckpointRef.current?.stage;
-      const isDecoderLocal = profile ? profile.operativeRole !== 'Field Scout' : false;
+      let cp: Checkpoint | null = null;
+      const currentProg = progressRef.current || progress;
+      const currentProf = profileRef.current || profile;
       const currentCp = activeCheckpointRef.current;
+      const knownStage = currentProg?.currentStage || currentCp?.stage;
+      const isDecoderLocal = currentProf ? currentProf.operativeRole !== 'Field Scout' : false;
       const waitingForUnlock = isDecoderLocal && (!currentCp?.qrScanned || !currentCp?.challenge);
 
-      if (knownStage && knownStage <= 12) {
-        const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== knownStage);
-        // Avoid aggressive background polling of getCheckpoint when base decoder is awaiting QR scan to save egress
-        const shouldFetchCp = stageChanged || forceRefresh || (!silent && waitingForUnlock);
+      const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== knownStage);
+      // Avoid aggressive background polling of getCheckpoint when base decoder is awaiting QR scan to save egress
+      const shouldFetchCp = stageChanged || forceRefresh || (!silent && waitingForUnlock);
 
-        const results = await Promise.all([
-          api.getMe(),
-          shouldFetchCp ? api.getCheckpoint(knownStage) : Promise.resolve(currentCp)
-        ]);
-        
-        prof = results[0].team;
-        prog = results[0].progress;
-        
-        // If stage unexpectedly advanced during getMe, fetch new checkpoint
-        if (prog && prog.currentStage > knownStage && prog.currentStage <= 12) {
-           cp = await api.getCheckpoint(prog.currentStage);
-        } else {
-           cp = results[1];
-        }
-      } else {
-        // Fallback for initial load
-        const res = await api.getMe();
-        prof = res.team;
-        prog = res.progress;
-        if (prog && prog.currentStage <= 12) {
-          cp = await api.getCheckpoint(prog.currentStage);
-        }
-      }
+      const results = await Promise.all([
+        api.getMe(),
+        (knownStage && knownStage <= 12 && shouldFetchCp) ? api.getCheckpoint(knownStage) : Promise.resolve(currentCp)
+      ]);
+      
+      prof = results[0].team;
+      prog = results[0].progress;
 
       if (!prof || prof.status !== 'approved') {
         router.push('/login');
         return;
       }
+
+      // Check if team route changed mid-game
+      const currentRoute = (prof.assignedRoute || prog?.assignedRoute || 1) as 1 | 2;
+      const prevRoute = prevRouteRef.current ?? (currentProf?.assignedRoute || currentProg?.assignedRoute || (currentCp?.routeId as 1 | 2) || currentRoute);
+      const routeChanged = prevRouteRef.current !== null && prevRoute !== currentRoute;
+      prevRouteRef.current = currentRoute;
+
+      // If route changed or stage unexpectedly advanced during getMe, fetch fresh checkpoint for currentRoute & stage
+      if (routeChanged || (prog && prog.currentStage > (knownStage || 0) && prog.currentStage <= 12)) {
+        cp = await api.getCheckpoint(prog?.currentStage || knownStage || 1);
+      } else {
+        cp = results[1];
+      }
+
+      profileRef.current = prof;
       setProfile(prof);
       
       if (prog) {
+        progressRef.current = prog;
         // Check if team just advanced stage (Base Decoder solved a question!)
         const prev = prevStageRef.current;
         if (prev !== null && prog.currentStage > prev) {
@@ -120,8 +124,34 @@ export default function HuntHUD() {
           setTimeout(() => setStageClearedNotice(null), 8000);
         }
         prevStageRef.current = prog.currentStage;
-
         setProgress(prog);
+
+        if (routeChanged) {
+          setRouteNotice(`Tactical Reassignment: Team moved to Route 0${currentRoute}. Target & map updated.`);
+          setTimeout(() => setRouteNotice(null), 8000);
+          autoOpenedCheckpointRef.current = null;
+          setShowChallenge(false);
+        }
+
+        // Safeguard active challenge:
+        // Only preserve active challenge if it belongs to the SAME stage AND the SAME route!
+        const existingCp = activeCheckpointRef.current;
+        if (!routeChanged && existingCp?.challenge && existingCp.qrScanned) {
+          const activeStage = prog.currentStage;
+          const existingRoute = existingCp.routeId || existingCp.route_id;
+          if (existingCp.stage === activeStage && (!existingRoute || existingRoute === currentRoute)) {
+            if (cp) {
+              cp = {
+                ...cp,
+                qrScanned: true,
+                challenge: cp.challenge || existingCp.challenge,
+              };
+            } else {
+              cp = existingCp;
+            }
+          }
+        }
+
         if (cp) {
           activeCheckpointRef.current = cp;
           setActiveCheckpoint(cp);
@@ -142,9 +172,12 @@ export default function HuntHUD() {
     }
   };
 
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
   useEffect(() => {
     setNow(Date.now());
-    loadData();
+    loadDataRef.current();
 
     // 1-second clock tick for active cooldown timers
     const clockInterval = setInterval(() => setNow(Date.now()), 1000);
@@ -152,14 +185,14 @@ export default function HuntHUD() {
     // Adaptive polling: 2.5s for fast sync
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        loadData(true);
+        loadDataRef.current(true);
       }
     }, 2500);
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setNow(Date.now());
-        loadData(true);
+        loadDataRef.current(true);
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -251,17 +284,22 @@ export default function HuntHUD() {
   const handleReloadStatus = async () => {
     setReloadingStatus(true);
     try {
-      const wasUnlockedBefore = !!activeCheckpointRef.current?.qrScanned;
       await loadData(false, true);
-      const isNowUnlocked = !!activeCheckpointRef.current?.qrScanned;
-      if (!wasUnlockedBefore && isNowUnlocked) {
-        const targetNode = activeCheckpointRef.current?.stage || progress?.currentStage || 1;
+      const currentCp = activeCheckpointRef.current;
+      const isNowUnlocked = !!currentCp?.qrScanned;
+      const hasChallengeNow = !!currentCp?.challenge;
+
+      if (isNowUnlocked && hasChallengeNow) {
+        const targetNode = currentCp?.stage || progressRef.current?.currentStage || progress?.currentStage || 1;
         setScanNotice(`QR VERIFIED: Node 0${targetNode} unlocked!`);
         setShowChallenge(true);
         setTimeout(() => setScanNotice(null), 6000);
       } else if (!isNowUnlocked) {
         setScanNotice('AWAITING FIELD SCOUT: QR code not scanned yet.');
         setTimeout(() => setScanNotice(null), 3000);
+      } else {
+        // QR is scanned; ensure modal opens
+        setShowChallenge(true);
       }
     } catch {
       setScanNotice('Network error: Failed to check QR status.');
@@ -405,6 +443,12 @@ export default function HuntHUD() {
           <div className="flex w-full max-w-sm items-center gap-2.5 rounded-lg border border-line border-l-4 border-l-success bg-surface p-3 text-sm font-semibold shadow-raised">
             <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
             <span>{stageClearedNotice}</span>
+          </div>
+        )}
+        {routeNotice && (
+          <div className="flex w-full max-w-sm items-center gap-2.5 rounded-lg border border-line border-l-4 border-l-primary bg-surface p-3 text-sm font-semibold shadow-raised">
+            <MapIcon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            <span>{routeNotice}</span>
           </div>
         )}
       </div>
@@ -578,9 +622,9 @@ export default function HuntHUD() {
       )}
       {showScanner && <QRScannerModal onScan={handleScanResult} onClose={() => setShowScanner(false)} />}
       
-      {showChallenge && activeCheckpoint?.challenge && (
+      {showChallenge && (activeCheckpoint?.challenge || activeCheckpointRef.current?.challenge) && (
         <ChallengeModal 
-          checkpoint={activeCheckpoint} 
+          checkpoint={(activeCheckpoint?.challenge ? activeCheckpoint : activeCheckpointRef.current)!} 
           initialCooldown={cooldownSeconds}
           onSuccess={handleChallengeSuccess} 
           onClose={() => setShowChallenge(false)} 

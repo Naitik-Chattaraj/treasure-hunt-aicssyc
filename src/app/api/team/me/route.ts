@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isRoute2Configured } from '@/lib/supabase';
 import { verifyTeamToken, isRoleSessionValid } from '@/lib/auth';
+ 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,6 +101,10 @@ export async function GET(req: NextRequest) {
         completionToken: team.completion_token,
         cooldownUntil: team.cooldown_until ? new Date(team.cooldown_until).getTime() : null,
         wrongAttempts: team.wrong_attempts,
+      },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       },
     });
   } catch (err: unknown) {

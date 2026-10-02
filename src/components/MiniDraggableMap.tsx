@@ -33,6 +33,7 @@ export default function MiniDraggableMap({
   const markerRef = useRef<any>(null);
   const badgeTextRef = useRef<HTMLSpanElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const justDraggedRef = useRef<boolean>(false);
 
   const defaultCoord = CAMPUS_DEFAULT_COORDINATES[checkpointId];
   const initialLat =
@@ -91,8 +92,8 @@ export default function MiniDraggableMap({
 
         const routeColor = routeId === 1 ? 'bg-cyan-600' : 'bg-purple-600';
         const markerHtml = `
-          <div class="relative flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-110 transition-transform">
-            <div class="w-8 h-8 rounded-full ${routeColor} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 border-white ring-2 ring-accent">
+          <div class="relative flex items-center justify-center cursor-grab active:cursor-grabbing select-none" style="transition: none;">
+            <div class="w-8 h-8 rounded-full ${routeColor} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 border-white ring-2 ring-accent" style="transition: none;">
               ${stage}
             </div>
             <span class="absolute -bottom-4 whitespace-nowrap bg-black/90 text-white font-mono text-[9px] px-1.5 py-0.5 rounded border border-line">
@@ -111,19 +112,23 @@ export default function MiniDraggableMap({
         const marker = L.marker([currentCoord.lat, currentCoord.lng], {
           icon,
           draggable: true,
-          autoPan: true,
+          autoPan: false,
         }).addTo(map);
 
         marker.on('dragstart', () => {
           isDraggingRef.current = true;
+          justDraggedRef.current = true;
         });
 
-        // Update live coordinate badge directly via DOM (Zero React lag during drag)
+        // Update live coordinate badge and text fields live while dragging
         marker.on('drag', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           const pos = e.target.getLatLng();
+          const cleanLat = Number(pos.lat.toFixed(6));
+          const cleanLng = Number(pos.lng.toFixed(6));
           if (badgeTextRef.current) {
-            badgeTextRef.current.textContent = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)} (Dragging)`;
+            badgeTextRef.current.textContent = `${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)} (Dragging)`;
           }
+          onChange(cleanLat, cleanLng);
         });
 
         marker.on('dragend', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
@@ -136,10 +141,14 @@ export default function MiniDraggableMap({
             badgeTextRef.current.textContent = `${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)}`;
           }
           onChange(cleanLat, cleanLng);
+          setTimeout(() => {
+            justDraggedRef.current = false;
+          }, 350);
         });
 
         // Click anywhere on mini map to teleport pin
         map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
+          if (isDraggingRef.current || justDraggedRef.current) return;
           const cleanLat = Number(e.latlng.lat.toFixed(6));
           const cleanLng = Number(e.latlng.lng.toFixed(6));
           marker.setLatLng([cleanLat, cleanLng]);
