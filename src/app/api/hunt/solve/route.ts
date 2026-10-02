@@ -82,24 +82,11 @@ export async function POST(req: NextRequest) {
         error: 'cooldown_active',
         message: `SYSTEM LOCKOUT: Anti-brute-force active. Wait ${waitSeconds}s before re-attempting.`,
         waitSeconds,
+        cooldownSeconds: waitSeconds,
       }, { status: 429 });
     }
 
     const assignedRoute: 1 | 2 = (team.assigned_route === 2 ? 2 : 1);
-
-    // Atomic claim to prevent parallel guesses
-    const { data: claimData, error: claimError } = await supabase.rpc('claim_attempt', {
-      team_id: team.id,
-      lock_seconds: 2
-    });
-
-    if (claimError || !claimData) {
-      return NextResponse.json({
-        error: 'cooldown_active',
-        message: 'SYSTEM LOCKOUT: Attempt rejected due to parallel submissions or active cooldown.',
-        waitSeconds: 2,
-      }, { status: 429 });
-    }
 
     // Fetch the checkpoint for this team's route and current stage
     let cpId: number | null = null;
@@ -134,6 +121,7 @@ export async function POST(req: NextRequest) {
     // 4. Fetch the specific etched question assigned to this team
     let isMatch = false;
     let activeChallengeId: string | null = null;
+    let correctAnswer: string | null = null;
 
     try {
       // UNIQUE (team_id, node_id) guarantees at most one row, so no ordering is needed
@@ -157,7 +145,7 @@ export async function POST(req: NextRequest) {
         if (qError) console.error('questions_pool answer lookup error:', qError);
 
         if (q) {
-          isMatch = String(q.answer).trim().toLowerCase() === cleanAnswer.toLowerCase();
+          correctAnswer = q.answer;
           activeChallengeId = activeChallenge.id;
         }
       }
@@ -165,12 +153,60 @@ export async function POST(req: NextRequest) {
       console.warn('team_active_challenges lookup warning:', e);
     }
 
-    if (!activeChallengeId) {
+    if (!activeChallengeId || correctAnswer === null) {
       return NextResponse.json({
         error: 'challenge_not_unlocked',
         message: 'QR code must be scanned on campus before submitting answers!',
       }, { status: 400 });
     }
+
+    // 5. Atomic claim to prevent parallel guesses (Bug A2) - 1 second lock
+    let claimSuccess = false;
+
+    try {
+      const { data: claimData, error: claimError } = await supabase.rpc('claim_attempt', {
+        team_id: team.id,
+        lock_seconds: 1,
+      });
+
+      if (!claimError && claimData) {
+        claimSuccess = true;
+      } else if (claimError) {
+        console.warn('claim_attempt RPC failed or missing, executing atomic update fallback:', claimError.message || claimError);
+      }
+    } catch (rpcErr) {
+      console.warn('claim_attempt RPC invocation exception:', rpcErr);
+    }
+
+    // Resilient fallback: Atomic update directly via PostgREST
+    if (!claimSuccess) {
+      const nowIso = new Date().toISOString();
+      const lockUntilIso = new Date(Date.now() + 1000).toISOString();
+      const { data: fallbackTeam, error: fbError } = await supabase
+        .from('teams')
+        .update({ cooldown_until: lockUntilIso })
+        .eq('id', team.id)
+        .or(`cooldown_until.is.null,cooldown_until.lt.${nowIso}`)
+        .select('id')
+        .maybeSingle();
+
+      if (fallbackTeam?.id) {
+        claimSuccess = true;
+      } else if (fbError) {
+        console.error('Atomic claim fallback error:', fbError);
+      }
+    }
+
+    if (!claimSuccess) {
+      return NextResponse.json({
+        error: 'cooldown_active',
+        message: 'SYSTEM LOCKOUT: Attempt rejected due to parallel submissions or active cooldown.',
+        waitSeconds: 1,
+        cooldownSeconds: 1,
+      }, { status: 429 });
+    }
+
+    isMatch = String(correctAnswer).trim().toLowerCase() === cleanAnswer.toLowerCase();
 
     // Log the submission attempt in team's route database
     await supabase.from('submissions_log').insert({
@@ -252,6 +288,7 @@ export async function POST(req: NextRequest) {
       error: 'incorrect_answer',
       message: 'INCORRECT OVERRIDE CODE. TERMINAL LOCKED.',
       cooldownSeconds,
+      waitSeconds: cooldownSeconds,
     });
   } catch (err: unknown) {
     console.error('API /hunt/solve: Internal Error', err);

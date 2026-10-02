@@ -227,6 +227,19 @@ export default function LoginPage() {
         setAuthError('TEAMS MUST HAVE 4 OR 5 MEMBERS.');
         return;
       }
+
+      const decoderCount = members.filter(m => m.role.toLowerCase().includes('decoder')).length;
+      const scoutCount = members.filter(m => m.role.toLowerCase().includes('scout')).length;
+
+      if (decoderCount !== 2) {
+        setAuthError('TEAM MUST HAVE EXACTLY 2 BASE DECODERS.');
+        return;
+      }
+      if (scoutCount < 2 || scoutCount > 3) {
+        setAuthError('TEAM MUST HAVE 2 OR 3 FIELD SCOUTS.');
+        return;
+      }
+
       for (const m of members) {
         if (!m.regNo.trim() || !m.phone.trim()) {
            setAuthError('ALL MEMBERS MUST PROVIDE REG NO AND PHONE.');

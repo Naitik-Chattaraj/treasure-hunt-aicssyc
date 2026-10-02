@@ -91,8 +91,15 @@ export function isRoleSessionValid(
   if (teamDeviceId.startsWith('{')) {
     try {
       const parsed = JSON.parse(teamDeviceId);
-      // The registered deviceId in DB for this role must match the token's deviceId
-      return Boolean(parsed[roleKey] && parsed[roleKey] === payloadDeviceId);
+      const roleDevices = parsed[roleKey];
+
+      // Multi-device array (up to 2 decoders, up to 3 scouts active at once)
+      if (Array.isArray(roleDevices)) {
+        return roleDevices.includes(payloadDeviceId);
+      }
+
+      // Legacy fallback if device_id is a single string for this role
+      return Boolean(roleDevices && roleDevices === payloadDeviceId);
     } catch {
       return false;
     }
@@ -102,13 +109,22 @@ export function isRoleSessionValid(
   return teamDeviceId === payloadDeviceId;
 }
 
-export type DeviceMap = Record<string, string>;
+export type DeviceMap = Record<string, string | string[]>;
 
 function parseDeviceMap(stored: string | null): DeviceMap {
   if (!stored) return {};
-  if (!stored.startsWith('{')) return { decoder: stored }; // Legacy single-device value
+  if (!stored.startsWith('{')) return { decoder: [stored] }; // Legacy single-device value
   try {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    const result: DeviceMap = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (Array.isArray(value)) {
+        result[key] = value.map(String);
+      } else if (typeof value === 'string') {
+        result[key] = [value];
+      }
+    }
+    return result;
   } catch {
     return {};
   }

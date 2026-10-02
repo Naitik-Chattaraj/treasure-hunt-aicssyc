@@ -8,6 +8,9 @@ export async function POST(req: NextRequest) {
     if (token) {
       const payload = await verifyTeamToken(token);
       if (payload?.teamId && payload?.deviceId) {
+        const teamId: string = payload.teamId;
+        const deviceId: string = payload.deviceId;
+        const operativeRole = payload.operativeRole || 'Base Decoder';
         const primaryRoute = payload.assignedRoute === 2 ? 2 : 1;
         let db = getSupabaseAdmin(primaryRoute);
 
@@ -15,7 +18,7 @@ export async function POST(req: NextRequest) {
           let { data: team } = await db
             .from('teams')
             .select('id, device_id')
-            .eq('id', payload.teamId)
+            .eq('id', teamId)
             .maybeSingle();
 
           if (!team && isRoute2Configured()) {
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
               const { data: altTeam } = await altDb
                 .from('teams')
                 .select('id, device_id')
-                .eq('id', payload.teamId)
+                .eq('id', teamId)
                 .maybeSingle();
               if (altTeam) {
                 team = altTeam;
@@ -34,13 +37,37 @@ export async function POST(req: NextRequest) {
           }
 
           if (team?.device_id && team.device_id.startsWith('{')) {
-            const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
-            // Remove only this device's entry, without overwriting a concurrent login for the other role
-            await updateDeviceMap(db, team.id, team.device_id, (map) => {
-              if (map[roleKey] !== payload.deviceId) return false;
-              delete map[roleKey];
-              return true;
-            });
+            const roleKey = operativeRole === 'Field Scout' ? 'scout' : 'decoder';
+            let rpcSuccess = false;
+
+            // Try Supabase RPC first
+            try {
+              const { error: rpcErr } = await db.rpc('remove_operative_session', {
+                p_team_id: team.id,
+                p_role: operativeRole,
+                p_device_id: deviceId,
+              });
+              if (!rpcErr) rpcSuccess = true;
+            } catch {
+              rpcSuccess = false;
+            }
+
+            // Fallback to updateDeviceMap
+            if (!rpcSuccess) {
+              await updateDeviceMap(db, team.id, team.device_id, (map) => {
+                const existing = map[roleKey];
+                if (Array.isArray(existing)) {
+                  if (!existing.includes(deviceId)) return false;
+                  map[roleKey] = existing.filter((id) => id !== deviceId);
+                  return true;
+                }
+                if (existing === deviceId) {
+                  delete map[roleKey];
+                  return true;
+                }
+                return false;
+              });
+            }
           }
         }
       }

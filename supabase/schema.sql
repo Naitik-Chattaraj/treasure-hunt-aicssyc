@@ -172,8 +172,7 @@ BEGIN
     END IF;
 END $$;
 
--- 11. RPC FUNCTIONS
-CREATE OR REPLACE FUNCTION public.claim_attempt(team_id UUID, lock_seconds INTEGER)
+CREATE OR REPLACE FUNCTION public.claim_attempt(team_id UUID, lock_seconds INTEGER DEFAULT 1)
 RETURNS UUID AS $$
 DECLARE
   returned_id UUID;
@@ -186,6 +185,168 @@ BEGIN
   RETURN returned_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.claim_attempt(UUID, INTEGER) TO authenticated, service_role, anon;
+
+-- ==============================================================================
+-- 10B. SQUAD ROSTER INTEGRITY (2 Base Decoders + 2-3 Field Scouts)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.validate_team_roster()
+RETURNS TRIGGER AS $$
+DECLARE
+    decoder_count INT;
+    scout_count   INT;
+    total_count   INT;
+BEGIN
+    IF NEW.members IS NULL OR jsonb_typeof(NEW.members) != 'array' OR jsonb_array_length(NEW.members) = 0 THEN
+        RETURN NEW;
+    END IF;
+
+    total_count := jsonb_array_length(NEW.members);
+    IF total_count < 4 OR total_count > 5 THEN
+        RAISE EXCEPTION 'A team must have between 4 and 5 members. Current count: %', total_count;
+    END IF;
+
+    SELECT 
+        COUNT(*) FILTER (WHERE lower(COALESCE(elem->>'role', '')) LIKE '%decoder%'),
+        COUNT(*) FILTER (WHERE lower(COALESCE(elem->>'role', '')) LIKE '%scout%')
+    INTO decoder_count, scout_count
+    FROM jsonb_array_elements(NEW.members) AS elem;
+
+    IF decoder_count <> 2 THEN
+        RAISE EXCEPTION 'Invalid squad: A team must have exactly 2 Base Decoders (Found: %)', decoder_count;
+    END IF;
+
+    IF scout_count < 2 OR scout_count > 3 THEN
+        RAISE EXCEPTION 'Invalid squad: A team must have 2 or 3 Field Scouts (Found: %)', scout_count;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_team_roster ON public.teams;
+CREATE TRIGGER trg_validate_team_roster
+    BEFORE INSERT OR UPDATE OF members ON public.teams
+    FOR EACH ROW
+    EXECUTE FUNCTION public.validate_team_roster();
+
+-- ==============================================================================
+-- 10C. CONCURRENT OPERATIVE SESSION REGISTRATION (Max 2 Decoders, Max 3 Scouts)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.register_operative_session(
+    p_team_id UUID,
+    p_role TEXT,
+    p_device_id TEXT
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_role_key     TEXT;
+    v_max_devices  INT;
+    v_devices_json JSONB;
+    v_role_array   JSONB;
+    v_clean_array  JSONB;
+BEGIN
+    IF lower(p_role) LIKE '%decoder%' THEN
+        v_role_key    := 'decoder';
+        v_max_devices := 2; -- Exactly up to 2 Base Decoders simultaneously
+    ELSIF lower(p_role) LIKE '%scout%' THEN
+        v_role_key    := 'scout';
+        v_max_devices := 3; -- Up to 3 Field Scouts simultaneously
+    ELSE
+        RAISE EXCEPTION 'Unrecognized operative role: %', p_role;
+    END IF;
+
+    SELECT COALESCE(
+        CASE 
+            WHEN device_id IS NOT NULL AND device_id ~ '^\s*\{' THEN device_id::jsonb 
+            ELSE '{}'::jsonb 
+        END,
+        '{}'::jsonb
+    )
+    INTO v_devices_json
+    FROM public.teams
+    WHERE id = p_team_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Team not found with ID: %', p_team_id;
+    END IF;
+
+    IF jsonb_typeof(v_devices_json -> v_role_key) = 'array' THEN
+        v_role_array := v_devices_json -> v_role_key;
+    ELSIF v_devices_json ? v_role_key AND (v_devices_json ->> v_role_key) IS NOT NULL THEN
+        v_role_array := jsonb_build_array(v_devices_json ->> v_role_key);
+    ELSE
+        v_role_array := '[]'::jsonb;
+    END IF;
+
+    SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+    INTO v_clean_array
+    FROM jsonb_array_elements(v_role_array) AS elem
+    WHERE elem #>> '{}' <> p_device_id;
+
+    v_clean_array := v_clean_array || jsonb_build_array(p_device_id);
+
+    WHILE jsonb_array_length(v_clean_array) > v_max_devices LOOP
+        v_clean_array := v_clean_array - 0;
+    END LOOP;
+
+    v_devices_json := jsonb_set(v_devices_json, ARRAY[v_role_key], v_clean_array, true);
+
+    UPDATE public.teams
+    SET device_id = v_devices_json::text,
+        updated_at = now()
+    WHERE id = p_team_id;
+
+    RETURN v_devices_json;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.register_operative_session(UUID, TEXT, TEXT) TO authenticated, service_role, anon;
+
+CREATE OR REPLACE FUNCTION public.remove_operative_session(
+    p_team_id UUID,
+    p_role TEXT,
+    p_device_id TEXT
+)
+RETURNS VOID AS $$
+DECLARE
+    v_role_key     TEXT;
+    v_devices_json JSONB;
+    v_clean_array  JSONB;
+BEGIN
+    v_role_key := CASE WHEN lower(p_role) LIKE '%decoder%' THEN 'decoder' ELSE 'scout' END;
+
+    SELECT COALESCE(
+        CASE 
+            WHEN device_id IS NOT NULL AND device_id ~ '^\s*\{' THEN device_id::jsonb 
+            ELSE '{}'::jsonb 
+        END,
+        '{}'::jsonb
+    )
+    INTO v_devices_json
+    FROM public.teams
+    WHERE id = p_team_id
+    FOR UPDATE;
+
+    IF jsonb_typeof(v_devices_json -> v_role_key) = 'array' THEN
+        SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+        INTO v_clean_array
+        FROM jsonb_array_elements(v_devices_json -> v_role_key) AS elem
+        WHERE elem #>> '{}' <> p_device_id;
+
+        v_devices_json := jsonb_set(v_devices_json, ARRAY[v_role_key], v_clean_array, true);
+
+        UPDATE public.teams
+        SET device_id = v_devices_json::text,
+            updated_at = now()
+        WHERE id = p_team_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.remove_operative_session(UUID, TEXT, TEXT) TO authenticated, service_role, anon;
 
 -- ==============================================================================
 -- 11. SEED 24 CHECKPOINTS (ROUTE 1: 1..12, ROUTE 2: 13..24) WITH SHA-256 CODES
