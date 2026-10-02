@@ -75,14 +75,14 @@ export default function AdminPrintQRPage() {
     .sort((a, b) => a.routeId - b.routeId || a.stage - b.stage);
 
   return (
-    <main className="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8 font-mono">
+    <main className="min-h-screen bg-sunken text-ink p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         
         {/* Navigation & Print Controls */}
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-gray-800 pb-4 print:hidden">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-line pb-4 print:hidden">
           <Link 
             href="/admin" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-cyan-400 border border-cyan-500/30 text-xs font-bold uppercase transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-surface-2 hover:bg-surface-2 text-accent border border-accent/30 text-xs font-bold uppercase transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Admin Dashboard
@@ -91,7 +91,7 @@ export default function AdminPrintQRPage() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold uppercase transition-colors cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent text-on-primary text-xs font-bold uppercase transition-colors cursor-pointer shadow-card"
             >
               <Printer className="w-4 h-4" />
               {selectedRoute === 'route1' 
@@ -105,29 +105,29 @@ export default function AdminPrintQRPage() {
 
         {/* Page Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-accent text-xs font-bold uppercase tracking-wider mb-1">
             <Compass className="w-4 h-4" />
             <span>Dual Route Architecture</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-ink">
             AICSSYC 2026 // Physical QR Checkpoints Sheet
           </h1>
-          <p className="text-gray-400 text-xs leading-relaxed max-w-3xl">
+          <p className="text-muted text-xs leading-relaxed max-w-3xl">
             Two separate 12-checkpoint campus routes are deployed simultaneously. Teams are randomly assigned to either Route 1 or Route 2. Scanning a QR code verifies that the code matches the team&apos;s assigned route and current stage sequence before unlocking challenges.
           </p>
         </div>
 
         {/* Route Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-gray-800 pb-4 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-line pb-4 print:hidden">
           <button
             onClick={() => setSelectedRoute('route1')}
             className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
               selectedRoute === 'route1'
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_15px_rgba(0,240,255,0.4)]'
-                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-cyan-500/50'
+                ? 'bg-accent text-on-primary border-accent shadow-card'
+                : 'bg-surface-2/80 text-ink border-line hover:border-accent/50'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <span className="w-2 h-2 rounded-full bg-accent"></span>
             Route 1: Hippocrates Loop (12 QR Codes)
           </button>
 
@@ -135,11 +135,11 @@ export default function AdminPrintQRPage() {
             onClick={() => setSelectedRoute('route2')}
             className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
               selectedRoute === 'route2'
-                ? 'bg-purple-500 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-purple-500/50'
+                ? 'bg-route-2 text-on-primary border-route-2 shadow-card'
+                : 'bg-surface-2/80 text-ink border-line hover:border-route-2/50'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span className="w-2 h-2 rounded-full bg-route-2"></span>
             Route 2: Hospital to Arts Loop (12 QR Codes)
           </button>
 
@@ -147,8 +147,8 @@ export default function AdminPrintQRPage() {
             onClick={() => setSelectedRoute('all')}
             className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
               selectedRoute === 'all'
-                ? 'bg-yellow-400 text-black border-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.4)]'
-                : 'bg-gray-800/80 text-gray-300 border-gray-700 hover:border-yellow-400/50'
+                ? 'bg-primary text-on-primary border-primary shadow-card'
+                : 'bg-surface-2/80 text-ink border-line hover:border-primary/50'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -157,25 +157,25 @@ export default function AdminPrintQRPage() {
         </div>
 
         {/* Route Banner */}
-        <div className="mb-6 p-3 bg-gray-800/60 border border-gray-700 text-xs flex flex-wrap justify-between items-center gap-2">
+        <div className="mb-6 p-3 bg-surface-2/60 border border-line text-xs flex flex-wrap justify-between items-center gap-2">
           <div>
-            <span className="text-gray-400 font-bold uppercase">Displaying: </span>
-            <span className="font-bold text-white uppercase">
+            <span className="text-muted font-bold uppercase">Displaying: </span>
+            <span className="font-bold text-ink uppercase">
               {selectedRoute === 'route1' && 'Route 1 // Hippocrates Hall to Hippocrates Hall (12 Nodes)'}
               {selectedRoute === 'route2' && 'Route 2 // SRM Hospital to FSH Arts College (12 Nodes)'}
               {selectedRoute === 'all' && 'All Routes // 24 Checkpoints (12 for Route 1, 12 for Route 2)'}
             </span>
           </div>
-          <span className="text-[11px] text-cyan-400 font-mono bg-cyan-950/60 border border-cyan-800 px-2 py-0.5">
+          <span className="text-xs text-accent font-mono bg-accent/10 border border-accent/50 rounded-md px-2 py-0.5">
             {displayedCheckpoints.length} QR Codes Active
           </span>
         </div>
         
         {loading && (
-          <div className="p-4 text-xs text-cyan-400 border border-gray-700 bg-gray-800/60">Loading checkpoints from database...</div>
+          <div className="p-4 text-xs text-accent border border-line bg-surface-2/60">Loading checkpoints from database...</div>
         )}
         {loadError && (
-          <div className="p-4 text-xs text-red-400 border border-red-500/50 bg-red-950/40">{loadError}</div>
+          <div className="p-4 text-xs text-danger border border-danger/50 bg-danger/10 rounded-lg">{loadError}</div>
         )}
 
         {/* QR Code Cards Grid */}
@@ -187,33 +187,33 @@ export default function AdminPrintQRPage() {
                 key={cp.id} 
                 className={`border p-5 flex flex-col items-center rounded shadow-md relative transition-all ${
                   isRoute1 
-                    ? 'border-cyan-500/40 bg-gray-800/90 shadow-[0_4px_20px_rgba(0,240,255,0.06)]' 
-                    : 'border-purple-500/40 bg-gray-800/90 shadow-[0_4px_20px_rgba(168,85,247,0.06)]'
+                    ? 'border-accent/40 bg-surface-2/90 shadow-card' 
+                    : 'border-route-2/40 bg-surface-2/90 shadow-card'
                 }`}
               >
                 {/* Header row */}
                 <div className="flex justify-between w-full items-center mb-3">
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider ${
-                      isRoute1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
+                    <span className={`text-xs px-2 py-0.5 font-bold uppercase tracking-wider ${
+                      isRoute1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
                     }`}>
                       ROUTE 0{cp.routeId}
                     </span>
-                    <span className="text-[10px] bg-black/60 text-yellow-300 border border-gray-700 px-1.5 py-0.5 font-bold uppercase">
+                    <span className="text-xs bg-sunken text-primary border border-line px-1.5 py-0.5 font-bold uppercase">
                       NODE 0{cp.stage}
                     </span>
                   </div>
 
-                  <span className="text-[10px] text-gray-400 font-mono uppercase">
+                  <span className="text-xs text-muted font-mono uppercase">
                     ID #{cp.id.toString().padStart(2, '0')}
                   </span>
                 </div>
                 
-                <h2 className="text-sm font-bold mb-1 text-white text-center min-h-[2.5rem] flex items-center justify-center">
+                <h2 className="text-sm font-bold mb-1 text-ink text-center min-h-[2.5rem] flex items-center justify-center">
                   {cp.title}
                 </h2>
 
-                <div className="text-[11px] text-yellow-400/90 font-bold uppercase text-center mb-3">
+                <div className="text-xs text-primary/90 font-bold uppercase text-center mb-3">
                   {cp.area}
                 </div>
                 
@@ -229,19 +229,19 @@ export default function AdminPrintQRPage() {
                 </div>
                 
                 {/* Card Metadata Details */}
-                <div className="w-full text-left text-xs bg-gray-900/90 p-3 border border-gray-700/80 rounded space-y-2">
+                <div className="w-full text-left text-xs bg-sunken/90 p-3 border border-line/80 rounded space-y-2">
                   <div>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] text-gray-400 uppercase font-bold">SHA-256 Token:</span>
+                      <span className="text-xs text-muted uppercase font-bold">SHA-256 Token:</span>
                       <button
                         onClick={() => handleCopy(cp.id, cp.qrHash || '')}
-                        className="text-[10px] text-cyan-400 hover:text-white flex items-center gap-1 cursor-pointer bg-gray-800 px-2 py-0.5 border border-gray-700 transition-colors"
+                        className="text-xs text-accent hover:text-ink flex items-center gap-1 cursor-pointer bg-surface-2 px-2 py-0.5 border border-line transition-colors"
                         title="Copy SHA-256 token to clipboard"
                       >
                         {copiedId === cp.id ? (
                           <>
-                            <Check className="w-3 h-3 text-green-400" />
-                            <span className="text-green-400">Copied!</span>
+                            <Check className="w-3 h-3 text-success" />
+                            <span className="text-success">Copied!</span>
                           </>
                         ) : (
                           <>
@@ -251,14 +251,14 @@ export default function AdminPrintQRPage() {
                         )}
                       </button>
                     </div>
-                    <code className="text-[10px] text-yellow-300 break-all block bg-black/70 p-1.5 border border-gray-800 font-mono leading-tight">
+                    <code className="text-xs text-primary break-all block bg-sunken p-1.5 border border-line font-mono leading-tight">
                       {cp.qrHash}
                     </code>
                   </div>
 
-                  <div className="text-[11px] text-gray-400 pt-1 border-t border-gray-800">
-                    <span className="text-[10px] text-gray-500 uppercase font-bold block">Physical Clue:</span>
-                    <span className="text-gray-300 text-xs leading-relaxed">{cp.clue}</span>
+                  <div className="text-xs text-muted pt-1 border-t border-line">
+                    <span className="text-xs text-muted uppercase font-bold block">Physical Clue:</span>
+                    <span className="text-ink text-xs leading-relaxed">{cp.clue}</span>
                   </div>
                 </div>
               </div>

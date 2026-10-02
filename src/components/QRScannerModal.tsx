@@ -13,8 +13,6 @@ import {
   CheckCircle2,
   Zap,
   ZapOff,
-  Crosshair,
-  Gauge
 } from 'lucide-react';
 
 // Configure Web Worker path for browsers without native BarcodeDetector
@@ -265,43 +263,37 @@ export default function QRScannerModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-colors font-mono">
-      <div className="w-full max-w-md bg-cyber-panel cyber-panel-border border-2 border-cyber-yellow shadow-[0_0_25px_rgba(252,238,10,0.25)] p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto">
-        
-        {/* Close Button */}
-        <button 
-          onClick={() => {
-            cleanupScanner();
-            onClose();
-          }} 
-          className="absolute top-4 right-4 text-cyber-muted hover:text-cyber-yellow transition-colors cursor-pointer"
-          aria-label="Close Scanner"
-        >
-          <X className="w-6 h-6" />
-        </button>
+  const closeScanner = () => {
+    cleanupScanner();
+    onClose();
+  };
 
-        {/* Modal Header & Controls */}
-        <div className="flex justify-between items-center mb-3 pr-8">
-          <h2 className="text-lg font-bold text-cyber-yellow tracking-widest uppercase flex items-center gap-2">
-            <Camera className="w-5 h-5 text-cyber-yellow" />
-            Checkpoint Scanner
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="scanner-title"
+        className="relative max-h-[94dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-4 shadow-raised sm:max-w-md sm:rounded-xl sm:p-5"
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 id="scanner-title" className="flex items-center gap-2 text-lg font-bold">
+            <Camera className="h-5 w-5 text-primary" aria-hidden="true" />
+            Scan checkpoint
           </h2>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {torchSupported && !scanFailed && (
               <button
                 type="button"
                 onClick={handleToggleTorch}
-                className={`flex items-center gap-1 text-[11px] px-2.5 py-1 border transition-all cursor-pointer font-bold ${
-                  torchOn 
-                    ? 'bg-cyber-yellow text-black border-cyber-yellow shadow-[0_0_12px_rgba(252,238,10,0.6)]' 
-                    : 'bg-cyber-darker border-cyber-yellow/40 text-cyber-yellow hover:bg-cyber-yellow/20'
+                aria-pressed={torchOn}
+                className={`flex h-11 w-11 items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                  torchOn ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface text-muted hover:text-ink'
                 }`}
-                title={torchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On'}
+                aria-label={torchOn ? 'Turn flashlight off' : 'Turn flashlight on'}
               >
-                {torchOn ? <ZapOff className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5 text-cyber-yellow" />}
-                <span>{torchOn ? 'LIGHT ON' : 'TORCH'}</span>
+                {torchOn ? <ZapOff className="h-5 w-5" aria-hidden="true" /> : <Zap className="h-5 w-5" aria-hidden="true" />}
               </button>
             )}
 
@@ -309,148 +301,128 @@ export default function QRScannerModal({
               <button
                 type="button"
                 onClick={handleFlipCamera}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 bg-cyber-darker border border-cyber-yellow/40 text-cyber-yellow hover:bg-cyber-yellow hover:text-black transition-colors cursor-pointer"
-                title="Switch Camera"
+                className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-ink cursor-pointer"
+                aria-label="Switch camera"
               >
-                <FlipHorizontal className="w-3.5 h-3.5" />
-                <span>FLIP</span>
+                <FlipHorizontal className="h-5 w-5" aria-hidden="true" />
               </button>
             )}
+
+            <button 
+              onClick={closeScanner}
+              className="flex h-11 w-11 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+              aria-label="Close scanner"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
 
-        {/* Live Camera Viewfinder (Direct HTML5 Video element) */}
-        <div className="relative mb-3 border-2 border-cyber-yellow/80 overflow-hidden bg-black min-h-[260px] max-h-[340px] flex items-center justify-center">
-          
+        {/* Live camera viewfinder; overlays stay white-on-black so they read against any video */}
+        <div className="relative mb-3 flex aspect-square max-h-[55dvh] w-full items-center justify-center overflow-hidden rounded-lg bg-black">
           <video 
             ref={videoRef}
-            className="w-full h-full object-cover min-h-[260px] max-h-[340px]"
+            className="h-full w-full object-cover"
             playsInline
             muted
           />
 
-          {/* State Overlays */}
           {scanState === 'verifying' && (
-            <div className="absolute inset-0 bg-cyber-yellow/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
-              <RefreshCw className="w-16 h-16 text-cyber-yellow mb-2 animate-spin drop-shadow-[0_0_12px_rgba(252,238,10,0.8)]" />
-              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-cyber-yellow text-cyber-yellow shadow-lg">
-                VERIFYING...
-              </div>
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 text-white" role="status">
+              <RefreshCw className="mb-2 h-12 w-12 animate-spin" aria-hidden="true" />
+              <div className="rounded-md bg-black/80 px-3 py-1.5 text-sm font-semibold">Checking code…</div>
             </div>
           )}
 
           {scanState === 'success' && (
-            <div className="absolute inset-0 bg-green-500/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
-              <CheckCircle2 className="w-16 h-16 text-green-300 mb-2 drop-shadow-[0_0_12px_rgba(74,222,128,0.8)]" />
-              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-green-400 text-green-300 shadow-lg">
-                QR CODE VERIFIED!
-              </div>
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-success/40 text-white" role="status">
+              <CheckCircle2 className="mb-2 h-14 w-14" aria-hidden="true" />
+              <div className="rounded-md bg-black/80 px-3 py-1.5 text-sm font-semibold">QR code accepted</div>
             </div>
           )}
-          
+
           {scanState === 'error' && (
-            <div className="absolute inset-0 bg-red-500/40 flex flex-col items-center justify-center text-white backdrop-blur-xs z-30 animate-pulse">
-              <X className="w-16 h-16 text-red-400 mb-2 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)]" />
-              <div className="text-sm font-bold uppercase tracking-wider bg-black/90 px-3 py-1.5 border border-red-500 text-red-400 shadow-lg">
-                INVALID QR
-              </div>
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-danger/40 text-white" role="alert">
+              <X className="mb-2 h-14 w-14" aria-hidden="true" />
+              <div className="rounded-md bg-black/80 px-3 py-1.5 text-sm font-semibold">Not a valid checkpoint code</div>
             </div>
           )}
 
-          {/* Cyberpunk HUD Reticle & Laser Sweep */}
           {scanState === 'idle' && (
-            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 z-20">
-              <div className="flex justify-between items-center text-cyber-yellow/90 text-[10px] bg-black/75 px-2 py-1 border border-cyber-yellow/30">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span className={`w-2 h-2 rounded-full ${isScanningActive ? 'bg-cyber-green animate-ping' : 'bg-cyber-yellow'}`}></span>
-                  {isScanningActive ? 'SENSOR ACTIVE' : 'INITIALIZING...'}
-                </span>
-                <span className="text-[9px] text-cyber-cyan flex items-center gap-1">
-                  <Gauge className="w-3 h-3 text-cyber-cyan" />
-                  TURBO DECODER
-                </span>
+            <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-3">
+              <span className="flex w-fit items-center gap-1.5 rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
+                <span className={`h-2 w-2 rounded-full ${isScanningActive ? 'bg-success' : 'bg-white/60'}`} aria-hidden="true" />
+                {isScanningActive ? 'Camera on · scanning' : 'Starting camera…'}
+              </span>
+
+              <div className="relative mx-auto my-auto h-52 w-52">
+                <div className="absolute -left-0.5 -top-0.5 h-6 w-6 rounded-tl-lg border-l-4 border-t-4 border-white" />
+                <div className="absolute -right-0.5 -top-0.5 h-6 w-6 rounded-tr-lg border-r-4 border-t-4 border-white" />
+                <div className="absolute -bottom-0.5 -left-0.5 h-6 w-6 rounded-bl-lg border-b-4 border-l-4 border-white" />
+                <div className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-br-lg border-b-4 border-r-4 border-white" />
+                {isScanningActive && <div className="laser-beam absolute left-3 right-3 h-0.5 rounded-full bg-primary" />}
               </div>
 
-              {/* Central Target Reticle & High-speed Laser Sweep */}
-              <div className="relative flex items-center justify-center my-auto">
-                <div className="relative w-48 h-48 rounded border border-cyber-yellow/40 flex items-center justify-center shadow-[0_0_20px_rgba(252,238,10,0.15)]">
-                  {/* Corner Reticle Accents */}
-                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-cyber-yellow"></div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-cyber-yellow"></div>
-                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-cyber-yellow"></div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-cyber-yellow"></div>
-                  
-                  {/* Center Crosshair */}
-                  <Crosshair className="w-6 h-6 text-cyber-yellow/40" />
-
-                  {/* Laser Sweep Beam */}
-                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-cyber-cyan to-transparent shadow-[0_0_10px_#00f0ff] laser-beam pointer-events-none"></div>
-                </div>
-              </div>
-
-              <div className="text-center text-[10px] text-cyber-yellow font-bold tracking-widest bg-black/85 py-1 border-t border-cyber-yellow/30">
-                ALIGN QR CODE IN RETICLE
-              </div>
+              <p className="mx-auto rounded-md bg-black/70 px-3 py-1 text-center text-sm text-white">
+                Fit the QR code inside the frame
+              </p>
             </div>
           )}
         </div>
 
-        {/* Camera Error Alert */}
         {scanFailed && (
-          <div className="bg-cyber-pink/20 border border-cyber-pink text-cyber-pink px-3 py-2 text-xs mb-3 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <div className="text-[11px] leading-relaxed">{error}</div>
+          <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-danger/50 bg-danger/10 px-3 py-2.5 text-sm text-danger">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div>{error}</div>
           </div>
         )}
 
-        {/* Manual Input & Image Upload */}
-        <div className="space-y-3 pt-1 border-t border-cyber-border">
-          <form onSubmit={handleManualSubmit} className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase text-cyber-cyan font-bold tracking-wider flex items-center gap-1">
-                <KeyRound className="w-3 h-3 text-cyber-yellow" />
-                Or Paste / Type Code Directly
-              </label>
-              <span className="text-[9px] text-gray-400">If camera cannot focus</span>
-            </div>
-
+        <div className="space-y-3 border-t border-line pt-3">
+          <form onSubmit={handleManualSubmit}>
+            <label htmlFor="scannerManualCode" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+              <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+              Camera won&apos;t focus? Type the code
+            </label>
             <div className="flex gap-2">
               <input
+                id="scannerManualCode"
                 type="text"
+                autoComplete="off"
+                spellCheck={false}
                 value={manualCode}
                 onChange={e => setManualCode(e.target.value)}
-                placeholder="Paste SHA-256 token"
-                className="flex-1 bg-cyber-darker border border-cyber-border focus:border-cyber-cyan text-foreground px-3 py-2 text-xs font-mono outline-none uppercase tracking-wider"
+                placeholder="Code printed under the QR"
+                className="h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-sunken px-3 font-mono text-base text-ink placeholder:font-sans placeholder:text-muted outline-none transition-colors focus:border-primary focus:shadow-glow sm:text-sm"
               />
               <button 
                 type="submit"
                 disabled={!manualCode.trim()}
-                className="bg-cyber-yellow text-black px-4 font-bold text-xs uppercase hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
+                className="h-11 shrink-0 rounded-md bg-primary btn-treasure px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
               >
                 Submit
               </button>
             </div>
           </form>
 
-          <div className="flex items-center justify-between pt-1">
-            <label className="text-[11px] text-gray-400 hover:text-cyber-cyan flex items-center gap-1.5 cursor-pointer">
-              <Upload className="w-3.5 h-3.5" />
-              <span>Upload QR Photo from Gallery</span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-1 text-sm text-muted transition-colors hover:text-ink focus-within:ring-2 focus-within:ring-primary">
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              Upload a photo of the QR
               <input 
                 type="file" 
                 accept="image/*"
                 onChange={handleFileUpload}
-                className="hidden"
+                className="sr-only"
               />
             </label>
 
             <button
               type="button"
               onClick={() => startScanner()}
-              className="text-[11px] text-cyber-yellow hover:underline flex items-center gap-1 cursor-pointer"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 text-sm text-muted transition-colors hover:text-ink cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3" />
-              Reset Camera
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Restart camera
             </button>
           </div>
         </div>
@@ -458,12 +430,12 @@ export default function QRScannerModal({
 
       <style jsx global>{`
         @keyframes laserSweep {
-          0% { top: 12%; opacity: 0.3; }
-          50% { top: 88%; opacity: 1; }
-          100% { top: 12%; opacity: 0.3; }
+          0% { top: 8%; opacity: 0.4; }
+          50% { top: 92%; opacity: 1; }
+          100% { top: 8%; opacity: 0.4; }
         }
         .laser-beam {
-          animation: laserSweep 1.6s ease-in-out infinite;
+          animation: laserSweep 1.8s ease-in-out infinite;
         }
       `}</style>
     </div>

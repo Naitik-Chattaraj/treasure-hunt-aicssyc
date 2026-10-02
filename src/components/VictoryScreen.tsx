@@ -3,8 +3,9 @@
 import { useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { HuntProgress } from '@/types/hunt';
-import { Trophy, CheckCircle, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import TreasureChest from '@/components/TreasureChest';
 
 export default function VictoryScreen({ 
   progress, 
@@ -24,12 +25,17 @@ export default function VictoryScreen({
   }, [progress]);
 
   useEffect(() => {
+    // Confetti in the active theme's colours; skipped for users who prefer reduced motion
+    const css = getComputedStyle(document.documentElement);
+    const colors = ['--primary', '--accent', '--route-2'].map((v) => css.getPropertyValue(v).trim()).filter(Boolean);
+
     // Initial big burst
     confetti({
       particleCount: 100,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#00F0FF', '#FCEE0A', '#FF003C']
+      colors,
+        disableForReducedMotion: true
     });
 
     // Fire celebratory confetti sequence periodically for 5 seconds
@@ -47,14 +53,16 @@ export default function VictoryScreen({
         angle: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: ['#00F0FF', '#FCEE0A', '#FF003C']
+        colors,
+        disableForReducedMotion: true
       });
       confetti({
         particleCount: 15,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
-        colors: ['#00F0FF', '#FCEE0A', '#FF003C']
+        colors,
+        disableForReducedMotion: true
       });
     };
 
@@ -67,49 +75,40 @@ export default function VictoryScreen({
   }, []);
 
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex items-center justify-center p-4 relative overflow-hidden font-mono transition-colors">
-      <div className="overlay-scanlines"></div>
-      
-      <div className="absolute top-4 right-4 z-20">
+    <main className="bg-map flex min-h-dvh items-center justify-center px-4 pt-16 pb-10 text-ink sm:py-16">
+      <div className="fixed top-3 right-3 z-20 sm:top-4 sm:right-4">
         <ThemeToggle />
       </div>
 
-      <div className="z-10 w-full max-w-lg bg-cyber-panel cyber-panel-border border-2 border-cyber-yellow p-8 sm:p-10 text-center shadow-[0_0_35px_rgba(252,238,10,0.3)]">
-        
-        <Trophy className="w-16 h-16 sm:w-20 sm:h-20 text-cyber-yellow mx-auto mb-4 animate-bounce" />
-        
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 tracking-widest text-cyber-cyan cyber-crt-text uppercase">
-          TREASURE SECURED!
-        </h1>
-        
-        <h2 className="text-lg sm:text-xl text-foreground font-bold mb-6 uppercase tracking-widest">
-          TEAM: {teamName}
-        </h2>
+      <div className="parchment w-full max-w-lg rounded-xl border border-primary/50 p-6 text-center sm:p-10">
+        <TreasureChest open className="mx-auto mb-2 h-32 w-36 sm:h-36 sm:w-40" />
 
-        <div className="bg-cyber-darker border border-cyber-border p-5 mb-6 text-left space-y-4 relative overflow-hidden">
-          {/* Decorative watermark */}
-          <ShieldCheck className="absolute -bottom-4 -right-4 w-32 h-32 text-cyber-yellow opacity-10 pointer-events-none" />
-          
+        <h1 className="title-treasure text-4xl sm:text-5xl">Treasure found!</h1>
+        <p className="mt-2 text-lg text-muted">
+          Well played, <span className="font-semibold text-ink">{teamName}</span>
+        </p>
+
+        <div className="mt-6 space-y-4 rounded-lg border border-line bg-sunken p-5 text-left">
           <div>
-            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Total Time</div>
-            <div className="text-2xl sm:text-3xl text-cyber-yellow font-extrabold tracking-wider">{elapsed}</div>
+            <div className="text-sm text-muted">Total time</div>
+            <div className="font-mono text-3xl font-bold tabular-nums text-primary sm:text-4xl">{elapsed}</div>
           </div>
-          
+
           <div>
-            <div className="text-[11px] text-cyber-cyan uppercase mb-1 font-bold">Victory Code</div>
-            <div className="text-xs sm:text-sm text-foreground font-mono font-bold bg-black/40 p-2.5 border border-cyber-border/80 break-all select-all">
+            <div className="text-sm text-muted">Victory code</div>
+            <div className="mt-1 break-all rounded-md border border-line-strong bg-surface p-3 font-mono text-base font-semibold select-all">
               {progress.completionToken || 'WIN-VERIFIED-2026'}
             </div>
-            <p className="text-[10px] text-cyber-muted mt-2 uppercase">
-              Present this token to the AICSSYC organizers at the final station to claim your prize.
+            <p className="mt-2 text-sm text-muted">
+              Show this code to the AICSSYC organizers at the final station to claim your prize.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-cyber-cyan font-bold tracking-widest text-sm animate-pulse">
-          <CheckCircle className="w-4 h-4" />
-          <span>ALL 12 CHECKPOINTS CLEARED</span>
-        </div>
+        <p className="mt-6 flex items-center justify-center gap-2 font-semibold text-success">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+          All 12 checkpoints cleared
+        </p>
       </div>
     </main>
   );

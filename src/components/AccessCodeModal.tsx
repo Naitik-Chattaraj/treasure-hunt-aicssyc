@@ -1,18 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Copy, 
-  Check, 
-  Users, 
-  ArrowRight, 
-  AlertTriangle,
-  Sparkles,
-  KeyRound,
-  BrainCircuit,
-  Footprints
-} from 'lucide-react';
+import { AlertTriangle, ArrowRight, BrainCircuit, Check, Copy, Footprints, KeyRound } from 'lucide-react';
+import TreasureChest from '@/components/TreasureChest';
 
 interface AccessCodeModalProps {
   accessCode: string;
@@ -64,134 +54,93 @@ export default function AccessCodeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md font-mono transition-colors animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-cyber-panel cyber-panel-border border-2 border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)] relative overflow-hidden flex flex-col max-h-[95vh]">
-        {/* Glowing Top Accent Line */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-cyber-cyan via-green-400 to-cyber-yellow animate-pulse" />
-
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
-          {/* Header Badge & Title */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center p-3 bg-green-500/15 border border-green-500/50 rounded-full mb-1 shadow-[0_0_20px_rgba(34,197,94,0.35)]">
-              <ShieldCheck className="w-10 h-10 text-green-400 animate-pulse" />
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-green-400 font-bold uppercase tracking-widest">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>TEAM AUTHORIZED & APPROVED</span>
-            </div>
-
-            <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-wider uppercase">
-              MISSION CLEARANCE GRANTED
-            </h2>
-            <p className="text-xs text-cyber-muted leading-relaxed max-w-md mx-auto">
-              Your squad <span className="text-green-400 font-bold">{teamName}</span> has been officially approved by Mission Control.
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="access-code-title"
+    >
+      <div className="parchment flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-primary/50 sm:rounded-xl">
+        <div className="space-y-5 overflow-y-auto p-5 sm:p-6">
+          <header className="text-center">
+            <TreasureChest open className="mx-auto h-24 w-28" />
+            <p className="mt-1 text-sm font-semibold text-success">Team approved</p>
+            <h2 id="access-code-title" className="title-treasure mt-1 text-3xl sm:text-4xl">You&apos;re in!</h2>
+            <p className="mt-2 text-sm text-muted">
+              <span className="font-semibold text-ink">{teamName}</span> has been approved by the organizers.
             </p>
-          </div>
+          </header>
 
-          {/* Access Code Highlight Card */}
-          <div className="bg-cyber-darker border-2 border-cyber-cyan p-4 sm:p-5 rounded relative shadow-[0_0_25px_rgba(0,240,255,0.18)] text-center space-y-3">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-cyber-cyan font-bold tracking-widest uppercase">
-              <KeyRound className="w-4 h-4 text-cyber-yellow" />
-              <span>OFFICIAL 6-DIGIT ACCESS CODE</span>
-            </div>
-
-            <p className="text-[11px] text-gray-300">
-              Please copy this code immediately and share it with your squad:
+          <section className="space-y-3 rounded-lg border border-line bg-sunken p-4 text-center" aria-label="Access code">
+            <p className="flex items-center justify-center gap-1.5 text-sm font-semibold">
+              <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+              Your 6-digit access code
             </p>
-
-            {/* Big Code Display */}
-            <div 
-              onClick={handleCopy}
-              className="bg-cyber-card/90 border border-cyber-cyan/40 hover:border-cyber-cyan py-3 px-4 rounded cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.25)] group relative"
-              title="Click to copy code"
-            >
-              <div className="text-3xl sm:text-4xl font-extrabold tracking-[0.3em] sm:tracking-[0.4em] text-cyber-yellow font-mono drop-shadow-[0_0_12px_rgba(252,238,10,0.6)] select-all">
-                {accessCode}
-              </div>
-              <span className="text-[10px] text-cyber-muted group-hover:text-cyber-cyan tracking-wider uppercase mt-1 block">
-                [ Click anywhere on code to copy ]
-              </span>
-            </div>
-
-            {/* Primary Copy Button */}
             <button
               type="button"
               onClick={handleCopy}
-              className={`w-full py-3 px-4 text-xs sm:text-sm font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 rounded border ${
-                copied
-                  ? 'bg-green-500 border-green-400 text-black shadow-[0_0_20px_rgba(34,197,94,0.5)] font-black'
-                  : 'bg-cyber-cyan hover:bg-cyber-blue border-cyber-cyan text-cyber-dark shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:scale-[1.01]'
-              }`}
+              title="Copy access code"
+              className="w-full rounded-md border border-line-strong bg-surface px-4 py-3 transition-colors hover:border-primary cursor-pointer"
             >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-black stroke-[3]" />
-                  <span>COPIED TO CLIPBOARD! ✓</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>COPY ACCESS CODE</span>
-                </>
-              )}
+              <span className="block select-all font-mono text-3xl font-bold tracking-[0.35em] text-primary sm:text-4xl">
+                {accessCode}
+              </span>
+              <span className="mt-1 block text-xs text-muted">Tap the code to copy it</span>
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={`flex h-12 w-full items-center justify-center gap-2 rounded-lg border text-sm font-semibold transition-colors cursor-pointer ${
+                copied ? 'border-success bg-success text-on-primary' : 'border-line-strong bg-surface text-ink hover:border-ink/40'
+              }`}
+              aria-live="polite"
+            >
+              {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+              {copied ? 'Copied' : 'Copy access code'}
+            </button>
+          </section>
 
-          {/* Quick Team Info Badges */}
-          <div className="grid grid-cols-2 gap-2 text-xs bg-cyber-darker p-3 border border-cyber-border rounded">
-            <div className="space-y-0.5">
-              <span className="text-[10px] text-cyber-muted uppercase font-bold">Team Leader</span>
-              <div className="text-foreground font-bold truncate">{teamLead}</div>
+          <dl className="grid grid-cols-2 gap-3 rounded-lg border border-line bg-sunken p-3 text-sm">
+            <div className="min-w-0">
+              <dt className="text-xs text-muted">Team leader</dt>
+              <dd className="truncate font-semibold">{teamLead}</dd>
             </div>
-            <div className="space-y-0.5">
-              <span className="text-[10px] text-cyber-muted uppercase font-bold">Assigned Route</span>
-              <div className="text-cyber-cyan font-bold">
-                ROUTE 0{assignedRoute || 1}
-              </div>
+            <div>
+              <dt className="text-xs text-muted">Route</dt>
+              <dd className={`font-semibold ${(assignedRoute || 1) === 1 ? 'text-route-1' : 'text-route-2'}`}>Route {assignedRoute || 1}</dd>
             </div>
             {operativeRole && (
-              <div className="col-span-2 pt-1 border-t border-cyber-border/60 flex items-center justify-between text-[11px]">
-                <span className="text-cyber-muted">This Device Role:</span>
-                <span className="text-cyber-yellow font-bold flex items-center gap-1">
-                  {operativeRole === 'Field Scout' ? (
-                    <Footprints className="w-3.5 h-3.5 text-cyber-yellow" />
-                  ) : (
-                    <BrainCircuit className="w-3.5 h-3.5 text-cyber-cyan" />
-                  )}
+              <div className="col-span-2 flex items-center justify-between border-t border-line pt-2">
+                <dt className="text-xs text-muted">This device</dt>
+                <dd className="flex items-center gap-1.5 font-semibold">
+                  {operativeRole === 'Field Scout'
+                    ? <Footprints className="h-4 w-4 text-primary" aria-hidden="true" />
+                    : <BrainCircuit className="h-4 w-4 text-accent" aria-hidden="true" />}
                   {operativeRole}
-                </span>
+                </dd>
               </div>
             )}
-          </div>
+          </dl>
 
-          {/* Critical Instructions Callout */}
-          <div className="bg-cyber-darker border-l-4 border-cyber-yellow p-3.5 text-left text-xs space-y-1.5">
-            <div className="flex items-center gap-1.5 text-cyber-yellow font-bold uppercase tracking-wider text-[11px]">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>SQUAD LOGIN INSTRUCTIONS:</span>
-            </div>
-            <ul className="text-gray-300 text-[11px] leading-relaxed space-y-1 pl-1 list-disc list-inside">
-              <li>
-                <strong className="text-white">Share with teammates:</strong> Send this 6-digit access code to your Base Decoders and Field Scouts.
-              </li>
-              <li>
-                <strong className="text-white">Teammate login:</strong> Teammates switch to the <strong className="text-cyber-cyan">LOGIN</strong> tab and sign in using your Team Name and this Access Code.
-              </li>
-              <li>
-                <strong className="text-white">Keep safe:</strong> You will need this code to log back in if your browser refreshes or disconnects.
-              </li>
+          <section className="rounded-lg border border-line border-l-4 border-l-primary bg-surface-2 p-3.5 text-sm">
+            <p className="mb-1.5 flex items-center gap-1.5 font-semibold">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              How your squad logs in
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-muted">
+              <li><span className="font-medium text-ink">Share the code</span> with your Base Decoders and Field Scouts.</li>
+              <li>They open <span className="font-medium text-ink">Log in</span> and enter the team name, this code and the team leader&apos;s name.</li>
+              <li><span className="font-medium text-ink">Keep it safe:</span> you need it to log back in if this browser signs out.</li>
             </ul>
-          </div>
+          </section>
 
-          {/* Action Button: Proceed to Hunt */}
           <button
             type="button"
             onClick={handleProceedClick}
-            className="w-full py-4 px-6 text-sm font-black tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 rounded bg-green-500 hover:bg-green-400 text-black shadow-[0_0_25px_rgba(34,197,94,0.45)] hover:shadow-[0_0_35px_rgba(34,197,94,0.65)] hover:scale-[1.01]"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary transition-colors hover:bg-primary-hover cursor-pointer"
           >
-            <span>ENTER MISSION CONTROL</span>
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
+            Start the hunt
+            <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>

@@ -1,173 +1,247 @@
 @import "tailwindcss";
 
+/*
+ * AICSSYC Treasure Hunt design tokens.
+ * "Desert expedition": sand canvas, parchment cards, wood-and-gold actions,
+ * jade accent / Route 1, lavender Route 2.
+ * Shades are tuned so every text colour meets WCAG AA (>= 4.5:1) on every surface.
+ * Components use the semantic names below; only these values change between themes.
+ */
+
+/* Dark: "desert at night" */
 :root {
-  --background: #0B0C10;
-  --foreground: #EDEDED;
-  --cyber-yellow: #FCEE0A;
-  --cyber-cyan: #00F0FF;
-  --cyber-pink: #FF003C;
-  --cyber-blue: #05D9E8;
-  --cyber-dark: #0B0C10;
-  --cyber-darker: #050507;
-  --cyber-panel: #12131A;
-  --cyber-border: #1E293B;
-  --cyber-muted: #94A3B8;
-  --cyber-card: #151824;
+  --canvas: #1A130C;
+  --dune: #241A10;
+  --surface: #2A1F14;
+  --surface-2: #33261A;
+  --sunken: #150F09;
+  --line: #4A3826;
+  --line-strong: #8A6D48;
+
+  --ink: #F6E8CF;
+  --muted: #C9B08A;
+
+  --primary: #E0A84E;
+  --primary-hover: #EDBA62;
+  --on-primary: #2A1A08;
+  --wood: #6B4316;
+
+  --accent: #5FD6BC;
+  --route-1: var(--accent);
+  --route-2: #C7A6EA;
+  --success: #8BCB7F;
+  --danger: #F2856F;
+
+  --map-art: rgba(224, 168, 78, 0.10);
+  color-scheme: dark;
 }
 
-html.light, body.light {
-  --background: #F1F5F9;
-  --foreground: #0F172A;
-  --cyber-yellow: #D97706;
-  --cyber-cyan: #0284C7;
-  --cyber-pink: #E11D48;
-  --cyber-blue: #0369A1;
-  --cyber-dark: #FFFFFF;
-  --cyber-darker: #E2E8F0;
-  --cyber-panel: #FFFFFF;
-  --cyber-border: #CBD5E1;
-  --cyber-muted: #64748B;
-  --cyber-card: #F8FAFC;
+/* Light: "sand and parchment" (default) */
+html.light {
+  --canvas: #F3D6A8;
+  --dune: #EAC48C;
+  --surface: #FBF1DC;
+  --surface-2: #F3E3C2;
+  --sunken: #FFF9EC;
+  --line: #DCC195;
+  --line-strong: #9C7744;
+
+  --ink: #3A230F;
+  --muted: #5E4124;
+
+  --primary: #7A4C16;
+  --primary-hover: #643E11;
+  --on-primary: #FFF8E8;
+  --wood: #5A3510;
+
+  --accent: #09594A;
+  --route-1: var(--accent);
+  --route-2: #5E4280;
+  --success: #285A1B;
+  --danger: #962217;
+
+  --map-art: rgba(110, 66, 20, 0.16);
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-cyber-yellow: var(--cyber-yellow);
-  --color-cyber-cyan: var(--cyber-cyan);
-  --color-cyber-pink: var(--cyber-pink);
-  --color-cyber-blue: var(--cyber-blue);
-  --color-cyber-dark: var(--cyber-dark);
-  --color-cyber-darker: var(--cyber-darker);
-  --color-cyber-panel: var(--cyber-panel);
-  --color-cyber-border: var(--cyber-border);
-  --color-cyber-muted: var(--cyber-muted);
-  --color-cyber-card: var(--cyber-card);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-route-1: var(--route-1);
+  --color-route-2: var(--route-2);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-lilita), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Elevation: flat (border only), card, raised (dialogs/menus) */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-raised: 0 12px 32px rgb(0 0 0 / 0.28);
+  --shadow-glow: 0 0 0 3px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
   overflow-x: hidden;
-  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* CRT TV / Monitor Heading Utility Classes (using text-clip, no background overlay) */
-.cyber-crt-text,
-.cyber-glitch-text {
-  display: inline-block;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    currentColor 0px,
-    currentColor 2.5px,
-    rgba(0, 0, 0, 0.45) 2.5px,
-    rgba(0, 0, 0, 0.45) 4.5px
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 0 8px currentColor);
-  animation: crt-phosphor 6s ease-in-out infinite alternate;
-  letter-spacing: 0.12em;
+/* Chunky storybook display face for page and section titles; it has one weight, so never fake-bold it */
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
 }
 
-html.light .cyber-crt-text,
-html.light .cyber-glitch-text {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    currentColor 0px,
-    currentColor 2.5px,
-    rgba(255, 255, 255, 0.5) 2.5px,
-    rgba(255, 255, 255, 0.5) 4.5px
-  );
-  filter: drop-shadow(0 0 1px currentColor);
-  animation: none;
+h3, h4 {
+  font-family: var(--font-sans);
+  line-height: 1.25;
 }
 
-.cyber-crt-text-hover:hover,
-.cyber-glitch-text-hover:hover {
-  filter: brightness(1.2) drop-shadow(0 0 6px currentColor);
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-@keyframes crt-phosphor {
-  0%, 100% {
-    opacity: 0.98;
-    filter: brightness(1) drop-shadow(0 0 2px currentColor);
-  }
-  48% {
-    opacity: 1;
-    filter: brightness(1.08) drop-shadow(0 0 5px currentColor);
-  }
-  50% {
-    opacity: 0.94;
-    filter: brightness(0.96) drop-shadow(0 0 1px currentColor);
-  }
-  52% {
-    opacity: 1;
-    filter: brightness(1.06) drop-shadow(0 0 4px currentColor);
-  }
-  85% {
-    opacity: 0.985;
-    filter: brightness(1.02) drop-shadow(0 0 3px currentColor);
-  }
+::selection {
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
 }
 
-.cyber-panel-border {
-  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+/*
+ * Treasure-map backdrop: rolling sand dunes, plus compass roses and a dotted footprint
+ * trail drawn as masks so they take the theme's --map-art colour.
+ */
+.bg-map {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(70% 45% at 0% 105%, var(--dune) 0 55%, transparent 75%),
+    radial-gradient(60% 40% at 100% 60%, var(--dune) 0 45%, transparent 70%),
+    radial-gradient(80% 35% at 30% 0%, var(--dune) 0 40%, transparent 70%);
 }
 
-.cyber-button-border {
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-}
-
-.scanline {
-  width: 100%;
-  height: 100px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 240, 255, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
-  opacity: 0.12;
-  position: fixed;
-  bottom: 100%;
-  left: 0;
-  animation: scanline 8s linear infinite;
+.bg-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   pointer-events: none;
-  z-index: 50;
+  background-color: var(--map-art);
+  --compass: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%23000' stroke-width='1.5'%3E%3Ccircle cx='100' cy='100' r='70'/%3E%3Ccircle cx='100' cy='100' r='62' stroke-dasharray='2 4'/%3E%3Ccircle cx='100' cy='100' r='88' stroke-width='1'/%3E%3Cpath d='M100 8 L110 90 L100 100 L90 90 Z M100 192 L110 110 L100 100 L90 110 Z M8 100 L90 90 L100 100 L90 110 Z M192 100 L110 90 L100 100 L110 110 Z' fill='%23000' fill-opacity='.55'/%3E%3Cpath d='M45 45 L96 96 M155 45 L104 96 M45 155 L96 104 M155 155 L104 104' stroke-width='3'/%3E%3Ctext x='100' y='30' font-size='14' font-family='serif' text-anchor='middle' fill='%23000' stroke='none'%3EN%3C/text%3E%3C/svg%3E");
+  --trail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 480' fill='none'%3E%3Cpath d='M-10 70 C 90 20, 160 150, 250 110 S 400 30, 490 90' stroke='%23000' stroke-width='3' stroke-dasharray='10 9' stroke-linecap='round'/%3E%3Cpath d='M-10 330 C 70 280, 150 400, 240 360 S 420 300, 490 350' stroke='%23000' stroke-width='3' stroke-dasharray='10 9' stroke-linecap='round'/%3E%3Cg fill='%23000'%3E%3Cellipse cx='300' cy='200' rx='7' ry='11' transform='rotate(-25 300 200)'/%3E%3Cellipse cx='318' cy='222' rx='7' ry='11' transform='rotate(-25 318 222)'/%3E%3Cellipse cx='324' cy='246' rx='7' ry='11' transform='rotate(-25 324 246)'/%3E%3Cellipse cx='343' cy='268' rx='7' ry='11' transform='rotate(-25 343 268)'/%3E%3Cellipse cx='80' cy='190' rx='7' ry='11' transform='rotate(20 80 190)'/%3E%3Cellipse cx='98' cy='170' rx='7' ry='11' transform='rotate(20 98 170)'/%3E%3C/g%3E%3Cpath d='M418 210 l14 14 m0 -14 l-14 14' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--compass), var(--compass), var(--trail);
+  mask-image: var(--compass), var(--compass), var(--trail);
+  -webkit-mask-repeat: no-repeat, no-repeat, repeat;
+  mask-repeat: no-repeat, no-repeat, repeat;
+  -webkit-mask-size: 240px, 300px, 480px;
+  mask-size: 240px, 300px, 480px;
+  -webkit-mask-position: right -60px top 40px, left -90px bottom -70px, 0 0;
+  mask-position: right -60px top 40px, left -90px bottom -70px, 0 0;
 }
 
-html.light .scanline {
-  opacity: 0.04;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(2, 132, 199, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+/* Parchment card: warm paper with darkened, slightly burnt edges */
+.parchment {
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(120% 120% at 50% 50%, transparent 60%, color-mix(in oklab, var(--line-strong) 22%, transparent) 100%);
+  border-color: var(--line);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--surface) 60%, transparent),
+    0 2px 0 color-mix(in oklab, var(--line-strong) 45%, transparent),
+    0 10px 24px rgb(58 35 15 / 0.18);
 }
 
-@keyframes scanline {
-  0% { bottom: 100%; }
-  100% { bottom: -100px; }
-}
-
-.overlay-scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0),
-    rgba(255,255,255,0) 50%,
-    rgba(0,0,0,0.06) 50%,
-    rgba(0,0,0,0.06)
+/* Raised wood-and-gold button for the main action on a screen */
+.btn-treasure {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.25);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--primary) 72%, #fff2c8) 0%,
+    var(--primary) 55%,
+    color-mix(in oklab, var(--primary) 82%, #000) 100%
   );
-  background-size: 100% 4px;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 49;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 3px 0 var(--wood),
+    0 6px 14px rgb(58 35 15 / 0.28);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
 }
 
-html.light .overlay-scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0),
-    rgba(0,0,0,0) 50%,
-    rgba(0,0,0,0.015) 50%,
-    rgba(0,0,0,0.015)
-  );
-  background-size: 100% 4px;
+.btn-treasure:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn-treasure:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 1px 0 var(--wood),
+    0 3px 8px rgb(58 35 15 / 0.25);
+}
+
+/* Storybook logo lettering: gold fill, dark wood outline and a soft drop shadow */
+.title-treasure {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  color: #F5B840;
+  letter-spacing: 0.02em;
+  text-shadow:
+    -2px -2px 0 #4A2A0E, 2px -2px 0 #4A2A0E, -2px 2px 0 #4A2A0E, 2px 2px 0 #4A2A0E,
+    0 -2px 0 #4A2A0E, 0 2px 0 #4A2A0E, -2px 0 0 #4A2A0E, 2px 0 0 #4A2A0E,
+    0 5px 0 #4A2A0E, 0 8px 10px rgb(58 35 15 / 0.35);
+}
+
+/* Dark wood title bar for dialogs and panels */
+.panel-bar {
+  background-color: var(--wood);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.08), transparent);
+  color: #FBEFD5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
 }

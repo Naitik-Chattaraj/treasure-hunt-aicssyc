@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Trophy, Medal, Clock, RefreshCw, Zap, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, Clock, Medal, RefreshCw, ShieldAlert, Trophy } from 'lucide-react';
 import { LeaderboardEntry } from '@/types/hunt';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -176,168 +176,125 @@ export default function LeaderboardPage() {
     return `${h}:${m}:${s}`;
   };
 
+  type Team = (typeof leaderboard)[number];
+  const timeFor = (team: Team) =>
+    formatElapsedDisplay(team.startTime, team.completedAt ?? team.completed_at, team.status, team.updatedAt);
+  const stageText = (stage: number) => (stage > 12 ? 'Finished' : `Checkpoint ${stage}/12`);
+
+  const routeBadge = (route?: 1 | 2) =>
+    route ? (
+      <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-xs font-semibold ${
+        route === 1 ? 'border-route-1/50 bg-route-1/10 text-route-1' : 'border-route-2/50 bg-route-2/10 text-route-2'
+      }`}>
+        Route {route}
+      </span>
+    ) : null;
+
+  const podiumOrder = [
+    { idx: 1, place: 2, className: 'order-2 md:order-1' },
+    { idx: 0, place: 1, className: 'order-1 md:order-2 md:-mt-3' },
+    { idx: 2, place: 3, className: 'order-3' },
+  ];
+
   return (
-    <main className="min-h-screen bg-cyber-dark text-foreground flex flex-col font-mono relative overflow-x-hidden transition-colors">
-      <div className="overlay-scanlines"></div>
-
-      {/* Header */}
-      <header className="z-10 bg-cyber-panel border-b border-cyber-yellow/40 p-4 sm:p-5 flex justify-between items-center shadow-[0_0_25px_rgba(252,238,10,0.15)]">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 border-2 border-cyber-yellow flex items-center justify-center bg-cyber-darker text-cyber-yellow shadow-[0_0_15px_rgba(252,238,10,0.3)]">
-            <Trophy className="w-6 h-6 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-cyber-yellow uppercase cyber-crt-text">
-                LIVE LEADERBOARD
-              </h1>
-              <span className="text-[10px] bg-cyber-yellow/20 border border-cyber-yellow text-cyber-yellow px-2 py-0.5 font-bold uppercase animate-pulse">
-                REALTIME
-              </span>
-            </div>
-            <p className="text-xs text-gray-400">AICSSYC TREASURE HUNT 2026</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">LAST SYNC</div>
-            <div className="text-xs text-cyber-cyan font-bold">
-              {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}
+    <main className="bg-map flex min-h-dvh flex-col text-ink">
+      <header className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Trophy className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold sm:text-2xl">Leaderboard</h1>
+              <p className="truncate text-sm text-muted">AICSSYC Treasure Hunt 2026</p>
             </div>
           </div>
-          <button
-            onClick={() => fetchLeaderboard(true)}
-            disabled={isRefreshing}
-            className="p-2 border border-cyber-cyan/40 bg-cyber-darker hover:bg-cyber-cyan/15 text-cyber-cyan transition-colors flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
-            title="Refresh Leaderboard"
-            aria-label="Refresh Leaderboard"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">SYNC</span>
-          </button>
-          <ThemeToggle />
+
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="text-right text-xs leading-tight">
+              <div className="flex items-center justify-end gap-1.5 font-semibold text-success">
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" /> Live
+              </div>
+              <div className="font-mono text-muted tabular-nums">{lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}</div>
+            </div>
+            <button
+              onClick={() => fetchLeaderboard(true)}
+              disabled={isRefreshing}
+              className="inline-flex h-10 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink transition-colors hover:border-line-strong disabled:opacity-60 cursor-pointer sm:px-3"
+              title="Refresh leaderboard"
+              aria-label="Refresh leaderboard"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      {/* Leaderboard Body */}
-      <div className="flex-1 p-4 sm:p-6 z-10 max-w-6xl w-full mx-auto space-y-6">
-        
-        {/* Top 3 Podium (if >= 3 approved teams) */}
+      <div className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         {leaderboard.filter(t => t.status === 'approved').length >= 3 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            {/* Rank 2 */}
-            <div className="order-2 md:order-1 bg-cyber-panel border border-gray-400/50 p-4 relative flex flex-col justify-between shadow-md">
-              <div className="flex justify-between items-start">
-                <span className="text-xl font-bold text-gray-300">#02</span>
-                <Medal className="w-6 h-6 text-gray-300" />
-              </div>
-              <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
-                  {leaderboard[1].teamName}
-                  {leaderboard[1].assignedRoute && (
-                    <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
-                      R0{leaderboard[1].assignedRoute}
+          <section className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end md:gap-4 md:pt-3" aria-label="Top three teams">
+            {podiumOrder.map(({ idx, place, className }) => {
+              const team = leaderboard[idx];
+              const isFirst = place === 1;
+              return (
+                <div
+                  key={team.id}
+                  className={`${className} relative rounded-xl border bg-surface p-4 shadow-card ${
+                    isFirst ? 'border-primary/60 sm:p-5' : 'border-line'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-bold ${
+                      isFirst ? 'bg-primary text-on-primary' : 'bg-surface-2 text-ink'
+                    }`}>
+                      {place}
                     </span>
-                  )}
-                </h3>
-                <div className="text-xs text-gray-400">Lead: {leaderboard[1].teamLead}</div>
-              </div>
-              <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
-                <span className="text-cyber-cyan font-bold">
-                  {leaderboard[1].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[1].currentStage}/12`}
-                </span>
-                <span className="text-gray-300 font-bold">
-                  {formatElapsedDisplay(leaderboard[1].startTime, leaderboard[1].completedAt ?? leaderboard[1].completed_at, leaderboard[1].status, leaderboard[1].updatedAt)}
-                </span>
-              </div>
-            </div>
-
-            {/* Rank 1 (Gold) */}
-            <div className="order-1 md:order-2 bg-cyber-panel border-2 border-cyber-yellow p-5 relative flex flex-col justify-between shadow-[0_0_25px_rgba(252,238,10,0.25)] -mt-2">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-yellow text-cyber-dark font-bold text-[10px] uppercase px-3 py-0.5 tracking-widest shadow-md flex items-center gap-1">
-                <Trophy className="w-3 h-3" /> LEADER
-              </div>
-              <div className="flex justify-between items-start mt-1">
-                <span className="text-2xl font-bold text-cyber-yellow">#01</span>
-                <Trophy className="w-7 h-7 text-cyber-yellow animate-bounce" />
-              </div>
-              <div className="my-3">
-                <h3 className="font-bold text-lg text-cyber-yellow truncate flex items-center gap-1.5">
-                  {leaderboard[0].teamName}
-                  {leaderboard[0].assignedRoute && (
-                    <span className="text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 px-1 py-0.2 font-mono">
-                      R0{leaderboard[0].assignedRoute}
-                    </span>
-                  )}
-                </h3>
-                <div className="text-xs text-gray-300">Lead: {leaderboard[0].teamLead}</div>
-              </div>
-              <div className="pt-3 border-t border-cyber-yellow/40 flex justify-between text-xs">
-                <span className="text-cyber-yellow font-bold text-sm">
-                  {leaderboard[0].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[0].currentStage}/12`}
-                </span>
-                <span className="text-white font-bold text-sm">
-                  {formatElapsedDisplay(leaderboard[0].startTime, leaderboard[0].completedAt ?? leaderboard[0].completed_at, leaderboard[0].status, leaderboard[0].updatedAt)}
-                </span>
-              </div>
-            </div>
-
-            {/* Rank 3 */}
-            <div className="order-3 bg-cyber-panel border border-amber-600/50 p-4 relative flex flex-col justify-between shadow-md">
-              <div className="flex justify-between items-start">
-                <span className="text-xl font-bold text-amber-500">#03</span>
-                <Medal className="w-6 h-6 text-amber-500" />
-              </div>
-              <div className="my-3">
-                <h3 className="font-bold text-base text-foreground truncate flex items-center gap-1.5">
-                  {leaderboard[2].teamName}
-                  {leaderboard[2].assignedRoute && (
-                    <span className="text-[9px] bg-amber-500/15 text-amber-500 border border-amber-500/40 px-1 py-0.2 font-mono">
-                      R0{leaderboard[2].assignedRoute}
-                    </span>
-                  )}
-                </h3>
-                <div className="text-xs text-gray-400">Lead: {leaderboard[2].teamLead}</div>
-              </div>
-              <div className="pt-2 border-t border-cyber-border flex justify-between text-xs">
-                <span className="text-cyber-cyan font-bold">
-                  {leaderboard[2].currentStage > 12 ? '🏆 VICTORY' : `NODE 0${leaderboard[2].currentStage}/12`}
-                </span>
-                <span className="text-gray-300 font-bold">
-                  {formatElapsedDisplay(leaderboard[2].startTime, leaderboard[2].completedAt ?? leaderboard[2].completed_at, leaderboard[2].status, leaderboard[2].updatedAt)}
-                </span>
-              </div>
-            </div>
-          </div>
+                    {isFirst ? (
+                      <Trophy className="h-6 w-6 text-primary" aria-label="Leader" />
+                    ) : (
+                      <Medal className="h-6 w-6 text-muted" aria-label={place === 2 ? 'Second place' : 'Third place'} />
+                    )}
+                  </div>
+                  <div className="my-3 min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <h3 className={`truncate font-semibold ${isFirst ? 'text-lg' : 'text-base'}`}>{team.teamName}</h3>
+                      {routeBadge(team.assignedRoute)}
+                    </div>
+                    <div className="truncate text-sm text-muted">Lead: {team.teamLead}</div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-line pt-3 text-sm">
+                    <span className={team.currentStage > 12 ? 'font-semibold text-success' : 'text-muted'}>{stageText(team.currentStage)}</span>
+                    <span className={`font-mono font-semibold tabular-nums ${isFirst ? 'text-primary' : ''}`}>{timeFor(team)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
         )}
 
-        {/* Master Ranking Table */}
-        <div className="bg-cyber-panel border border-cyber-border overflow-hidden shadow-lg">
-          <div className="p-4 border-b border-cyber-border flex justify-between items-center bg-cyber-darker/60">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-cyber-yellow flex items-center gap-2">
-              <Zap className="w-4 h-4 text-cyber-yellow" />
-              Standings ({leaderboard.length} Teams)
-            </h2>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Clock className="w-3.5 h-3.5 text-cyber-cyan" />
-              <span>Real-time client calculated</span>
-            </div>
+        <section className="overflow-hidden rounded-xl border border-line bg-surface parchment shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+            <h2 className="font-semibold">Standings <span className="text-muted">({leaderboard.length} teams)</span></h2>
+            <p className="flex items-center gap-1.5 text-sm text-muted">
+              <Clock className="h-4 w-4" aria-hidden="true" />
+              Ranked by progress, then time
+            </p>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-cyber-darker text-gray-400 uppercase tracking-wider border-b border-cyber-border">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line bg-sunken text-xs text-muted">
                 <tr>
-                  <th className="p-4 w-16 text-center">Rank</th>
-                  <th className="p-4">Team Name</th>
-                  <th className="p-4">Team Lead</th>
-                  <th className="p-4">Progress Bar</th>
-                  <th className="p-4 text-center">Current Stage</th>
-                  <th className="p-4 text-right">Elapsed Time</th>
+                  <th scope="col" className="w-14 px-3 py-3 text-center font-medium sm:px-4">Rank</th>
+                  <th scope="col" className="px-3 py-3 font-medium sm:px-4">Team</th>
+                  <th scope="col" className="hidden px-4 py-3 font-medium md:table-cell">Team lead</th>
+                  <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Progress</th>
+                  <th scope="col" className="px-3 py-3 text-right font-medium sm:px-4">Time</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-cyber-border/40">
+              <tbody className="divide-y divide-line">
                 {leaderboard.map((team, idx) => {
                   const rank = idx + 1;
                   const isDisqualified = team.status === 'rejected';
@@ -345,97 +302,61 @@ export default function LeaderboardPage() {
                   const progressPercent = Math.min(100, Math.round(((team.currentStage - 1) / 12) * 100));
 
                   return (
-                    <tr 
-                      key={team.id} 
-                      className={`hover:bg-cyber-darker/80 transition-colors ${
-                        isDisqualified
-                          ? 'bg-cyber-pink/5 opacity-70'
-                          : rank === 1
-                          ? 'bg-cyber-yellow/5'
-                          : ''
+                    <tr
+                      key={team.id}
+                      className={`transition-colors hover:bg-surface-2 ${
+                        isDisqualified ? 'bg-danger/5 opacity-75' : rank === 1 ? 'bg-primary/5' : ''
                       }`}
                     >
-                      <td className="p-4 text-center font-bold text-sm">
+                      <td className="px-3 py-3 text-center sm:px-4">
                         {isDisqualified ? (
-                          <span className="text-cyber-pink font-bold">DQ</span>
-                        ) : rank === 1 ? (
-                          <span className="text-cyber-yellow font-bold flex items-center justify-center gap-1">
-                            🥇 #1
-                          </span>
-                        ) : rank === 2 ? (
-                          <span className="text-gray-300 font-bold">🥈 #2</span>
-                        ) : rank === 3 ? (
-                          <span className="text-amber-500 font-bold">🥉 #3</span>
+                          <span className="font-mono text-xs font-semibold text-danger" title="Disqualified">DQ</span>
                         ) : (
-                          <span className="text-gray-400">#{rank}</span>
+                          <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full font-mono text-sm font-semibold ${
+                            rank === 1 ? 'bg-primary text-on-primary' : rank <= 3 ? 'bg-surface-2 text-ink' : 'text-muted'
+                          }`}>
+                            {rank}
+                          </span>
                         )}
                       </td>
 
-                      <td className="p-4 font-bold text-sm text-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className={isDisqualified ? 'text-cyber-pink line-through' : rank === 1 ? 'text-cyber-yellow' : ''}>
-                            {team.teamName}
-                          </span>
-                          {team.assignedRoute && (
-                            <span className="text-[9px] bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/40 px-1 py-0.2 font-mono">
-                              R0{team.assignedRoute}
+                      <td className="px-3 py-3 sm:px-4">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className={`font-semibold ${isDisqualified ? 'text-danger line-through' : ''}`}>{team.teamName}</span>
+                          {routeBadge(team.assignedRoute)}
+                          {isDisqualified ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-danger/10 px-1.5 py-0.5 text-xs font-semibold text-danger">
+                              <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" /> Disqualified
+                            </span>
+                          ) : isWinner && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-success/15 px-1.5 py-0.5 text-xs font-semibold text-success">
+                              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Finished
                             </span>
                           )}
-                          {isDisqualified ? (
-                            <span className="text-[9px] bg-cyber-pink/20 text-cyber-pink border border-cyber-pink/50 px-1.5 py-0.2 font-bold uppercase flex items-center gap-1">
-                              <ShieldAlert className="w-3 h-3" /> DISQUALIFIED
-                            </span>
-                          ) : isWinner ? (
-                            <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/50 px-1.5 py-0.2 font-bold uppercase">
-                              VICTOR
-                            </span>
-                          ) : null}
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted sm:hidden">
+                          {isDisqualified ? 'Disqualified' : stageText(team.currentStage)}
                         </div>
                       </td>
 
-                      <td className="p-4 text-gray-300">{team.teamLead}</td>
+                      <td className="hidden px-4 py-3 text-muted md:table-cell">{team.teamLead}</td>
 
-                      <td className="p-4 w-48">
-                        <div className="w-full bg-cyber-darker h-2 rounded-full overflow-hidden border border-cyber-border/80">
-                          <div 
-                            className={`h-full transition-all duration-500 ${
-                              isDisqualified
-                                ? 'bg-cyber-pink/60'
-                                : isWinner
-                                ? 'bg-green-400'
-                                : 'bg-gradient-to-r from-cyber-cyan to-cyber-yellow'
+                      <td className="hidden w-48 px-4 py-3 sm:table-cell">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isDisqualified ? 'bg-danger/60' : isWinner ? 'bg-success' : 'bg-primary'
                             }`}
-                            style={{ width: `${isDisqualified ? 100 : isWinner ? 100 : progressPercent}%` }}
+                            style={{ width: `${isDisqualified || isWinner ? 100 : progressPercent}%` }}
                           />
                         </div>
-                        <div className="text-[10px] text-gray-500 mt-1">
-                          {isDisqualified ? 'Disqualified' : isWinner ? '12/12 Cleared' : `${team.currentStage - 1}/12 Cleared`}
+                        <div className="mt-1 text-xs text-muted">
+                          {isDisqualified ? 'Disqualified' : `${isWinner ? 12 : team.currentStage - 1}/12 found`}
                         </div>
                       </td>
 
-                      <td className="p-4 text-center font-bold">
-                        {isDisqualified ? (
-                          <span className="text-cyber-pink flex items-center justify-center gap-1">
-                            <ShieldAlert className="w-4 h-4" />
-                            ELIMINATED
-                          </span>
-                        ) : isWinner ? (
-                          <span className="text-green-400 flex items-center justify-center gap-1">
-                            <ShieldCheck className="w-4 h-4" />
-                            COMPLETED
-                          </span>
-                        ) : (
-                          <span className="text-cyber-cyan">NODE 0{team.currentStage}</span>
-                        )}
-                      </td>
-
-                      <td className={`p-4 text-right font-bold text-sm ${isDisqualified ? 'text-cyber-pink/80' : 'text-cyber-yellow'}`}>
-                        {formatElapsedDisplay(
-                          team.startTime,
-                          team.completedAt ?? team.completed_at,
-                          team.status,
-                          team.updatedAt
-                        )}
+                      <td className={`px-3 py-3 text-right font-mono font-semibold tabular-nums sm:px-4 ${isDisqualified ? 'text-danger' : ''}`}>
+                        {timeFor(team)}
                       </td>
                     </tr>
                   );
@@ -443,15 +364,15 @@ export default function LeaderboardPage() {
 
                 {leaderboard.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="p-10 text-center text-gray-500 font-mono">
-                      No active teams yet. Teams appear here once approved by organizers.
+                    <td colSpan={5} className="px-4 py-12 text-center text-muted">
+                      No teams on the board yet. Teams appear here once organizers approve them.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </div>
     </main>
   );

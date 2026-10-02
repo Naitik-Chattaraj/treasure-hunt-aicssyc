@@ -159,13 +159,13 @@ export default function QuestionBlockQRModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md font-mono">
-      <div className="w-full max-w-md bg-cyber-panel cyber-panel-border border-2 border-cyber-cyan shadow-[0_0_30px_rgba(0,240,255,0.25)] p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto flex flex-col items-center text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      <div className="w-full max-w-md bg-surface rounded-xl border-2 border-accent shadow-card p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto flex flex-col items-center text-center">
         
         {/* Close Button */}
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 text-cyber-muted hover:text-cyber-cyan transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-muted hover:text-accent transition-colors cursor-pointer"
         >
           <X className="w-6 h-6" />
         </button>
@@ -173,19 +173,19 @@ export default function QuestionBlockQRModal({
         {/* Badge & Title */}
         <div className="flex items-center gap-2 mb-2">
           <span className={`text-xs font-bold px-2.5 py-0.5 uppercase tracking-wider ${
-            routeNumber === 1 ? 'bg-cyan-500 text-black' : 'bg-purple-500 text-white'
+            routeNumber === 1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
           }`}>
             ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
           </span>
-          <span className="text-[10px] bg-cyber-darker text-gray-400 px-2 py-0.5 border border-cyber-border font-bold">
+          <span className="text-xs bg-sunken text-muted px-2 py-0.5 border border-line font-bold">
             CHECKPOINT #{checkpoint.id}
           </span>
         </div>
 
-        <h2 className="text-lg font-bold text-foreground mb-0.5">
+        <h2 className="text-lg font-bold text-ink mb-0.5">
           {checkpoint.title}
         </h2>
-        <div className="text-xs text-cyber-yellow font-bold uppercase mb-4">
+        <div className="text-xs text-primary font-bold uppercase mb-4">
           {checkpoint.area}
         </div>
 
@@ -202,18 +202,18 @@ export default function QuestionBlockQRModal({
         </div>
 
         {/* Token Info & Copy */}
-        <div className="w-full bg-cyber-darker p-3 border border-cyber-border text-left text-xs mb-4">
+        <div className="w-full bg-sunken p-3 border border-line text-left text-xs mb-4">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] text-gray-400 uppercase font-bold">Active QR SHA-256 Token:</span>
+            <span className="text-xs text-muted uppercase font-bold">Active QR SHA-256 Token:</span>
             <button
               onClick={handleCopy}
-              className="text-[10px] text-cyber-cyan hover:text-white flex items-center gap-1 cursor-pointer bg-cyber-panel px-2 py-0.5 border border-cyber-cyan/40"
+              className="text-xs text-accent hover:text-ink flex items-center gap-1 cursor-pointer bg-surface px-2 py-0.5 border border-accent/40"
             >
-              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
               <span>{copied ? 'Copied!' : 'Copy Token'}</span>
             </button>
           </div>
-          <code className="text-[11px] text-cyber-yellow break-all block font-mono bg-black/60 p-1.5 border border-cyber-border/40">
+          <code className="text-xs text-primary break-all block font-mono bg-sunken p-1.5 border border-line/40">
             {checkpoint.qr_hash}
           </code>
         </div>
@@ -222,7 +222,7 @@ export default function QuestionBlockQRModal({
         <div className="grid grid-cols-2 gap-2 w-full mb-3">
           <button
             onClick={handlePrint}
-            className="flex items-center justify-center gap-1.5 bg-cyber-cyan text-black hover:bg-white font-bold py-2.5 px-3 text-xs uppercase transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 bg-accent text-on-primary hover:opacity-90 font-bold py-2.5 px-3 text-xs uppercase transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             Print Sticker
@@ -230,7 +230,7 @@ export default function QuestionBlockQRModal({
 
           <button
             onClick={handleDownloadSVG}
-            className="flex items-center justify-center gap-1.5 bg-cyber-panel hover:bg-cyber-darker text-cyber-cyan border border-cyber-cyan font-bold py-2.5 px-3 text-xs uppercase transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 bg-surface hover:bg-sunken text-accent border border-accent font-bold py-2.5 px-3 text-xs uppercase transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
             Download SVG
@@ -242,7 +242,7 @@ export default function QuestionBlockQRModal({
           <button
             onClick={handleRegenerate}
             disabled={regenerating}
-            className="w-full flex items-center justify-center gap-1.5 text-gray-400 hover:text-cyber-yellow hover:border-cyber-yellow/50 border border-cyber-border py-2 px-3 text-[11px] uppercase transition-colors cursor-pointer disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-1.5 text-muted hover:text-primary hover:border-primary/50 border border-line py-2 px-3 text-xs uppercase transition-colors cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${regenerating ? 'animate-spin' : ''}`} />
             <span>Generate New Unique QR Token</span>
