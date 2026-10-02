@@ -35,6 +35,8 @@ export function validateMembers(members: unknown): string {
 
   let decoders = 0;
   let scouts = 0;
+  const seenRegNos = new Set<string>();
+  const seenPhones = new Set<string>();
 
   for (let i = 0; i < members.length; i++) {
     const m = members[i] as Partial<TeamMember> | null;
@@ -44,11 +46,19 @@ export function validateMembers(members: unknown): string {
     const nameErr = validatePersonName(String(m.name ?? ''), `Member ${n} name`);
     if (nameErr) return nameErr.toUpperCase();
 
-    const regNo = String(m.regNo ?? '').trim();
+    const regNo = String(m.regNo ?? '').trim().toUpperCase();
     if (!REG_NO_PATTERN.test(regNo)) return `MEMBER ${n}: REG NO MUST BE ALPHANUMERIC (LETTERS AND DIGITS ONLY).`;
+    if (seenRegNos.has(regNo)) {
+      return `MEMBER ${n}: REGISTRATION NUMBER "${regNo}" IS DUPLICATE IN THIS TEAM.`;
+    }
+    seenRegNos.add(regNo);
 
     const phone = String(m.phone ?? '').trim();
     if (!PHONE_PATTERN.test(phone)) return `MEMBER ${n}: PHONE NUMBER MUST BE EXACTLY 10 DIGITS.`;
+    if (seenPhones.has(phone)) {
+      return `MEMBER ${n}: PHONE NUMBER "${phone}" IS DUPLICATE IN THIS TEAM.`;
+    }
+    seenPhones.add(phone);
 
     if (m.role === 'Base Decoder') decoders++;
     else if (m.role === 'Field Scout') scouts++;
@@ -63,3 +73,4 @@ export function validateMembers(members: unknown): string {
   }
   return '';
 }
+

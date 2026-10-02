@@ -9,9 +9,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. TEAMS TABLE (Route 1 Cohort)
 CREATE TABLE IF NOT EXISTS public.teams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_name TEXT PRIMARY KEY,
+    id UUID UNIQUE DEFAULT gen_random_uuid(),
     uid TEXT UNIQUE NOT NULL,
-    team_name TEXT NOT NULL,
     team_lead TEXT NOT NULL,
     members JSONB DEFAULT '[]'::jsonb,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -33,6 +33,119 @@ ALTER TABLE public.teams
 
 ALTER TABLE public.teams
     ADD COLUMN IF NOT EXISTS device_id TEXT;
+
+-- Ensure team_name is PRIMARY KEY and id is UNIQUE for foreign key integrity in pre-existing tables
+DO $$
+BEGIN
+    -- Ensure id has a UNIQUE constraint if not already unique, so foreign keys to teams(id) remain valid
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conrelid = 'public.teams'::regclass AND conname = 'teams_id_key'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conrelid = 'public.teams'::regclass AND conname = 'teams_id_unique'
+    ) THEN
+        ALTER TABLE public.teams ADD CONSTRAINT teams_id_unique UNIQUE (id);
+    END IF;
+
+    -- If teams_pkey is not currently on team_name, switch primary key to team_name
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+        WHERE c.conrelid = 'public.teams'::regclass AND c.contype = 'p' AND a.attname = 'team_name'
+    ) THEN
+        ALTER TABLE public.teams DROP CONSTRAINT IF EXISTS teams_pkey;
+        ALTER TABLE public.teams ADD CONSTRAINT teams_pkey PRIMARY KEY (team_name);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        BEGIN
+            ALTER TABLE public.teams ADD CONSTRAINT teams_team_name_unique UNIQUE (team_name);
+        EXCEPTION
+            WHEN OTHERS THEN NULL;
+        END;
+END $$;
+
+-- Case-insensitive uniqueness for team names
+CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_team_name_lower ON public.teams (LOWER(TRIM(team_name)));
+
+-- GIN index for members JSONB
+CREATE INDEX IF NOT EXISTS idx_teams_members_gin ON public.teams USING gin (members);
+
+-- Trigger to enforce uniqueness of phone numbers and registration numbers
+-- both within a team and across all teams in the database
+CREATE OR REPLACE FUNCTION public.check_team_members_unique()
+RETURNS TRIGGER AS $$
+DECLARE
+    m JSONB;
+    member_phone TEXT;
+    member_reg_no TEXT;
+    conflict_team TEXT;
+    seen_phones TEXT[] := ARRAY[]::TEXT[];
+    seen_reg_nos TEXT[] := ARRAY[]::TEXT[];
+BEGIN
+    IF NEW.members IS NULL OR jsonb_typeof(NEW.members) <> 'array' THEN
+        RETURN NEW;
+    END IF;
+
+    FOR m IN SELECT * FROM jsonb_array_elements(NEW.members)
+    LOOP
+        member_phone := REGEXP_REPLACE(TRIM(COALESCE(m->>'phone', '')), '\s+', '', 'g');
+        member_reg_no := UPPER(REGEXP_REPLACE(TRIM(COALESCE(m->>'regNo', '')), '\s+', '', 'g'));
+
+        -- 1. Check intra-team duplicates within the submitted members
+        IF member_phone <> '' THEN
+            IF member_phone = ANY(seen_phones) THEN
+                RAISE EXCEPTION 'DUPLICATE_PHONE_INTRA: Phone number "%" is duplicated within this team.', member_phone;
+            END IF;
+            seen_phones := array_append(seen_phones, member_phone);
+        END IF;
+
+        IF member_reg_no <> '' THEN
+            IF member_reg_no = ANY(seen_reg_nos) THEN
+                RAISE EXCEPTION 'DUPLICATE_REG_INTRA: Registration number "%" is duplicated within this team.', member_reg_no;
+            END IF;
+            seen_reg_nos := array_append(seen_reg_nos, member_reg_no);
+        END IF;
+
+        -- 2. Check cross-team uniqueness across the entire database
+        IF member_phone <> '' THEN
+            SELECT t.team_name INTO conflict_team
+            FROM public.teams t,
+                 jsonb_array_elements(t.members) other_m
+            WHERE LOWER(TRIM(t.team_name)) <> LOWER(TRIM(NEW.team_name))
+              AND (NEW.id IS NULL OR t.id <> NEW.id)
+              AND REGEXP_REPLACE(TRIM(COALESCE(other_m->>'phone', '')), '\s+', '', 'g') = member_phone
+            LIMIT 1;
+
+            IF conflict_team IS NOT NULL THEN
+                RAISE EXCEPTION 'DUPLICATE_PHONE_INTER: Phone number "%" is already registered with team "%".', member_phone, conflict_team;
+            END IF;
+        END IF;
+
+        IF member_reg_no <> '' THEN
+            SELECT t.team_name INTO conflict_team
+            FROM public.teams t,
+                 jsonb_array_elements(t.members) other_m
+            WHERE LOWER(TRIM(t.team_name)) <> LOWER(TRIM(NEW.team_name))
+              AND (NEW.id IS NULL OR t.id <> NEW.id)
+              AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(other_m->>'regNo', '')), '\s+', '', 'g')) = member_reg_no
+            LIMIT 1;
+
+            IF conflict_team IS NOT NULL THEN
+                RAISE EXCEPTION 'DUPLICATE_REG_INTER: Registration number "%" is already registered with team "%".', member_reg_no, conflict_team;
+            END IF;
+        END IF;
+    END LOOP;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_check_team_members_unique ON public.teams;
+CREATE TRIGGER trg_check_team_members_unique
+BEFORE INSERT OR UPDATE OF members ON public.teams
+FOR EACH ROW
+EXECUTE FUNCTION public.check_team_members_unique();
+
 
 -- 3. CHECKPOINTS TABLE (12 Physical Nodes for Route 1)
 CREATE TABLE IF NOT EXISTS public.checkpoints (

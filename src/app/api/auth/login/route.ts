@@ -118,79 +118,145 @@ export async function POST(req: NextRequest) {
         phone: m.phone.trim(),
       }));
 
-      // Check if team name already exists across both databases
-      const { data: existingTeamR1 } = await db1
-        .from('teams')
-        .select('id')
-        .eq('team_name', trimmedTeam)
-        .maybeSingle();
+      // Check if team name or any member phone/regNo already exists across both databases
+      const selectFields = 'id, team_name, members';
+      const [teamsR1Res, teamsR2Res] = await Promise.all([
+        db1.from('teams').select(selectFields),
+        isMultiDb && db2 ? db2.from('teams').select(selectFields) : Promise.resolve({ data: null, error: null }),
+      ]);
 
-      let existingTeam = existingTeamR1;
-
-      if (!existingTeam && isMultiDb && db2) {
-        const { data: existingTeamR2 } = await db2
-          .from('teams')
-          .select('id')
-          .eq('team_name', trimmedTeam)
-          .maybeSingle();
-        existingTeam = existingTeamR2;
+      if (teamsR1Res.error) {
+        return serverError('Registration validation failed. Please try again.', teamsR1Res.error);
       }
+      if (teamsR2Res?.error) {
+        return serverError('Registration validation failed. Please try again.', teamsR2Res.error);
+      }
+
+      const allExistingTeams = [
+        ...(teamsR1Res.data || []),
+        ...(teamsR2Res?.data || []),
+      ];
+
+      const normalizedNewTeam = trimmedTeam.toLowerCase();
+      const incomingRegNos = new Map<string, string>(); // upperRegNo -> memberName
+      const incomingPhones = new Map<string, string>(); // phone -> memberName
+
+      for (const m of roster) {
+        incomingRegNos.set(m.regNo, m.name);
+        incomingPhones.set(m.phone, m.name);
+      }
+
+      // 1. Team Name Uniqueness Check (Primary Key)
+      const existingTeam = allExistingTeams.find(
+        t => typeof t.team_name === 'string' && t.team_name.trim().toLowerCase() === normalizedNewTeam
+      );
 
       // Registration never resumes an existing team: team name and team lead are public
       // on the leaderboard, so matching them must not grant a session or reveal the access code.
       // Existing teams sign in through login mode with their access code.
       if (existingTeam) {
         return NextResponse.json(
-          { error: 'Team name already registered. Log in with your 6-digit access code.' },
+          { error: `Team name "${trimmedTeam}" is already registered. Log in with your 6-digit access code.` },
           { status: 409 }
         );
-      } else {
-        // Create a unique 6-digit alphanumeric code
-        const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-        const generatedUid = generateCode();
+      }
 
-        // Horizontally load-balance teams across Route 1 and Route 2 databases
-        let assignedRoute: 1 | 2 = 1;
-        if (isMultiDb && db2) {
-          try {
-            const [count1Res, count2Res] = await Promise.all([
-              db1.from('teams').select('id', { count: 'exact', head: true }),
-              db2.from('teams').select('id', { count: 'exact', head: true }),
-            ]);
-            const count1 = count1Res.count ?? 0;
-            const count2 = count2Res.count ?? 0;
-            assignedRoute = count1 <= count2 ? 1 : 2;
-          } catch {
-            assignedRoute = Math.random() < 0.5 ? 1 : 2;
+      // 2. Member Phone & Registration Number Uniqueness Check across all teams
+      for (const exTeam of allExistingTeams) {
+        if (Array.isArray(exTeam.members)) {
+          for (const rawMember of exTeam.members) {
+            if (!rawMember || typeof rawMember !== 'object') continue;
+            const exMember = rawMember as Record<string, unknown>;
+            const exRegNo = String(exMember.regNo ?? '').trim().toUpperCase();
+            const exPhone = String(exMember.phone ?? '').trim();
+
+            if (exRegNo && incomingRegNos.has(exRegNo)) {
+              const memberName = incomingRegNos.get(exRegNo);
+              return NextResponse.json(
+                {
+                  error: `Registration number "${exRegNo}" (${memberName}) is already registered with team "${exTeam.team_name}". Registration numbers must be unique across all teams.`
+                },
+                { status: 409 }
+              );
+            }
+
+            if (exPhone && incomingPhones.has(exPhone)) {
+              const memberName = incomingPhones.get(exPhone);
+              return NextResponse.json(
+                {
+                  error: `Phone number "${exPhone}" (${memberName}) is already registered with team "${exTeam.team_name}". Phone numbers must be unique across all teams.`
+                },
+                { status: 409 }
+              );
+            }
           }
-        } else {
+        }
+      }
+
+      // Create a unique 6-digit alphanumeric code
+      const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+      const generatedUid = generateCode();
+
+      // Horizontally load-balance teams across Route 1 and Route 2 databases
+      let assignedRoute: 1 | 2 = 1;
+      if (isMultiDb && db2) {
+        try {
+          const [count1Res, count2Res] = await Promise.all([
+            db1.from('teams').select('id', { count: 'exact', head: true }),
+            db2.from('teams').select('id', { count: 'exact', head: true }),
+          ]);
+          const count1 = count1Res.count ?? 0;
+          const count2 = count2Res.count ?? 0;
+          assignedRoute = count1 <= count2 ? 1 : 2;
+        } catch {
           assignedRoute = Math.random() < 0.5 ? 1 : 2;
         }
-
-        const targetDb = (assignedRoute === 2 && isMultiDb && db2) ? db2 : db1;
-
-        const { data: newTeam, error: insertError } = await targetDb
-          .from('teams')
-          .insert({
-            uid: generatedUid,
-            team_name: trimmedTeam,
-            team_lead: trimmedLead,
-            members: roster,
-            status: 'pending',
-            current_stage: 1,
-            assigned_route: assignedRoute,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          return serverError('Registration failed. Please try again.', insertError);
-        }
-
-        team = newTeam;
-        activeDb = targetDb;
-        resolvedRoute = assignedRoute;
+      } else {
+        assignedRoute = Math.random() < 0.5 ? 1 : 2;
       }
+
+      const targetDb = (assignedRoute === 2 && isMultiDb && db2) ? db2 : db1;
+
+      const { data: newTeam, error: insertError } = await targetDb
+        .from('teams')
+        .insert({
+          uid: generatedUid,
+          team_name: trimmedTeam,
+          team_lead: trimmedLead,
+          members: roster,
+          status: 'pending',
+          current_stage: 1,
+          assigned_route: assignedRoute,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        const errMsg = insertError.message || '';
+        if (insertError.code === '23505' || errMsg.includes('duplicate key') || errMsg.includes('teams_pkey')) {
+          return NextResponse.json(
+            { error: `Team name "${trimmedTeam}" is already registered. Please choose a different team name.` },
+            { status: 409 }
+          );
+        }
+        if (errMsg.includes('DUPLICATE_PHONE') || errMsg.includes('Phone number') || errMsg.includes('phone number')) {
+          return NextResponse.json(
+            { error: errMsg.replace(/.*(?:DUPLICATE_PHONE_[A-Z]+: )?/, '') },
+            { status: 409 }
+          );
+        }
+        if (errMsg.includes('DUPLICATE_REG') || errMsg.includes('Registration number') || errMsg.includes('registration number')) {
+          return NextResponse.json(
+            { error: errMsg.replace(/.*(?:DUPLICATE_REG_[A-Z]+: )?/, '') },
+            { status: 409 }
+          );
+        }
+        return serverError('Registration failed. Please try again.', insertError);
+      }
+
+      team = newTeam;
+      activeDb = targetDb;
+      resolvedRoute = assignedRoute;
     }
 
     if (!team) {
