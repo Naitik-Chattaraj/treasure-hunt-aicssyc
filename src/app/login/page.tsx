@@ -21,6 +21,7 @@ import {
   Zap
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import AccessCodeModal from '@/components/AccessCodeModal';
 import { TeamMember } from '@/types/hunt';
 import { normalizeName, validateMembers, validatePersonName } from '@/lib/validation';
 
@@ -48,8 +49,90 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [approvedTeamModalData, setApprovedTeamModalData] = useState<{
+    accessCode: string;
+    teamName: string;
+    teamLead: string;
+    assignedRoute?: 1 | 2;
+    operativeRole?: string;
+  } | null>(null);
+
+  const handleApprovalSuccess = (teamData: {
+    uid: string;
+    teamName: string;
+    teamLead: string;
+    assignedRoute?: 1 | 2;
+    operativeRole?: string;
+  }) => {
+    setPendingApproval(false);
+    setApprovedTeamModalData({
+      accessCode: teamData.uid,
+      teamName: teamData.teamName,
+      teamLead: teamData.teamLead,
+      assignedRoute: teamData.assignedRoute,
+      operativeRole: teamData.operativeRole || operativeRole,
+    });
+  };
+
+  const handleProceedToHunt = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('treasure_hunt_pending_reg');
+    }
+    setApprovedTeamModalData(null);
+    router.push('/hunt');
+  };
 
   useEffect(() => {
+    // Check if there is a pending registration saved on this device
+    if (typeof window !== 'undefined') {
+      const savedPending = localStorage.getItem('treasure_hunt_pending_reg');
+      if (savedPending) {
+        try {
+          const parsed = JSON.parse(savedPending);
+          if (parsed && parsed.uid && parsed.teamName) {
+            setUid(parsed.uid);
+            setTeamName(parsed.teamName);
+            if (parsed.teamLead) setTeamLead(parsed.teamLead);
+            if (parsed.members) setMembers(parsed.members);
+            if (parsed.operativeName) setOperativeName(parsed.operativeName);
+            if (parsed.operativeRole) setOperativeRole(parsed.operativeRole);
+            setPendingApproval(true);
+
+            // Re-verify status with the server
+            api.login(
+              parsed.uid,
+              parsed.teamName,
+              parsed.teamLead,
+              parsed.members,
+              true,
+              parsed.operativeName,
+              parsed.operativeRole
+            ).then(res => {
+              if (res.status === 'approved') {
+                handleApprovalSuccess({
+                  uid: res.team?.uid || parsed.uid,
+                  teamName: res.team?.teamName || parsed.teamName,
+                  teamLead: res.team?.teamLead || parsed.teamLead,
+                  assignedRoute: res.team?.assignedRoute,
+                  operativeRole: res.team?.operativeRole || parsed.operativeRole,
+                });
+              } else if (res.status === 'rejected') {
+                setPendingApproval(false);
+                localStorage.removeItem('treasure_hunt_pending_reg');
+                setAuthError('AUTHORIZATION DENIED BY MISSION CONTROL.');
+              }
+            }).catch(() => {
+              // keep pending
+            });
+            return;
+          }
+        } catch {
+          localStorage.removeItem('treasure_hunt_pending_reg');
+        }
+      }
+    }
+
+    // Default session check for already authenticated active sessions
     api.getProfile().then(profile => {
       if (profile && profile.status === 'approved') {
         router.push('/hunt');
@@ -81,9 +164,35 @@ export default function LoginPage() {
 
     const checkApproval = async () => {
       // Poll in login mode with the access code issued at registration
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, true, operativeName.trim(), operativeRole);
+      const currentUid = uid.trim();
+      const currentTeam = teamName.trim();
+      const currentLead = teamLead.trim();
+      if (!currentUid || !currentTeam) return;
+
+      const res = await api.login(
+        currentUid, 
+        currentTeam, 
+        currentLead, 
+        members, 
+        true, 
+        operativeName.trim(), 
+        operativeRole
+      );
+
       if (res.status === 'approved') {
-        router.push('/hunt');
+        handleApprovalSuccess({
+          uid: res.team?.uid || currentUid,
+          teamName: res.team?.teamName || currentTeam,
+          teamLead: res.team?.teamLead || currentLead,
+          assignedRoute: res.team?.assignedRoute,
+          operativeRole: res.team?.operativeRole || operativeRole,
+        });
+      } else if (res.status === 'rejected') {
+        setPendingApproval(false);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('treasure_hunt_pending_reg');
+        }
+        setAuthError('AUTHORIZATION DENIED BY MISSION CONTROL.');
       }
     };
 
@@ -179,12 +288,32 @@ export default function LoginPage() {
   const handleManualCheck = async () => {
     setCheckingStatus(true);
     try {
-      const res = await api.login(uid.trim(), teamName.trim(), teamLead.trim(), members, true, operativeName.trim(), operativeRole);
+      const currentUid = uid.trim();
+      const currentTeam = teamName.trim();
+      const currentLead = teamLead.trim();
+      const res = await api.login(
+        currentUid, 
+        currentTeam, 
+        currentLead, 
+        members, 
+        true, 
+        operativeName.trim(), 
+        operativeRole
+      );
       if (res.status === 'approved') {
-        router.push('/hunt');
+        handleApprovalSuccess({
+          uid: res.team?.uid || currentUid,
+          teamName: res.team?.teamName || currentTeam,
+          teamLead: res.team?.teamLead || currentLead,
+          assignedRoute: res.team?.assignedRoute,
+          operativeRole: res.team?.operativeRole || operativeRole,
+        });
       } else if (res.status === 'rejected') {
         setPendingApproval(false);
-        setAuthError('AUTHORIZATION DENIED.');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('treasure_hunt_pending_reg');
+        }
+        setAuthError('AUTHORIZATION DENIED BY MISSION CONTROL.');
       }
     } catch {
       // keep waiting
@@ -253,11 +382,31 @@ export default function LoginPage() {
       );
       
       if (res.status === 'approved') {
-        router.push('/hunt');
+        if (!isLoginMode) {
+          handleApprovalSuccess({
+            uid: res.team?.uid || uid.trim(),
+            teamName: res.team?.teamName || teamName.trim(),
+            teamLead: res.team?.teamLead || normalizeName(teamLead),
+            assignedRoute: res.team?.assignedRoute,
+            operativeRole: res.team?.operativeRole || operativeRole,
+          });
+        } else {
+          router.push('/hunt');
+        }
       } else if (res.status === 'pending') {
-        // Keep the access code from registration so the approval poll can log in with it
-        if (res.team?.uid) setUid(res.team.uid);
+        const assignedUid = res.team?.uid || uid.trim();
+        if (assignedUid) setUid(assignedUid);
         setPendingApproval(true);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('treasure_hunt_pending_reg', JSON.stringify({
+            uid: assignedUid,
+            teamName: teamName.trim(),
+            teamLead: normalizeName(teamLead),
+            members: finalMembers,
+            operativeName: finalOperativeName,
+            operativeRole: operativeRole,
+          }));
+        }
       } else {
         setAuthError(res.error || 'ACCESS DENIED: REGISTRATION REJECTED.');
       }
@@ -312,11 +461,21 @@ export default function LoginPage() {
                 APPROVAL PENDING
               </h2>
               <p className="text-xs text-gray-300 leading-relaxed mt-2">
-                Team <span className="text-cyber-yellow font-bold">{teamName}</span> is pending approval.
+                Team <span className="text-cyber-yellow font-bold">{teamName}</span> is awaiting authorization from Mission Control.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
-                An organizer will approve your team and provide a <strong className="text-cyber-cyan">6-digit access code</strong> for login.
+                Once approved, a modal will pop up with your <strong className="text-cyber-cyan font-bold">6-digit access code</strong> to copy and share with your squad.
               </p>
+              {uid && (
+                <div className="mt-3.5 pt-3 border-t border-cyber-yellow/20 text-xs">
+                  <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider block mb-1">
+                    Assigned Access Code:
+                  </span>
+                  <span className="text-base font-extrabold tracking-widest text-cyber-yellow font-mono bg-cyber-dark px-3 py-1 border border-cyber-border rounded">
+                    {uid}
+                  </span>
+                </div>
+              )}
             </div>
 
             <button
@@ -703,6 +862,17 @@ export default function LoginPage() {
           </>
         )}
       </div>
+
+      {approvedTeamModalData && (
+        <AccessCodeModal
+          accessCode={approvedTeamModalData.accessCode}
+          teamName={approvedTeamModalData.teamName}
+          teamLead={approvedTeamModalData.teamLead}
+          assignedRoute={approvedTeamModalData.assignedRoute}
+          operativeRole={approvedTeamModalData.operativeRole}
+          onProceed={handleProceedToHunt}
+        />
+      )}
     </main>
   );
 }

@@ -15,7 +15,8 @@ import {
   BrainCircuit, 
   Footprints,
   CheckCircle2,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import TeamProfileModal from '@/components/TeamProfileModal';
 import TacticalMapModal from '@/components/TacticalMapModal';
@@ -51,11 +52,12 @@ export default function HuntHUD() {
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
   const [now, setNow] = useState<number>(0);
+  const [reloadingStatus, setReloadingStatus] = useState(false);
 
   const isFieldScout = profile?.operativeRole === 'Field Scout';
   const isBaseDecoder = !isFieldScout;
 
-  const loadData = async (silent = false) => {
+  const loadData = async (silent = false, forceRefresh = false) => {
     if (!silent) setLoading(true);
     try {
       // Egress & Latency Optimization: Parallelize getMe and getCheckpoint if stage is known
@@ -68,7 +70,8 @@ export default function HuntHUD() {
 
       if (knownStage && knownStage <= 12) {
         const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== knownStage);
-        const shouldFetchCp = stageChanged || waitingForUnlock;
+        // Avoid aggressive background polling of getCheckpoint when base decoder is awaiting QR scan to save egress
+        const shouldFetchCp = stageChanged || forceRefresh || (!silent && waitingForUnlock);
 
         const results = await Promise.all([
           api.getMe(),
@@ -241,6 +244,29 @@ export default function HuntHUD() {
     setManualSubmitting(false);
   };
 
+  const handleReloadStatus = async () => {
+    setReloadingStatus(true);
+    try {
+      const wasUnlockedBefore = !!activeCheckpointRef.current?.qrScanned;
+      await loadData(false, true);
+      const isNowUnlocked = !!activeCheckpointRef.current?.qrScanned;
+      if (!wasUnlockedBefore && isNowUnlocked) {
+        const targetNode = activeCheckpointRef.current?.stage || progress?.currentStage || 1;
+        setScanNotice(`QR VERIFIED: Node 0${targetNode} unlocked!`);
+        setShowChallenge(true);
+        setTimeout(() => setScanNotice(null), 6000);
+      } else if (!isNowUnlocked) {
+        setScanNotice('AWAITING FIELD SCOUT: QR code not scanned yet.');
+        setTimeout(() => setScanNotice(null), 3000);
+      }
+    } catch {
+      setScanNotice('Network error: Failed to check QR status.');
+      setTimeout(() => setScanNotice(null), 3000);
+    } finally {
+      setReloadingStatus(false);
+    }
+  };
+
   const handleChallengeSuccess = async () => {
     setShowChallenge(false);
     await loadData(false);
@@ -405,13 +431,27 @@ export default function HuntHUD() {
                 )}
               </div>
             ) : (
-              <div className="p-2.5 bg-cyber-darker border border-cyber-border text-xs text-cyber-muted flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
-                <span>
-                  {isFieldScout 
-                    ? `LOCATE AND SCAN QR`
-                    : `AWAITING FIELD SCAN...`}
-                </span>
+              <div className="p-2.5 bg-cyber-darker border border-cyber-border text-xs text-cyber-muted flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-cyber-yellow shrink-0" />
+                  <span>
+                    {isFieldScout 
+                      ? `LOCATE AND SCAN QR`
+                      : `AWAITING FIELD SCAN...`}
+                  </span>
+                </div>
+                {isBaseDecoder && (
+                  <button
+                    type="button"
+                    onClick={handleReloadStatus}
+                    disabled={reloadingStatus}
+                    className="text-[10px] text-cyber-cyan hover:text-white font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Check if Field Scout has scanned QR"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${reloadingStatus ? 'animate-spin' : ''}`} />
+                    <span>{reloadingStatus ? 'Checking...' : 'Reload'}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -514,13 +554,26 @@ export default function HuntHUD() {
               SOLVE CHALLENGE
             </button>
           ) : (
-            <button
-              onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 cyber-button-border bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan hover:text-black py-3 sm:py-3.5 text-xs sm:text-sm uppercase font-bold tracking-widest transition-all cursor-pointer active:scale-[0.99]"
-            >
-              <ScanLine className="w-4 h-4" />
-              AWAITING QR SCAN
-            </button>
+            <div className="flex flex-col items-center gap-2 w-full">
+              <button
+                onClick={handleReloadStatus}
+                disabled={reloadingStatus}
+                className="w-full flex items-center justify-center gap-2.5 cyber-button-border bg-cyber-cyan hover:bg-cyber-blue text-cyber-dark font-extrabold py-3.5 sm:py-4 text-sm sm:text-base uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(0,240,255,0.35)] hover:shadow-[0_0_25px_rgba(0,240,255,0.55)] cursor-pointer active:scale-[0.99] disabled:opacity-60"
+              >
+                <RefreshCw className={`w-5 h-5 shrink-0 ${reloadingStatus ? 'animate-spin' : ''}`} />
+                <span>{reloadingStatus ? 'CHECKING FOR QR SCAN...' : 'RELOAD STATUS // CHECK QR SCAN'}</span>
+              </button>
+              <div className="flex items-center justify-between w-full text-[10px] sm:text-[11px] text-cyber-muted px-1">
+                <span>Field Scout scanning on ground</span>
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="hover:text-cyber-cyan transition-colors underline cursor-pointer"
+                >
+                  Scan QR with camera
+                </button>
+              </div>
+            </div>
           )
         )}
       </div>

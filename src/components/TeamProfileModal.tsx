@@ -1,7 +1,7 @@
 'use client';
 
 import { TeamProfile, HuntProgress } from '@/types/hunt';
-import { X, LogOut, Award, Clock } from 'lucide-react';
+import { X, LogOut, Award, Clock, Copy, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -17,6 +17,7 @@ export default function TeamProfileModal({
 }) {
   const router = useRouter();
   const [elapsed, setElapsed] = useState<string>('00:00:00');
+  const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     if (!progress.startTime) return;
@@ -30,6 +31,16 @@ export default function TeamProfileModal({
     }, 1000);
     return () => clearInterval(interval);
   }, [progress.startTime]);
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
 
   const handleLogout = async () => {
     await api.logout();
@@ -52,9 +63,18 @@ export default function TeamProfileModal({
           {profile.teamName}
         </h2>
         <div className="flex flex-wrap items-center gap-2 mb-5">
-          <span className="text-[11px] text-cyber-yellow bg-cyber-yellow/10 border border-cyber-yellow/30 px-2 py-0.5">
-            UID: {profile.uid}
-          </span>
+          <div className="flex items-center gap-1.5 text-[11px] text-cyber-yellow bg-cyber-yellow/10 border border-cyber-yellow/30 px-2 py-0.5 rounded-sm">
+            <span>ACCESS CODE:</span>
+            <span className="font-bold tracking-wider">{profile.uid}</span>
+            <button
+              type="button"
+              onClick={() => handleCopyCode(profile.uid)}
+              className="text-cyber-yellow hover:text-white p-0.5 cursor-pointer ml-0.5"
+              title="Copy Access Code"
+            >
+              {copiedCode ? <Check className="w-3 h-3 text-green-400 stroke-[3]" /> : <Copy className="w-3 h-3" />}
+            </button>
+          </div>
           <span className="text-[11px] text-cyber-cyan bg-cyber-cyan/10 border border-cyber-cyan/30 px-2 py-0.5">
             LEAD: {profile.teamLead}
           </span>
