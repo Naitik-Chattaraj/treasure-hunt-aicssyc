@@ -15,7 +15,6 @@ import {
   Zap,
   Undo2,
   Crosshair,
-  Layers,
 } from 'lucide-react';
 import {
   CAMPUS_CENTER,
@@ -46,14 +45,6 @@ interface AdminOpenStreetMapProps {
   onSelectCheckpoint?: (id: number | null) => void;
 }
 
-interface MovedCoordInfo {
-  id: number;
-  lat: number;
-  lng: number;
-  originalLat: number;
-  originalLng: number;
-}
-
 export default function AdminOpenStreetMap({
   checkpoints,
   routeFilter,
@@ -72,38 +63,34 @@ export default function AdminOpenStreetMap({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const polyline2Ref = useRef<any>(null);
 
-  // Store coordinates currently on the map (persists dragged positions without resetting)
-  const currentCoordsRef = useRef<Map<number, { lat: number; lng: number }>>(new Map());
+  // Direct DOM ref for zero-latency dragging HUD banner (prevents 60fps React re-render lag)
+  const dragHudRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
-  // Internal selection state (synced with controlled prop if provided)
+  // In-memory persistent map of latest coordinates per checkpoint ID
+  const coordsRef = useRef<Map<number, { lat: number; lng: number }>>(new Map());
+
+  // Selection
   const [internalSelectedId, setInternalSelectedId] = useState<number | null>(null);
   const activeSelectedId = controlledSelectedId !== undefined ? controlledSelectedId : internalSelectedId;
 
-  // Track nodes that have been dragged and are pending save (when auto-save is off)
-  const [movedNodes, setMovedNodes] = useState<Record<number, MovedCoordInfo>>({});
+  // Track moved nodes pending save (when autoSave is false)
+  const [movedNodes, setMovedNodes] = useState<Record<number, { lat: number; lng: number; origLat: number; origLng: number }>>({});
   const [autoSave, setAutoSave] = useState<boolean>(true);
 
-  // Live dragging HUD
-  const [liveDrag, setLiveDrag] = useState<{
-    id: number;
-    stage: number;
-    route: 1 | 2;
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-  // Form input states for sidebar inspector
+  // Sidebar form inputs
   const [latInput, setLatInput] = useState<string>('');
   const [lngInput, setLngInput] = useState<string>('');
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const [copiedSql, setCopiedSql] = useState(false);
-  const [showSqlModal, setShowSqlModal] = useState(false);
+  // GPS & SQL modal
   const [adminGps, setAdminGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gettingGps, setGettingGps] = useState(false);
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
-  // Filter checkpoints based on current tab
+  // Filter checkpoints by route
   const filteredCheckpoints = checkpoints.filter((cp) => {
     const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
     if (routeFilter === 'all') return true;
@@ -112,8 +99,8 @@ export default function AdminOpenStreetMap({
 
   const selectedCp = checkpoints.find((cp) => cp.id === activeSelectedId) || null;
 
-  // Show transient notification toast
-  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'success') => {
+  // Show toast notification
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => {
       setToast((prev) => (prev?.message === message ? null : prev));
@@ -128,156 +115,123 @@ export default function AdminOpenStreetMap({
     [onSelectCheckpoint]
   );
 
-  // 1. Get resolved coordinate for a checkpoint
-  const getResolvedCoord = useCallback(
-    (cp: AdminCheckpointCoord): { lat: number; lng: number; isCustom: boolean } => {
-      // Check if we have an active dragged coordinate in memory
-      const active = currentCoordsRef.current.get(cp.id);
-      if (active) {
-        return { lat: active.lat, lng: active.lng, isCustom: true };
-      }
+  // Helper to resolve coordinates
+  const resolveCoord = useCallback((cp: AdminCheckpointCoord): { lat: number; lng: number; isCustom: boolean } => {
+    const inMem = coordsRef.current.get(cp.id);
+    if (inMem) return { lat: inMem.lat, lng: inMem.lng, isCustom: true };
 
-      if (cp.latitude != null && cp.longitude != null && !isNaN(Number(cp.latitude)) && !isNaN(Number(cp.longitude))) {
-        return { lat: Number(cp.latitude), lng: Number(cp.longitude), isCustom: true };
-      }
+    if (cp.latitude != null && cp.longitude != null && !isNaN(Number(cp.latitude)) && !isNaN(Number(cp.longitude))) {
+      return { lat: Number(cp.latitude), lng: Number(cp.longitude), isCustom: true };
+    }
 
-      const defaultCoord = CAMPUS_DEFAULT_COORDINATES[cp.id];
-      return {
-        lat: defaultCoord?.lat ?? CAMPUS_CENTER.lat,
-        lng: defaultCoord?.lng ?? CAMPUS_CENTER.lng,
-        isCustom: false,
-      };
-    },
-    []
-  );
+    const def = CAMPUS_DEFAULT_COORDINATES[cp.id];
+    return {
+      lat: def?.lat ?? CAMPUS_CENTER.lat,
+      lng: def?.lng ?? CAMPUS_CENTER.lng,
+      isCustom: false,
+    };
+  }, []);
 
-  // 2. Helper to construct Marker Icon HTML
-  const createMarkerIcon = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (L: any, cp: AdminCheckpointCoord, isSelected: boolean, isMoved: boolean) => {
-      const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
-      const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
-      const hasCustomCoord = cp.latitude != null && cp.longitude != null;
+  // Redraw Polylines directly in Leaflet
+  const updatePolylines = useCallback(() => {
+    if (!polyline1Ref.current && !polyline2Ref.current) return;
 
-      const routeBg = route === 1 ? 'bg-cyan-600' : 'bg-purple-600';
-      const borderClass = isSelected
-        ? 'border-amber-400 ring-4 ring-amber-400/70 scale-125 z-40'
-        : isMoved
-        ? 'border-amber-400 ring-2 ring-amber-400 animate-pulse scale-110 z-30'
-        : 'border-white hover:scale-110 z-20';
+    const r1: [number, number][] = [];
+    const r2: [number, number][] = [];
 
-      const tagClass = isMoved
-        ? 'bg-amber-950/90 text-amber-300 border-amber-400 ring-1 ring-amber-400 font-bold'
-        : hasCustomCoord
-        ? 'bg-black/90 text-emerald-300 border-emerald-500/60'
-        : 'bg-black/90 text-amber-300 border-amber-500/60';
+    for (let id = 1; id <= 12; id++) {
+      const pos = coordsRef.current.get(id);
+      if (pos) r1.push([pos.lat, pos.lng]);
+    }
+    for (let id = 13; id <= 24; id++) {
+      const pos = coordsRef.current.get(id);
+      if (pos) r2.push([pos.lat, pos.lng]);
+    }
 
-      const tagText = isMoved
-        ? `R${route}-0${stage} ● Unsaved`
-        : `R${route}-0${stage} ${hasCustomCoord ? '✓' : '⚠️'}`;
+    if (polyline1Ref.current) polyline1Ref.current.setLatLngs(r1);
+    if (polyline2Ref.current) polyline2Ref.current.setLatLngs(r2);
+  }, []);
 
-      const markerHtml = `
-        <div class="group relative flex items-center justify-center cursor-grab active:cursor-grabbing transition-transform select-none">
-          <div class="w-8 h-8 rounded-full ${routeBg} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 transition-all ${borderClass}">
+  // Construct Leaflet DivIcon
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buildIcon = useCallback((L: any, cp: AdminCheckpointCoord, isSelected: boolean, isMoved: boolean) => {
+    const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
+    const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
+    const hasCustom = cp.latitude != null && cp.longitude != null;
+
+    const bgClass = route === 1 ? 'bg-cyan-600' : 'bg-purple-600';
+    const borderClass = isSelected
+      ? 'border-amber-400 ring-4 ring-amber-400/80 scale-125 z-40'
+      : isMoved
+      ? 'border-amber-400 ring-2 ring-amber-400 scale-110 z-30'
+      : 'border-white hover:scale-110 z-20';
+
+    const tagClass = isMoved
+      ? 'bg-amber-950/95 text-amber-300 border-amber-400 font-bold animate-pulse'
+      : hasCustom
+      ? 'bg-black/90 text-emerald-300 border-emerald-500/60'
+      : 'bg-black/90 text-amber-300 border-amber-500/60';
+
+    const tagLabel = isMoved
+      ? `R${route}-0${stage} ● Unsaved`
+      : `R${route}-0${stage} ${hasCustom ? '✓' : '⚠️'}`;
+
+    return L.divIcon({
+      className: `admin-marker-pin marker-id-${cp.id}`,
+      html: `
+        <div class="group relative flex items-center justify-center cursor-grab active:cursor-grabbing transition-transform select-none" style="pointer-events: auto;">
+          <div class="w-8 h-8 rounded-full ${bgClass} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 transition-all ${borderClass}">
             ${stage}
           </div>
           <span class="absolute -bottom-5 whitespace-nowrap font-mono text-[9px] px-1.5 py-0.5 rounded border shadow-sm ${tagClass}">
-            ${tagText}
+            ${tagLabel}
           </span>
-          <div class="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 text-[10px] text-white font-mono px-2 py-0.5 rounded pointer-events-none whitespace-nowrap border border-line shadow-lg">
+          <div class="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/95 text-[10px] text-white font-mono px-2 py-0.5 rounded pointer-events-none whitespace-nowrap border border-line shadow-lg">
             Drag to Move
           </div>
         </div>
-      `;
-
-      return L.divIcon({
-        className: 'admin-marker-pin',
-        html: markerHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-      });
-    },
-    []
-  );
-
-  // 3. Redraw Route Polylines dynamically from current coordinates
-  const refreshPolylines = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const L = (window as any).L;
-    if (!L) return;
-
-    const r1Points: [number, number][] = [];
-    const r2Points: [number, number][] = [];
-
-    // Collect Route 1 (IDs 1..12)
-    for (let id = 1; id <= 12; id++) {
-      const coord = currentCoordsRef.current.get(id);
-      if (coord) {
-        r1Points.push([coord.lat, coord.lng]);
-      }
-    }
-
-    // Collect Route 2 (IDs 13..24)
-    for (let id = 13; id <= 24; id++) {
-      const coord = currentCoordsRef.current.get(id);
-      if (coord) {
-        r2Points.push([coord.lat, coord.lng]);
-      }
-    }
-
-    if (polyline1Ref.current) {
-      polyline1Ref.current.setLatLngs(r1Points);
-    }
-    if (polyline2Ref.current) {
-      polyline2Ref.current.setLatLngs(r2Points);
-    }
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
   }, []);
 
-  // 4. Update Marker Icons without destroying or moving them
-  const updateAllMarkerIcons = useCallback(() => {
+  // Update visual appearance of markers without destroying DOM or canceling drags
+  const refreshMarkerStyles = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const L = (window as any).L;
-    if (!L) return;
+    if (!L || isDraggingRef.current) return;
 
     markersMapRef.current.forEach((marker, id) => {
       const cp = checkpoints.find((c) => c.id === id);
       if (!cp) return;
       const isSelected = activeSelectedId === id;
       const isMoved = !!movedNodes[id];
-      marker.setIcon(createMarkerIcon(L, cp, isSelected, isMoved));
+      marker.setIcon(buildIcon(L, cp, isSelected, isMoved));
     });
-  }, [checkpoints, activeSelectedId, movedNodes, createMarkerIcon]);
+  }, [checkpoints, activeSelectedId, movedNodes, buildIcon]);
 
-  // Sync marker icons when selection or movedNodes changes
-  useEffect(() => {
-    updateAllMarkerIcons();
-  }, [updateAllMarkerIcons]);
-
-  // Sync lat/lng inputs when selected checkpoint changes
+  // Synchronize input fields when selected checkpoint changes
   useEffect(() => {
     if (activeSelectedId != null) {
       const cp = checkpoints.find((c) => c.id === activeSelectedId);
       if (cp) {
-        const coord = currentCoordsRef.current.get(cp.id) || getResolvedCoord(cp);
+        const coord = coordsRef.current.get(cp.id) || resolveCoord(cp);
         setLatInput(coord.lat.toFixed(6));
         setLngInput(coord.lng.toFixed(6));
       }
     }
-  }, [activeSelectedId, checkpoints, getResolvedCoord]);
+  }, [activeSelectedId, checkpoints, resolveCoord]);
 
-  // 5. Commit Node Move (either Auto-Save to Supabase or mark as Unsaved)
-  const handleNodeMoved = useCallback(
-    async (id: number, newLat: number, newLng: number) => {
-      const cleanLat = Number(newLat.toFixed(6));
-      const cleanLng = Number(newLng.toFixed(6));
+  // Handle final node drop after user releases mouse
+  const handleNodeDropped = useCallback(
+    async (id: number, lat: number, lng: number) => {
+      const cleanLat = Number(lat.toFixed(6));
+      const cleanLng = Number(lng.toFixed(6));
 
-      // Update current in-memory coordinate
-      currentCoordsRef.current.set(id, { lat: cleanLat, lng: cleanLng });
+      coordsRef.current.set(id, { lat: cleanLat, lng: cleanLng });
+      updatePolylines();
 
-      // Update polyline instantly
-      refreshPolylines();
-
-      // If active selection is this node, sync input fields
       if (activeSelectedId === id) {
         setLatInput(cleanLat.toFixed(6));
         setLngInput(cleanLng.toFixed(6));
@@ -287,8 +241,7 @@ export default function AdminOpenStreetMap({
       const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
 
       if (autoSave) {
-        // Auto-save immediately to database
-        setSavingId(id);
+        setSaving(true);
         try {
           const success = await onUpdateCheckpoint({
             id,
@@ -298,7 +251,6 @@ export default function AdminOpenStreetMap({
 
           if (success) {
             showToast(`✓ Node 0${stage} saved to (${cleanLat}, ${cleanLng})`, 'success');
-            // Remove from movedNodes if it was there
             setMovedNodes((prev) => {
               const updated = { ...prev };
               delete updated[id];
@@ -306,145 +258,39 @@ export default function AdminOpenStreetMap({
             });
             onRefresh();
           } else {
-            showToast(`Failed to auto-save Node 0${stage}. Click 'Save' to retry.`, 'error');
-            // Record as pending moved node
+            showToast(`Could not auto-save Node 0${stage}. Click 'Save' to retry.`, 'error');
             setMovedNodes((prev) => ({
               ...prev,
               [id]: {
-                id,
                 lat: cleanLat,
                 lng: cleanLng,
-                originalLat: cp?.latitude ? Number(cp.latitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat,
-                originalLng: cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng,
+                origLat: cp?.latitude ? Number(cp.latitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat,
+                origLng: cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng,
               },
             }));
           }
         } catch (err) {
-          showToast(`Error saving Node 0${stage}: ${err}`, 'error');
+          showToast(`Error: ${err}`, 'error');
         } finally {
-          setSavingId(null);
+          setSaving(false);
         }
       } else {
-        // Mark as moved / unsaved
         setMovedNodes((prev) => ({
           ...prev,
           [id]: {
-            id,
             lat: cleanLat,
             lng: cleanLng,
-            originalLat: cp?.latitude ? Number(cp.latitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat,
-            originalLng: cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng,
+            origLat: cp?.latitude ? Number(cp.latitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat,
+            origLng: cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng,
           },
         }));
         showToast(`📍 Node 0${stage} moved to (${cleanLat}, ${cleanLng}). Click Save to persist.`, 'info');
       }
     },
-    [autoSave, activeSelectedId, checkpoints, onUpdateCheckpoint, onRefresh, refreshPolylines, showToast]
+    [autoSave, activeSelectedId, checkpoints, onUpdateCheckpoint, onRefresh, updatePolylines, showToast]
   );
 
-  // 6. Revert a moved node back to its original DB or preset coordinates
-  const handleRevertNode = useCallback(
-    (id: number) => {
-      const moved = movedNodes[id];
-      const cp = checkpoints.find((c) => c.id === id);
-      const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
-
-      const origLat = moved ? moved.originalLat : cp?.latitude ? Number(cp.latitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat;
-      const origLng = moved ? moved.originalLng : cp?.longitude ? Number(cp.longitude) : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng;
-
-      // Reset in-memory position
-      currentCoordsRef.current.set(id, { lat: origLat, lng: origLng });
-
-      // Move marker on map
-      const marker = markersMapRef.current.get(id);
-      if (marker) {
-        marker.setLatLng([origLat, origLng]);
-      }
-
-      // Update polylines
-      refreshPolylines();
-
-      // Clear from movedNodes
-      setMovedNodes((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-
-      if (activeSelectedId === id) {
-        setLatInput(origLat.toFixed(6));
-        setLngInput(origLng.toFixed(6));
-      }
-
-      showToast(`↺ Reverted Node 0${stage} to original coordinates`, 'info');
-    },
-    [movedNodes, checkpoints, activeSelectedId, refreshPolylines, showToast]
-  );
-
-  // 7. Save a specific moved node to Database
-  const handleSaveMovedNode = useCallback(
-    async (id: number) => {
-      const moved = movedNodes[id];
-      if (!moved) return;
-
-      const cp = checkpoints.find((c) => c.id === id);
-      const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
-
-      setSavingId(id);
-      try {
-        const ok = await onUpdateCheckpoint({
-          id,
-          latitude: moved.lat,
-          longitude: moved.lng,
-        });
-
-        if (ok) {
-          showToast(`✓ Node 0${stage} location successfully saved to database!`, 'success');
-          setMovedNodes((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
-          onRefresh();
-        } else {
-          showToast(`Failed to save Node 0${stage} to database`, 'error');
-        }
-      } catch (err) {
-        showToast(`Error saving node: ${err}`, 'error');
-      } finally {
-        setSavingId(null);
-      }
-    },
-    [movedNodes, checkpoints, onUpdateCheckpoint, onRefresh, showToast]
-  );
-
-  // 8. Save All Moved Nodes in one batch
-  const handleSaveAllMoved = useCallback(async () => {
-    const ids = Object.keys(movedNodes).map(Number);
-    if (ids.length === 0) return;
-
-    setSavingId(-1);
-    let successCount = 0;
-
-    for (const id of ids) {
-      const moved = movedNodes[id];
-      if (moved) {
-        const ok = await onUpdateCheckpoint({
-          id,
-          latitude: moved.lat,
-          longitude: moved.lng,
-        });
-        if (ok) successCount++;
-      }
-    }
-
-    setSavingId(null);
-    setMovedNodes({});
-    onRefresh();
-    showToast(`✓ Saved ${successCount} node(s) to Supabase database!`, 'success');
-  }, [movedNodes, onUpdateCheckpoint, onRefresh, showToast]);
-
-  // 9. Manual Save from Sidebar Form
+  // Manual save coordinates button in sidebar
   const handleSaveManualCoordinates = useCallback(async () => {
     if (activeSelectedId == null) return;
 
@@ -459,15 +305,14 @@ export default function AdminOpenStreetMap({
     const cleanLat = Number(lat.toFixed(6));
     const cleanLng = Number(lng.toFixed(6));
 
-    // Update marker on map directly
     const marker = markersMapRef.current.get(activeSelectedId);
     if (marker) {
       marker.setLatLng([cleanLat, cleanLng]);
     }
-    currentCoordsRef.current.set(activeSelectedId, { lat: cleanLat, lng: cleanLng });
-    refreshPolylines();
+    coordsRef.current.set(activeSelectedId, { lat: cleanLat, lng: cleanLng });
+    updatePolylines();
 
-    setSavingId(activeSelectedId);
+    setSaving(true);
     try {
       const ok = await onUpdateCheckpoint({
         id: activeSelectedId,
@@ -489,25 +334,94 @@ export default function AdminOpenStreetMap({
     } catch (err) {
       showToast(`Error saving: ${err}`, 'error');
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
-  }, [activeSelectedId, latInput, lngInput, onUpdateCheckpoint, onRefresh, refreshPolylines, showToast]);
+  }, [activeSelectedId, latInput, lngInput, onUpdateCheckpoint, onRefresh, updatePolylines, showToast]);
 
-  // 10. Reset Selected Checkpoint to SRM Default Preset
+  // Revert a moved node
+  const handleRevertNode = useCallback(
+    (id: number) => {
+      const moved = movedNodes[id];
+      const cp = checkpoints.find((c) => c.id === id);
+      const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
+
+      const origLat = moved
+        ? moved.origLat
+        : cp?.latitude
+        ? Number(cp.latitude)
+        : CAMPUS_DEFAULT_COORDINATES[id]?.lat ?? CAMPUS_CENTER.lat;
+      const origLng = moved
+        ? moved.origLng
+        : cp?.longitude
+        ? Number(cp.longitude)
+        : CAMPUS_DEFAULT_COORDINATES[id]?.lng ?? CAMPUS_CENTER.lng;
+
+      coordsRef.current.set(id, { lat: origLat, lng: origLng });
+
+      const marker = markersMapRef.current.get(id);
+      if (marker) {
+        marker.setLatLng([origLat, origLng]);
+      }
+
+      updatePolylines();
+
+      setMovedNodes((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      if (activeSelectedId === id) {
+        setLatInput(origLat.toFixed(6));
+        setLngInput(origLng.toFixed(6));
+      }
+
+      showToast(`↺ Reverted Node 0${stage} to original coordinates`, 'info');
+    },
+    [movedNodes, checkpoints, activeSelectedId, updatePolylines, showToast]
+  );
+
+  // Save all moved nodes at once
+  const handleSaveAllMoved = useCallback(async () => {
+    const ids = Object.keys(movedNodes).map(Number);
+    if (ids.length === 0) return;
+
+    setSaving(true);
+    let successCount = 0;
+
+    for (const id of ids) {
+      const moved = movedNodes[id];
+      if (moved) {
+        const ok = await onUpdateCheckpoint({
+          id,
+          latitude: moved.lat,
+          longitude: moved.lng,
+        });
+        if (ok) successCount++;
+      }
+    }
+
+    setSaving(false);
+    setMovedNodes({});
+    onRefresh();
+    showToast(`✓ Saved ${successCount} node(s) to Supabase database!`, 'success');
+  }, [movedNodes, onUpdateCheckpoint, onRefresh, showToast]);
+
+  // Reset to SRM building preset
   const handleResetToPreset = useCallback(async () => {
     if (activeSelectedId == null) return;
-    const defaultCoord = CAMPUS_DEFAULT_COORDINATES[activeSelectedId];
-    if (!defaultCoord) return;
+    const def = CAMPUS_DEFAULT_COORDINATES[activeSelectedId];
+    if (!def) return;
 
-    const cleanLat = Number(defaultCoord.lat.toFixed(6));
-    const cleanLng = Number(defaultCoord.lng.toFixed(6));
+    const cleanLat = Number(def.lat.toFixed(6));
+    const cleanLng = Number(def.lng.toFixed(6));
 
     const marker = markersMapRef.current.get(activeSelectedId);
     if (marker) {
       marker.setLatLng([cleanLat, cleanLng]);
     }
-    currentCoordsRef.current.set(activeSelectedId, { lat: cleanLat, lng: cleanLng });
-    refreshPolylines();
+    coordsRef.current.set(activeSelectedId, { lat: cleanLat, lng: cleanLng });
+    updatePolylines();
 
     if (mapInstanceRef.current) {
       mapInstanceRef.current.setView([cleanLat, cleanLng], 18, { animate: true });
@@ -516,10 +430,10 @@ export default function AdminOpenStreetMap({
     setLatInput(cleanLat.toFixed(6));
     setLngInput(cleanLng.toFixed(6));
 
-    await handleNodeMoved(activeSelectedId, cleanLat, cleanLng);
-  }, [activeSelectedId, handleNodeMoved, refreshPolylines]);
+    await handleNodeDropped(activeSelectedId, cleanLat, cleanLng);
+  }, [activeSelectedId, handleNodeDropped, updatePolylines]);
 
-  // 11. Grab Admin Device GPS Position
+  // Admin Device GPS
   const handleGetAdminLocation = useCallback(() => {
     if (!navigator.geolocation) {
       alert('Geolocation is not supported by your browser');
@@ -537,19 +451,16 @@ export default function AdminOpenStreetMap({
           mapInstanceRef.current.setView([lat, lng], 18, { animate: true });
         }
 
-        // If a checkpoint is currently selected, offer to move it or update inputs
         if (activeSelectedId != null) {
           setLatInput(lat.toFixed(6));
           setLngInput(lng.toFixed(6));
           const marker = markersMapRef.current.get(activeSelectedId);
-          if (marker) {
-            marker.setLatLng([lat, lng]);
-          }
-          currentCoordsRef.current.set(activeSelectedId, { lat, lng });
-          refreshPolylines();
-          handleNodeMoved(activeSelectedId, lat, lng);
+          if (marker) marker.setLatLng([lat, lng]);
+          coordsRef.current.set(activeSelectedId, { lat, lng });
+          updatePolylines();
+          handleNodeDropped(activeSelectedId, lat, lng);
         } else {
-          showToast(`Admin GPS acquired: ${lat}, ${lng}`, 'info');
+          showToast(`Admin GPS: ${lat}, ${lng}`, 'info');
         }
       },
       (err) => {
@@ -558,28 +469,28 @@ export default function AdminOpenStreetMap({
       },
       { enableHighAccuracy: true, timeout: 15000 }
     );
-  }, [activeSelectedId, handleNodeMoved, refreshPolylines, showToast]);
+  }, [activeSelectedId, handleNodeDropped, updatePolylines, showToast]);
 
-  // 12. Fit bounds to current route nodes
+  // Fit all route nodes
   const handleFitRoute = useCallback(() => {
     if (!mapInstanceRef.current || filteredCheckpoints.length === 0) return;
     const bounds: [number, number][] = filteredCheckpoints.map((cp) => {
-      const coord = currentCoordsRef.current.get(cp.id) || getResolvedCoord(cp);
+      const coord = coordsRef.current.get(cp.id) || resolveCoord(cp);
       return [coord.lat, coord.lng];
     });
     mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
-  }, [filteredCheckpoints, getResolvedCoord]);
+  }, [filteredCheckpoints, resolveCoord]);
 
-  // 13. Initialize Leaflet Map Instance (Runs ONCE)
+  // 1. Initialize Map Once
   useEffect(() => {
-    let isCancelled = false;
+    let cancelled = false;
 
     async function initMap() {
       if (!mapContainerRef.current || mapInstanceRef.current) return;
 
       try {
         const L = await loadLeaflet();
-        if (isCancelled || !mapContainerRef.current) return;
+        if (cancelled || !mapContainerRef.current) return;
 
         const map = L.map(mapContainerRef.current, {
           center: [CAMPUS_CENTER.lat, CAMPUS_CENTER.lng],
@@ -595,51 +506,47 @@ export default function AdminOpenStreetMap({
 
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // Polylines for Route 1 (Cyan) and Route 2 (Purple)
         polyline1Ref.current = L.polyline([], {
-          color: '#06b6d4', // Cyan
+          color: '#06b6d4',
           weight: 3.5,
           opacity: 0.85,
           dashArray: '6, 6',
         }).addTo(map);
 
         polyline2Ref.current = L.polyline([], {
-          color: '#a855f7', // Purple
+          color: '#a855f7',
           weight: 3.5,
           opacity: 0.85,
           dashArray: '6, 6',
         }).addTo(map);
 
-        // Click map to reposition currently selected checkpoint
+        // Click map to reposition selected checkpoint
         map.on('click', (e: { latlng: { lat: number; lng: number } }) => {
-          const lat = Number(e.latlng.lat.toFixed(6));
-          const lng = Number(e.latlng.lng.toFixed(6));
-
-          // If a checkpoint is selected, move it to clicked location!
-          // Note: read latest selectedId via state callback or active ref
-          setInternalSelectedId((currentSelected) => {
-            const idToMove = controlledSelectedId !== undefined ? controlledSelectedId : currentSelected;
-            if (idToMove != null) {
-              const marker = markersMapRef.current.get(idToMove);
-              if (marker) {
-                marker.setLatLng([lat, lng]);
-              }
-              handleNodeMoved(idToMove, lat, lng);
+          setInternalSelectedId((curr) => {
+            const targetId = controlledSelectedId !== undefined ? controlledSelectedId : curr;
+            if (targetId != null) {
+              const cleanLat = Number(e.latlng.lat.toFixed(6));
+              const cleanLng = Number(e.latlng.lng.toFixed(6));
+              const marker = markersMapRef.current.get(targetId);
+              if (marker) marker.setLatLng([cleanLat, cleanLng]);
+              coordsRef.current.set(targetId, { lat: cleanLat, lng: cleanLng });
+              updatePolylines();
+              handleNodeDropped(targetId, cleanLat, cleanLng);
             }
-            return currentSelected;
+            return curr;
           });
         });
 
         mapInstanceRef.current = map;
       } catch (err) {
-        console.error('Error loading Leaflet for Admin:', err);
+        console.error('Failed to init Leaflet for Admin:', err);
       }
     }
 
     initMap();
 
     return () => {
-      isCancelled = true;
+      cancelled = true;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -647,7 +554,7 @@ export default function AdminOpenStreetMap({
     };
   }, []);
 
-  // 14. Synchronize Markers and Map State when checkpoints or routeFilter change
+  // 2. Synchronize Markers with Checkpoints data and Route Filter
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const L = (window as any).L;
@@ -656,7 +563,7 @@ export default function AdminOpenStreetMap({
 
     const visibleIds = new Set(filteredCheckpoints.map((cp) => cp.id));
 
-    // Remove markers that are no longer visible in current route filter
+    // Remove obsolete markers
     markersMapRef.current.forEach((marker, id) => {
       if (!visibleIds.has(id)) {
         marker.remove();
@@ -666,29 +573,26 @@ export default function AdminOpenStreetMap({
 
     const bounds: [number, number][] = [];
 
-    // Create or update markers for visible checkpoints
+    // Create markers for newly visible checkpoints
     filteredCheckpoints.forEach((cp) => {
-      const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
-      const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
-
-      // Only update in-memory coordinate if user has NOT already dragged this node
-      if (!movedNodes[cp.id]) {
-        const resolved = getResolvedCoord(cp);
-        currentCoordsRef.current.set(cp.id, { lat: resolved.lat, lng: resolved.lng });
+      // Initialize coordinate in memory if not already present
+      if (!coordsRef.current.has(cp.id) || !movedNodes[cp.id]) {
+        const res = resolveCoord(cp);
+        coordsRef.current.set(cp.id, { lat: res.lat, lng: res.lng });
       }
 
-      const currentCoord = currentCoordsRef.current.get(cp.id)!;
-      bounds.push([currentCoord.lat, currentCoord.lng]);
+      const coord = coordsRef.current.get(cp.id)!;
+      bounds.push([coord.lat, coord.lng]);
 
       const isSelected = activeSelectedId === cp.id;
       const isMoved = !!movedNodes[cp.id];
-      const icon = createMarkerIcon(L, cp, isSelected, isMoved);
+      const icon = buildIcon(L, cp, isSelected, isMoved);
 
       let marker = markersMapRef.current.get(cp.id);
 
       if (!marker) {
-        // Create new draggable Leaflet Marker
-        marker = L.marker([currentCoord.lat, currentCoord.lng], {
+        // Instantiate Draggable Marker
+        marker = L.marker([coord.lat, coord.lng], {
           icon,
           draggable: true,
           autoPan: true,
@@ -699,57 +603,57 @@ export default function AdminOpenStreetMap({
           handleSelectCheckpoint(cp.id);
         });
 
-        // Marker Drag Start -> Auto select & set live HUD
-        marker.on('dragstart', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
+        // Marker Drag Start -> Lock state, show HUD directly via DOM (Zero React lag)
+        marker.on('dragstart', () => {
+          isDraggingRef.current = true;
           handleSelectCheckpoint(cp.id);
-          const pos = e.target.getLatLng();
-          setLiveDrag({
-            id: cp.id,
-            stage,
-            route,
-            lat: pos.lat,
-            lng: pos.lng,
-          });
+          if (dragHudRef.current) {
+            dragHudRef.current.style.display = 'flex';
+          }
         });
 
-        // Marker Dragging in real-time -> Dynamically bend polyline & update live HUD
+        // Marker Dragging -> Update polyline & HUD directly in 60fps
         marker.on('drag', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           const pos = e.target.getLatLng();
-          currentCoordsRef.current.set(cp.id, { lat: pos.lat, lng: pos.lng });
+          coordsRef.current.set(cp.id, { lat: pos.lat, lng: pos.lng });
 
-          // Live bend polyline in 60fps!
-          refreshPolylines();
+          // Update Leaflet polylines immediately
+          updatePolylines();
 
-          setLiveDrag({
-            id: cp.id,
-            stage,
-            route,
-            lat: pos.lat,
-            lng: pos.lng,
-          });
+          // Update HUD directly
+          if (dragHudRef.current) {
+            const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
+            const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
+            dragHudRef.current.innerHTML = `
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <span><strong>R${route}-0${stage}</strong> &rarr; Lat: ${pos.lat.toFixed(6)}, Lng: ${pos.lng.toFixed(6)}</span>
+            `;
+          }
         });
 
-        // Marker Drag End -> Finalize position & trigger save / pending status
+        // Marker Drag End -> Commit coordinates and unlock
         marker.on('dragend', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
-          setLiveDrag(null);
+          isDraggingRef.current = false;
+          if (dragHudRef.current) {
+            dragHudRef.current.style.display = 'none';
+          }
           const finalPos = e.target.getLatLng();
-          handleNodeMoved(cp.id, finalPos.lat, finalPos.lng);
+          handleNodeDropped(cp.id, finalPos.lat, finalPos.lng);
         });
 
         markersMapRef.current.set(cp.id, marker);
       } else {
-        // Marker already exists: ensure position and icon are correct without re-creating!
-        if (!movedNodes[cp.id]) {
-          marker.setLatLng([currentCoord.lat, currentCoord.lng]);
+        // Marker exists: update position only if not currently moved or dragging
+        if (!isDraggingRef.current && !movedNodes[cp.id]) {
+          marker.setLatLng([coord.lat, coord.lng]);
         }
         marker.setIcon(icon);
       }
     });
 
-    // Update polylines
-    refreshPolylines();
+    updatePolylines();
 
-    // Initial fit if no checkpoint is actively selected
+    // Initial fit view if no checkpoint selected
     if (bounds.length > 0 && activeSelectedId == null) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
     }
@@ -757,25 +661,23 @@ export default function AdminOpenStreetMap({
     filteredCheckpoints,
     activeSelectedId,
     movedNodes,
-    createMarkerIcon,
-    getResolvedCoord,
-    handleNodeMoved,
+    buildIcon,
+    resolveCoord,
+    handleNodeDropped,
     handleSelectCheckpoint,
-    refreshPolylines,
+    updatePolylines,
   ]);
 
-  const handleCopySql = () => {
-    const snippet = generateSqlMigrationSnippet();
-    navigator.clipboard.writeText(snippet);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 2500);
-  };
+  // Keep marker styling in sync with selection
+  useEffect(() => {
+    refreshMarkerStyles();
+  }, [refreshMarkerStyles]);
 
   const movedCount = Object.keys(movedNodes).length;
 
   return (
     <div className="space-y-4">
-      {/* Toast Notification */}
+      {/* Toast Feedback */}
       {toast && (
         <div
           className={`fixed top-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-xl text-xs font-bold font-mono flex items-center gap-2 border transition-all animate-in slide-in-from-top-2 ${
@@ -866,50 +768,39 @@ export default function AdminOpenStreetMap({
 
       {/* Main Map + Inspection Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* OpenStreetMap Canvas (2 Columns on large screens) */}
+        {/* OpenStreetMap Canvas */}
         <div className="lg:col-span-2 relative h-[500px] sm:h-[600px] rounded-lg border border-line overflow-hidden shadow-inner bg-zinc-900">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-          {/* Live Dragging HUD Banner */}
-          {liveDrag && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md flex items-center gap-2.5 animate-pulse">
-              <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
-              <span>
-                Dragging{' '}
-                <strong className="text-accent">
-                  Route {liveDrag.route} // Node 0{liveDrag.stage}
-                </strong>{' '}
-                &rarr; Lat: {liveDrag.lat.toFixed(6)}, Lng: {liveDrag.lng.toFixed(6)}
-              </span>
-            </div>
-          )}
+          {/* Real-time Drag HUD Banner (Direct DOM overlay, 0 React lag) */}
+          <div
+            ref={dragHudRef}
+            style={{ display: 'none' }}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md items-center gap-2.5 pointer-events-none"
+          />
 
-          {/* Unsaved Changes Floating Bar (When Auto-Save is OFF and nodes moved) */}
+          {/* Unsaved Changes Banner */}
           {!autoSave && movedCount > 0 && (
             <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-3 z-20 bg-amber-950/95 border-2 border-amber-400 p-3 rounded-lg shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="flex items-center gap-2 text-amber-300">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="font-bold">
-                  {movedCount} Node(s) Moved (Unsaved)
-                </span>
+                <span className="font-bold">{movedCount} Node(s) Moved (Unsaved)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSaveAllMoved}
-                  disabled={savingId === -1}
-                  className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold uppercase rounded cursor-pointer transition-colors shadow flex items-center gap-1"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{savingId === -1 ? 'Saving...' : 'Save All Changes'}</span>
-                </button>
-              </div>
+              <button
+                onClick={handleSaveAllMoved}
+                disabled={saving}
+                className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold uppercase rounded cursor-pointer transition-colors shadow flex items-center gap-1"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
+              </button>
             </div>
           )}
 
           {/* Quick Help Tip */}
           <div className="absolute bottom-3 left-3 z-10 bg-black/85 border border-line/60 px-3 py-1.5 rounded text-[11px] text-stone-300 backdrop-blur-xs flex items-center gap-2 shadow">
             <Info className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span>Drag pins or click anywhere to calibrate node coordinates</span>
+            <span>Drag pins or click anywhere on the map to set exact coordinates</span>
           </div>
 
           {/* Legend Overlay */}
@@ -923,7 +814,7 @@ export default function AdminOpenStreetMap({
               <span>Route 2</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-emerald-400">✓ Calibrated</span>
+              <span className="text-emerald-400">✓ Saved</span>
             </div>
           </div>
         </div>
@@ -950,7 +841,7 @@ export default function AdminOpenStreetMap({
                 <p className="text-xs text-primary font-bold uppercase">{selectedCp.area}</p>
               </div>
 
-              {/* Status Indicator */}
+              {/* Status Alert */}
               {movedNodes[selectedCp.id] ? (
                 <div className="bg-amber-500/15 border border-amber-500/50 p-2.5 rounded text-xs text-amber-300 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -998,8 +889,8 @@ export default function AdminOpenStreetMap({
                         if (marker) {
                           const curLng = parseFloat(lngInput) || CAMPUS_CENTER.lng;
                           marker.setLatLng([num, curLng]);
-                          currentCoordsRef.current.set(selectedCp.id, { lat: num, lng: curLng });
-                          refreshPolylines();
+                          coordsRef.current.set(selectedCp.id, { lat: num, lng: curLng });
+                          updatePolylines();
                         }
                       }
                     }}
@@ -1027,8 +918,8 @@ export default function AdminOpenStreetMap({
                         if (marker) {
                           const curLat = parseFloat(latInput) || CAMPUS_CENTER.lat;
                           marker.setLatLng([curLat, num]);
-                          currentCoordsRef.current.set(selectedCp.id, { lat: curLat, lng: num });
-                          refreshPolylines();
+                          coordsRef.current.set(selectedCp.id, { lat: curLat, lng: num });
+                          updatePolylines();
                         }
                       }
                     }}
@@ -1072,7 +963,7 @@ export default function AdminOpenStreetMap({
               <div className="space-y-2 pt-2 border-t border-line">
                 <button
                   onClick={handleSaveManualCoordinates}
-                  disabled={savingId === selectedCp.id}
+                  disabled={saving}
                   className={`w-full py-2.5 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${
                     movedNodes[selectedCp.id]
                       ? 'bg-amber-500 hover:bg-amber-400 text-black font-extrabold ring-2 ring-amber-400 animate-pulse'
@@ -1081,7 +972,7 @@ export default function AdminOpenStreetMap({
                 >
                   <Save className="w-4 h-4" />
                   <span>
-                    {savingId === selectedCp.id
+                    {saving
                       ? 'Persisting to Database...'
                       : movedNodes[selectedCp.id]
                       ? 'Save Moved Position to Supabase'
@@ -1117,9 +1008,7 @@ export default function AdminOpenStreetMap({
               <span className="text-[11px] uppercase font-bold text-muted">
                 Select Checkpoint ({filteredCheckpoints.length} nodes):
               </span>
-              <span className="text-[10px] text-muted font-mono">
-                Click to Focus &amp; Pan
-              </span>
+              <span className="text-[10px] text-muted font-mono">Click to Focus</span>
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
               {filteredCheckpoints.map((cp) => {
@@ -1186,7 +1075,12 @@ export default function AdminOpenStreetMap({
 
             <div className="flex justify-between items-center gap-3">
               <button
-                onClick={handleCopySql}
+                onClick={() => {
+                  const snippet = generateSqlMigrationSnippet();
+                  navigator.clipboard.writeText(snippet);
+                  setCopiedSql(true);
+                  setTimeout(() => setCopiedSql(false), 2500);
+                }}
                 className="flex-1 py-2.5 bg-primary hover:opacity-90 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-colors cursor-pointer flex items-center justify-center gap-2 shadow"
               >
                 {copiedSql ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}

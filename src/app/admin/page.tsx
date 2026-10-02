@@ -285,11 +285,15 @@ export default function AdminDashboard() {
         body: JSON.stringify(updated),
       });
       if (res.ok) {
+        setCheckpoints(prev => prev.map(cp => cp.id === updated.id ? { ...cp, ...updated } : cp));
         await fetchDashboardData(true);
         return true;
       }
+      const errData = await res.json().catch(() => ({}));
+      console.error('Failed to update coordinates:', errData.error);
       return false;
-    } catch {
+    } catch (err) {
+      console.error('Network error updating coordinates:', err);
       return false;
     }
   };
@@ -308,13 +312,14 @@ export default function AdminDashboard() {
 
       if (res.ok) {
         setSaveStatus('Updated successfully!');
+        setCheckpoints(prev => prev.map(cp => cp.id === editingCheckpoint.id ? { ...cp, ...editForm } as AdminCheckpoint : cp));
         await fetchDashboardData(true);
         setTimeout(() => {
           setEditingCheckpoint(null);
           setSaveStatus(null);
         }, 1000);
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setSaveStatus(`Error: ${data.error || 'Failed to save'}`);
       }
     } catch {

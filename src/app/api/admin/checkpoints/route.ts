@@ -85,21 +85,14 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Valid checkpoint ID (1-24) required' }, { status: 400 });
     }
 
-    // Determine target database based on checkpoint ID (1..12 is Route 1, 13..24 is Route 2)
-    const targetRoute: 1 | 2 = id <= 12 ? 1 : 2;
-    const supabase = getSupabaseAdmin(targetRoute);
-
-    if (!supabase) {
-      return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
-    }
-
     const updatePayload: Record<string, unknown> = {
-      title,
-      area,
-      clue,
-      qr_hash,
       updated_at: new Date().toISOString(),
     };
+
+    if (title !== undefined && title !== null) updatePayload.title = title;
+    if (area !== undefined && area !== null) updatePayload.area = area;
+    if (clue !== undefined && clue !== null) updatePayload.clue = clue;
+    if (qr_hash !== undefined && qr_hash !== null) updatePayload.qr_hash = qr_hash;
 
     if (latitude !== undefined) {
       updatePayload.latitude = latitude !== null && latitude !== '' ? Number(latitude) : null;
@@ -108,19 +101,47 @@ export async function PUT(req: NextRequest) {
       updatePayload.longitude = longitude !== null && longitude !== '' ? Number(longitude) : null;
     }
 
-    const { data: updated, error } = await supabase
+    // Determine target database based on checkpoint ID (1..12 is Route 1, 13..24 is Route 2)
+    const targetRoute: 1 | 2 = id <= 12 ? 1 : 2;
+    const supabase = getSupabaseAdmin(targetRoute);
+
+    if (!supabase) {
+      return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
+    }
+
+    let { data: updated, error } = await supabase
       .from('checkpoints')
       .update(updatePayload)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
+
+    // Fallback: If not found in targetRoute db and dual-db is configured, try the other DB
+    if (!updated && !error) {
+      const altRoute: 1 | 2 = targetRoute === 1 ? 2 : 1;
+      const altSupabase = getSupabaseAdmin(altRoute);
+      if (altSupabase && altSupabase !== supabase) {
+        const altRes = await altSupabase
+          .from('checkpoints')
+          .update(updatePayload)
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+        if (altRes.data) {
+          updated = altRes.data;
+          error = null;
+        }
+      }
+    }
 
     if (error) {
-      return serverError('Failed to update checkpoint', error);
+      console.error('Failed to update checkpoint in Supabase:', error);
+      return NextResponse.json({ error: error.message || 'Failed to update checkpoint' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, checkpoint: updated });
   } catch (err: unknown) {
+    console.error('PUT /api/admin/checkpoints error:', err);
     return serverError('Failed to update checkpoint', err);
   }
 }

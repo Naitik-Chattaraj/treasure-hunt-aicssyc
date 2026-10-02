@@ -31,6 +31,8 @@ export default function MiniDraggableMap({
   const mapRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markerRef = useRef<any>(null);
+  const badgeTextRef = useRef<HTMLSpanElement | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   const defaultCoord = CAMPUS_DEFAULT_COORDINATES[checkpointId];
   const initialLat =
@@ -46,17 +48,20 @@ export default function MiniDraggableMap({
     lat: initialLat,
     lng: initialLng,
   });
-  const [isDragging, setIsDragging] = useState(false);
   const [acquiringGps, setAcquiringGps] = useState(false);
 
-  // Sync state if props change externally
+  // Sync state if props change externally when not dragging
   useEffect(() => {
+    if (isDraggingRef.current) return;
     if (latitude != null && longitude != null && !isNaN(Number(latitude)) && !isNaN(Number(longitude))) {
       const latNum = Number(latitude);
       const lngNum = Number(longitude);
       setCurrentCoord({ lat: latNum, lng: lngNum });
       if (markerRef.current) {
         markerRef.current.setLatLng([latNum, lngNum]);
+      }
+      if (badgeTextRef.current) {
+        badgeTextRef.current.textContent = `${latNum.toFixed(6)}, ${lngNum.toFixed(6)}`;
       }
     }
   }, [latitude, longitude]);
@@ -110,20 +115,26 @@ export default function MiniDraggableMap({
         }).addTo(map);
 
         marker.on('dragstart', () => {
-          setIsDragging(true);
+          isDraggingRef.current = true;
         });
 
+        // Update live coordinate badge directly via DOM (Zero React lag during drag)
         marker.on('drag', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           const pos = e.target.getLatLng();
-          setCurrentCoord({ lat: pos.lat, lng: pos.lng });
+          if (badgeTextRef.current) {
+            badgeTextRef.current.textContent = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)} (Dragging)`;
+          }
         });
 
         marker.on('dragend', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
-          setIsDragging(false);
+          isDraggingRef.current = false;
           const pos = e.target.getLatLng();
           const cleanLat = Number(pos.lat.toFixed(6));
           const cleanLng = Number(pos.lng.toFixed(6));
           setCurrentCoord({ lat: cleanLat, lng: cleanLng });
+          if (badgeTextRef.current) {
+            badgeTextRef.current.textContent = `${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)}`;
+          }
           onChange(cleanLat, cleanLng);
         });
 
@@ -133,13 +144,15 @@ export default function MiniDraggableMap({
           const cleanLng = Number(e.latlng.lng.toFixed(6));
           marker.setLatLng([cleanLat, cleanLng]);
           setCurrentCoord({ lat: cleanLat, lng: cleanLng });
+          if (badgeTextRef.current) {
+            badgeTextRef.current.textContent = `${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)}`;
+          }
           onChange(cleanLat, cleanLng);
         });
 
         mapRef.current = map;
         markerRef.current = marker;
 
-        // Leaflet resize trigger
         setTimeout(() => {
           if (mapRef.current) mapRef.current.invalidateSize();
         }, 150);
@@ -177,6 +190,9 @@ export default function MiniDraggableMap({
         if (mapRef.current) {
           mapRef.current.setView([cleanLat, cleanLng], 18, { animate: true });
         }
+        if (badgeTextRef.current) {
+          badgeTextRef.current.textContent = `${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)}`;
+        }
         onChange(cleanLat, cleanLng);
       },
       (err) => {
@@ -195,6 +211,9 @@ export default function MiniDraggableMap({
     }
     if (mapRef.current) {
       mapRef.current.setView([defaultCoord.lat, defaultCoord.lng], 17, { animate: true });
+    }
+    if (badgeTextRef.current) {
+      badgeTextRef.current.textContent = `${defaultCoord.lat.toFixed(6)}, ${defaultCoord.lng.toFixed(6)}`;
     }
     onChange(defaultCoord.lat, defaultCoord.lng);
   };
@@ -250,10 +269,9 @@ export default function MiniDraggableMap({
         {/* Live Coordinate Badge Overlay */}
         <div className="absolute top-2 left-2 z-10 bg-black/85 border border-line/80 px-2 py-1 rounded text-[10px] font-mono text-ink backdrop-blur-xs flex items-center gap-1.5 shadow">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>
+          <span ref={badgeTextRef}>
             {currentCoord.lat.toFixed(6)}, {currentCoord.lng.toFixed(6)}
           </span>
-          {isDragging && <span className="text-amber-300 font-bold">(Dragging)</span>}
         </div>
 
         {/* Helper Footer overlay */}
