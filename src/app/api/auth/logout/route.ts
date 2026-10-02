@@ -35,12 +35,36 @@ export async function POST(req: NextRequest) {
 
           if (team?.device_id && team.device_id.startsWith('{')) {
             const roleKey = payload.operativeRole === 'Field Scout' ? 'scout' : 'decoder';
-            // Remove only this device's entry, without overwriting a concurrent login for the other role
-            await updateDeviceMap(db, team.id, team.device_id, (map) => {
-              if (map[roleKey] !== payload.deviceId) return false;
-              delete map[roleKey];
-              return true;
-            });
+            let rpcSuccess = false;
+
+            // Try Supabase RPC first
+            try {
+              const { error: rpcErr } = await db.rpc('remove_operative_session', {
+                p_team_id: team.id,
+                p_role: payload.operativeRole,
+                p_device_id: payload.deviceId,
+              });
+              if (!rpcErr) rpcSuccess = true;
+            } catch {
+              rpcSuccess = false;
+            }
+
+            // Fallback to updateDeviceMap
+            if (!rpcSuccess) {
+              await updateDeviceMap(db, team.id, team.device_id, (map) => {
+                const existing = map[roleKey];
+                if (Array.isArray(existing)) {
+                  if (!existing.includes(payload.deviceId)) return false;
+                  map[roleKey] = existing.filter((id) => id !== payload.deviceId);
+                  return true;
+                }
+                if (existing === payload.deviceId) {
+                  delete map[roleKey];
+                  return true;
+                }
+                return false;
+              });
+            }
           }
         }
       }

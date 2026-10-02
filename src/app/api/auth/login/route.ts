@@ -206,17 +206,53 @@ export async function POST(req: NextRequest) {
     // Team is approved - generate deviceId, update DB with dual session map, sign JWT
     const deviceId = crypto.randomUUID();
     const roleKey = currentOperativeRole === 'Field Scout' ? 'scout' : 'decoder';
+    const maxDevices = currentOperativeRole === 'Base Decoder' ? 2 : 3;
 
-    // Only this role's entry changes; a concurrent login for the other role is kept
-    const deviceSaved = await updateDeviceMap(
-      activeDb,
-      team.id,
-      typeof team.device_id === 'string' ? team.device_id : null,
-      (map) => {
-        map[roleKey] = deviceId;
-        return true;
+    let deviceSaved = false;
+
+    // Try Supabase RPC first if available
+    try {
+      const { data: rpcData, error: rpcError } = await activeDb.rpc('register_operative_session', {
+        p_team_id: team.id,
+        p_role: currentOperativeRole,
+        p_device_id: deviceId,
+      });
+      if (!rpcError && rpcData) {
+        deviceSaved = true;
       }
-    );
+    } catch {
+      deviceSaved = false;
+    }
+
+    // Fallback to updateDeviceMap if RPC is not configured or returns error
+    if (!deviceSaved) {
+      deviceSaved = await updateDeviceMap(
+        activeDb,
+        team.id,
+        typeof team.device_id === 'string' ? team.device_id : null,
+        (map) => {
+          let list: string[] = [];
+          const existing = map[roleKey];
+          if (Array.isArray(existing)) {
+            list = [...existing];
+          } else if (typeof existing === 'string') {
+            list = [existing];
+          }
+
+          // Filter out deviceId if already present
+          list = list.filter((id) => id !== deviceId);
+          list.push(deviceId);
+
+          // Enforce role capacity: max 2 Base Decoders, max 3 Field Scouts (FIFO)
+          while (list.length > maxDevices) {
+            list.shift();
+          }
+
+          map[roleKey] = list;
+          return true;
+        }
+      );
+    }
 
     // A token whose deviceId isn't stored would be rejected on the very next request
     if (!deviceSaved) {

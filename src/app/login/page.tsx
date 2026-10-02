@@ -227,6 +227,19 @@ export default function LoginPage() {
         setAuthError('TEAMS MUST HAVE 4 OR 5 MEMBERS.');
         return;
       }
+
+      const decoderCount = members.filter(m => m.role.toLowerCase().includes('decoder')).length;
+      const scoutCount = members.filter(m => m.role.toLowerCase().includes('scout')).length;
+
+      if (decoderCount !== 2) {
+        setAuthError('TEAM MUST HAVE EXACTLY 2 BASE DECODERS.');
+        return;
+      }
+      if (scoutCount < 2 || scoutCount > 3) {
+        setAuthError('TEAM MUST HAVE 2 OR 3 FIELD SCOUTS.');
+        return;
+      }
+
       for (const m of members) {
         if (!m.regNo.trim() || !m.phone.trim()) {
            setAuthError('ALL MEMBERS MUST PROVIDE REG NO AND PHONE.');
@@ -555,7 +568,7 @@ export default function LoginPage() {
                     </button>
                   </div>
                   <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-                    Limit: 1 active device per role (1 Field Scout + 1 Base Decoder per team). Logging in on another device will disconnect the previous device for that role.
+                    Limit: Up to 2 Base Decoders and 2-3 Field Scouts can be active at once per team. Logging in on an additional device will disconnect the oldest device for that role.
                   </p>
                 </div>
               </div>
