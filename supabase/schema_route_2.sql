@@ -156,10 +156,19 @@ CREATE TABLE IF NOT EXISTS public.checkpoints (
     area TEXT NOT NULL,
     clue TEXT NOT NULL,
     qr_hash TEXT UNIQUE NOT NULL, -- SHA-256 hash encoded in physical QR
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE (route_id, stage)
 );
+
+-- Ensure latitude and longitude columns exist for pre-existing tables
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
 -- Ensure checkpoints constraints allow nodes 1..24 and dual-route uniqueness
 DO $$
@@ -471,91 +480,103 @@ DELETE FROM public.checkpoints WHERE route_id = 1 OR id <= 12;
 -- ==============================================================================
 -- 12. SEED ROUTE 2 CHECKPOINTS (NODES 13 TO 24, STAGES 01 TO 12)
 -- ==============================================================================
-INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash)
+INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash, latitude, longitude)
 VALUES
 (
     13, 2, 1,
     'Node 01: SRM General Hospital Lawn & Entrance',
     'Hospital Frontage - Emergency Lawn & Gateway',
     'Rendezvous at SRM General Hospital Lawn & Entrance. Search near the emergency ramp guide sign.',
-    '53a63eea12e8a9d16dce66c36914f5d9ecdd3a0b3188630000472398a899e1e6'
+    '53a63eea12e8a9d16dce66c36914f5d9ecdd3a0b3188630000472398a899e1e6',
+    12.819820, 80.037810
 ),
 (
     14, 2, 2,
     'Node 02: Dental / Pharmacy Block',
     'Health Sciences - Dental & Pharmacy Arcade',
     'Proceed to Dental / Pharmacy Block. Look near the clinical dispensary lobby notice board.',
-    '97409beb417220658ccb5a621a9052b8c5f87f4b6146b22bef80847b95970285'
+    '97409beb417220658ccb5a621a9052b8c5f87f4b6146b22bef80847b95970285',
+    12.820240, 80.039020
 ),
 (
     15, 2, 3,
     'Node 03: Bio-Tech Block & Life Sciences Lawn',
     'Bio-Sciences Sector - Life Sciences Lawn & Pod',
     'Navigate to the Bio-Tech Block. Check the ground pavilion overlooking the Life Sciences Lawn.',
-    'e9a7253f987f01d999741858a9791710df97e48c114d79ad1e5ee498d8d927bd'
+    'e9a7253f987f01d999741858a9791710df97e48c114d79ad1e5ee498d8d927bd',
+    12.821030, 80.041050
 ),
 (
     16, 2, 4,
     'Node 04: Dr. T.P. Ganesan Auditorium',
     'Grand Convention - Auditorium Portico',
     'Advance to Dr. T.P. Ganesan Auditorium. Search near the grand staircase leading to the main entrance foyer.',
-    'c784139c044369902fde1c9c5c3434058c94acd771b88c9849df26374813a1e5'
+    'c784139c044369902fde1c9c5c3434058c94acd771b88c9849df26374813a1e5',
+    12.822040, 80.044020
 ),
 (
     17, 2, 5,
     'Node 05: Vendhar Square & Clock Tower Area',
     'Central Junction - Vendhar Square & Clock Tower',
     'Move to the Vendhar Square & Clock Tower Area. Inspect the base of the lighting mast facing the plaza.',
-    '7891214434f28f03c7a2074c0989f0afdcd3442568b7a9fc9fea44e6417761f9'
+    '7891214434f28f03c7a2074c0989f0afdcd3442568b7a9fc9fea44e6417761f9',
+    12.823210, 80.042850
 ),
 (
     18, 2, 6,
     'Node 06: BEL Block',
     'Engineering Wing - BEL Block East Gateway',
     'Locate BEL Block. Search the exterior covered pathway leading to the computing research labs.',
-    '6cb0b82b2bfa0fd7e8e7b49cb579bf4e5f77260c855981a318241cbbda0defb8'
+    '6cb0b82b2bfa0fd7e8e7b49cb579bf4e5f77260c855981a318241cbbda0defb8',
+    12.824230, 80.043040
 ),
 (
     19, 2, 7,
     'Node 07: Java Green / Main Canteen',
     'Food Court Plaza - Java Green & Main Canteen',
     'Head to Java Green / Main Canteen. Inspect the wooden pergola pillar near the outdoor seating walkway.',
-    '561da7e62342f209ffbcc79777b3d17f41c50d8db17c21a868ddda687f75415d'
+    '561da7e62342f209ffbcc79777b3d17f41c50d8db17c21a868ddda687f75415d',
+    12.823920, 80.043510
 ),
 (
     20, 2, 8,
     'Node 08: SRM Tech Park',
     'IT Sector - SRM Tech Park Main Atrium',
     'Proceed to SRM Tech Park. Search near the ground floor directory totem by the glass revolving doors.',
-    '7020a54c0e185c7abc6940c0d6a174f1af9296f391097a3a15b62d2b307d959a'
+    '7020a54c0e185c7abc6940c0d6a174f1af9296f391097a3a15b62d2b307d959a',
+    12.824850, 80.045620
 ),
 (
     21, 2, 9,
     'Node 09: Central Library / University Building (UB)',
     'Knowledge Core - Central Library & UB Concourse',
     'Enter the Central Library / UB Building. Check near the library return drop kiosk on the concourse level.',
-    '1983f06654e9265d3521764f883397ec9db406708521b8737497d7c107f3c8eb'
+    '1983f06654e9265d3521764f883397ec9db406708521b8737497d7c107f3c8eb',
+    12.823540, 80.045010
 ),
 (
     22, 2, 10,
     'Node 10: Post Office & Bank Complex',
     'Campus Services - Post Office & Banking Arcade',
     'Locate the Post Office & Bank Complex. Search beside the ATM vestibule outer glass panel.',
-    'b5b82967ac52ded872bc7cf842f2727233e3468228d955271e085211ff81c003'
+    'b5b82967ac52ded872bc7cf842f2727233e3468228d955271e085211ff81c003',
+    12.824050, 80.045830
 ),
 (
     23, 2, 11,
     'Node 11: School of Law',
     'Juridical Wing - School of Law Forecourt',
     'Advance to the School of Law. Look near the legal aid clinic entrance sign on the ground floor.',
-    '52471a6be7f54b7a7a906d7d6b16b10ec164b4434d265c4d10282c049cd2ec67'
+    '52471a6be7f54b7a7a906d7d6b16b10ec164b4434d265c4d10282c049cd2ec67',
+    12.825810, 80.048020
 ),
 (
     24, 2, 12,
     'Node 12: Faculty of Science & Humanities (Arts College)',
     'Arts & Humanities - FSH Main Entrance Portico',
     'Reach Faculty of Science & Humanities (Arts College). Scan the final node at the main administrative portal, then rush to finish at Hippocrates Hall!',
-    '9e561fdf50f2ea36c0d81c75a2ddcc901ff2b355370573169b61df0008d63a4c'
+    '9e561fdf50f2ea36c0d81c75a2ddcc901ff2b355370573169b61df0008d63a4c',
+    12.826220, 80.047030
 )
 ON CONFLICT (id) DO UPDATE SET
     route_id = EXCLUDED.route_id,
@@ -563,7 +584,9 @@ ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     area = EXCLUDED.area,
     clue = EXCLUDED.clue,
-    qr_hash = EXCLUDED.qr_hash;
+    qr_hash = EXCLUDED.qr_hash,
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude;
 
 -- ==============================================================================
 -- 13. SEED ROUTE 2 QUESTIONS POOL (NODES 13 TO 24)

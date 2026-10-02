@@ -156,10 +156,19 @@ CREATE TABLE IF NOT EXISTS public.checkpoints (
     area TEXT NOT NULL,
     clue TEXT NOT NULL,
     qr_hash TEXT UNIQUE NOT NULL, -- SHA-256 hash encoded in physical QR
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE (route_id, stage)
 );
+
+-- Ensure latitude and longitude columns exist for pre-existing tables
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
 -- Ensure checkpoints constraints allow nodes 1..24 and dual-route uniqueness
 DO $$
@@ -474,91 +483,103 @@ DELETE FROM public.checkpoints WHERE route_id = 2 OR id >= 13;
 -- ==============================================================================
 -- 12. SEED ROUTE 1 CHECKPOINTS (NODES 01 TO 12)
 -- ==============================================================================
-INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash)
+INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash, latitude, longitude)
 VALUES
 (
     1, 1, 1,
     'Node 01: Hippocrates Hall',
     'Medical Complex - Hippocrates Concourse',
     'Begin at Hippocrates Hall. Search near the main entrance directory board and seminar foyer on the ground level.',
-    'bd9eac87121e230733f08e604f2e962c531bbcb9775a6b99ed20b30d346afc8c'
+    'bd9eac87121e230733f08e604f2e962c531bbcb9775a6b99ed20b30d346afc8c',
+    12.820845, 80.038512
 ),
 (
     2, 1, 2,
     'Node 02: N Block',
     'Academic Quad - N-Block Ground Arcade',
     'Advance to N Block. Inspect the perimeter pillars adjacent to the main departmental notice bulletin.',
-    '3583502fd2948d5900f18951f422c396e3c31187e8fea9ada199cd0e330b0433'
+    '3583502fd2948d5900f18951f422c396e3c31187e8fea9ada199cd0e330b0433',
+    12.823610, 80.042530
 ),
 (
     3, 1, 3,
     'Node 03: Shiva Temple',
     'Campus Sanctuary - Shiva Temple Grounds',
     'Navigate towards the campus Shiva Temple. Look along the perimeter stone walkway boundary markers.',
-    '400a3ac3a0f3beb94798989c12750fad125c537a40b7393f8e812284977b3b8b'
+    '400a3ac3a0f3beb94798989c12750fad125c537a40b7393f8e812284977b3b8b',
+    12.821520, 80.040210
 ),
 (
     4, 1, 4,
     'Node 04: BEL Block',
     'Technology Sector - BEL Block Entrance Foyer',
     'Locate BEL Block. Search the exterior pillar near the engineering laboratory entrance corridor sign.',
-    '53cfdaff40cb230500abc46f9f32be5c47ae98d19ebab65f6f713a4e4f7f9d10'
+    '53cfdaff40cb230500abc46f9f32be5c47ae98d19ebab65f6f713a4e4f7f9d10',
+    12.824230, 80.043040
 ),
 (
     5, 1, 5,
     'Node 05: TP Building',
     'Tech Park Zone - TP Building Ground Podium',
     'Proceed to TP Building. Check the structural support column beside the central elevator bank.',
-    '39cd553d3ef594283ab642c0ff5dd435d4e1e8f58bb2802b82cfd3d1e4429222'
+    '39cd553d3ef594283ab642c0ff5dd435d4e1e8f58bb2802b82cfd3d1e4429222',
+    12.824850, 80.045620
 ),
 (
     6, 1, 6,
     'Node 06: Clock Tower',
     'Campus Heart - Heritage Clock Tower Plaza',
     'Head to the landmark Clock Tower. Search the stonework base facing the central pedestrian avenue.',
-    '928b524ce9d888864289c090b7aaeb3c63dab7816d7b0a2b78d6d566a40c1dbc'
+    '928b524ce9d888864289c090b7aaeb3c63dab7816d7b0a2b78d6d566a40c1dbc',
+    12.823210, 80.042850
 ),
 (
     7, 1, 7,
     'Node 07: UB Building',
     'University Building - Ground Floor Concourse',
     'Enter the University Building (UB). Locate the checkpoint near the main atrium digital information terminal.',
-    '08ec07fbd278124a852535d8d6acfa9d20d02ccb5aacbf2e897ed03827c651ea'
+    '08ec07fbd278124a852535d8d6acfa9d20d02ccb5aacbf2e897ed03827c651ea',
+    12.823540, 80.045010
 ),
 (
     8, 1, 8,
     'Node 08: Architecture Block',
     'School of Architecture - Design Portico',
     'Move to the Architecture Block. Search near the model exhibition foyer and student gallery facade.',
-    'dc441c40a0b5b4ba2f505f5033be64d2c25dc00084676a623342568de3ccb6f2'
+    'dc441c40a0b5b4ba2f505f5033be64d2c25dc00084676a623342568de3ccb6f2',
+    12.825220, 80.046530
 ),
 (
     9, 1, 9,
     'Node 09: Law College',
     'School of Law - Academic Portal',
     'Advance to Law College. Look near the moot court hall outer bulletin frame.',
-    'd46853b77c3dc0cbcece6817e23a29ddb0c58910f2b37e173627fa819069fb44'
+    'd46853b77c3dc0cbcece6817e23a29ddb0c58910f2b37e173627fa819069fb44',
+    12.825810, 80.048020
 ),
 (
     10, 1, 10,
     'Node 10: Vendhar',
     'Vendhar Square - Central Promenade',
     'Reach Vendhar Square. Inspect the perimeter brick wall facing the central landscaped island.',
-    'f862cc2b52f6bff77e2347f7e84d06ac3b71d1bc26f9d49b90a0a4df74fde4a7'
+    'f862cc2b52f6bff77e2347f7e84d06ac3b71d1bc26f9d49b90a0a4df74fde4a7',
+    12.823050, 80.043210
 ),
 (
     11, 1, 11,
     'Node 11: Medical College',
     'Health Sciences - SRM Medical College Quad',
     'Proceed to SRM Medical College. Search near the dean office outer corridor archway.',
-    '7b6d3809e4ba60d514cc86ab57e4c88999ae00a00389036411bdd583fe358b18'
+    '7b6d3809e4ba60d514cc86ab57e4c88999ae00a00389036411bdd583fe358b18',
+    12.821210, 80.038840
 ),
 (
     12, 1, 12,
     'Node 12: Hippocrates Hall',
     'Grand Finale - Hippocrates Hall Apex Podium',
     'Return to Hippocrates Hall for the final breach! Scan the victory checkpoint situated at the main podium stage.',
-    'c789491605d4e6055d42a72a83ac31529b05e7d51a9fc93be11b7a6dfd63b88f'
+    'c789491605d4e6055d42a72a83ac31529b05e7d51a9fc93be11b7a6dfd63b88f',
+    12.820845, 80.038512
 )
 ON CONFLICT (id) DO UPDATE SET
     route_id = EXCLUDED.route_id,
@@ -566,7 +587,9 @@ ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     area = EXCLUDED.area,
     clue = EXCLUDED.clue,
-    qr_hash = EXCLUDED.qr_hash;
+    qr_hash = EXCLUDED.qr_hash,
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude;
 
 -- ==============================================================================
 -- 13. SEED ROUTE 1 QUESTIONS POOL (NODES 01 TO 12)

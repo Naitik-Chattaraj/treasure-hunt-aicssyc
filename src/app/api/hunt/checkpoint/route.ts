@@ -10,6 +10,8 @@ interface CheckpointMeta {
   title: string;
   area: string;
   clue: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 // Server in-memory cache for static checkpoint metadata (5-minute TTL) to eliminate repetitive DB queries
@@ -95,7 +97,7 @@ export async function GET(req: NextRequest) {
       try {
         const { data: routeCp } = await supabase
           .from('checkpoints')
-          .select('id, route_id, stage, title, area, clue')
+          .select('id, route_id, stage, title, area, clue, latitude, longitude')
           .eq('route_id', assignedRoute)
           .eq('stage', currentStage)
           .maybeSingle();
@@ -111,7 +113,7 @@ export async function GET(req: NextRequest) {
         try {
           const { data: idCp } = await supabase
             .from('checkpoints')
-            .select('id, route_id, stage, title, area, clue')
+            .select('id, route_id, stage, title, area, clue, latitude, longitude')
             .eq('stage', currentStage)
             .maybeSingle();
           if (idCp) {

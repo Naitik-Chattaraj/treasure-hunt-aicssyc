@@ -40,6 +40,8 @@ export interface Checkpoint {
   title: string;
   area: string;
   clue: string;
+  latitude?: number | null;
+  longitude?: number | null;
   qrHash?: string; // Only present in admin views or mock
   qr_hash?: string;
   qrScanned?: boolean; // Whether the field team has unlocked the QR for this stage

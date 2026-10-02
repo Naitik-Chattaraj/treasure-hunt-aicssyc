@@ -169,6 +169,17 @@ export const api = {
     }
   },
 
+  async getMapNodes(): Promise<Checkpoint[]> {
+    try {
+      const res = await fetch('/api/hunt/map-nodes');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.nodes || [];
+    } catch {
+      return [];
+    }
+  },
+
   async scanQr(qrHash: string): Promise<ScanResult> {
     const cleanHash = qrHash.trim();
 

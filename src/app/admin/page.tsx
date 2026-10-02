@@ -25,7 +25,10 @@ import {
   Copy,
   Check,
   Camera,
-  QrCode
+  QrCode,
+  MapPin,
+  Navigation,
+  Map as MapIcon,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -34,6 +37,9 @@ import QuestionBlockQRModal from '@/components/QuestionBlockQRModal';
 import AdminQRGeneratorTab from '@/components/AdminQRGeneratorTab';
 import AdminTeamSquadModal from '@/components/AdminTeamSquadModal';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
+import AdminOpenStreetMap from '@/components/AdminOpenStreetMap';
+import MiniDraggableMap from '@/components/MiniDraggableMap';
+import { generateSqlMigrationSnippet } from '@/lib/coordinates';
 
 interface AdminTeam {
   id: string;
@@ -67,6 +73,8 @@ interface AdminCheckpoint {
   area: string;
   clue: string;
   qr_hash: string;
+  latitude?: number | null;
+  longitude?: number | null;
   questions_pool?: QuestionPoolItem[];
 }
 
@@ -74,6 +82,11 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'teams' | 'checkpoints' | 'qr-generator'>('teams');
   const [checkpointRouteFilter, setCheckpointRouteFilter] = useState<'all' | 1 | 2>(1);
+  const [checkpointViewMode, setCheckpointViewMode] = useState<'list' | 'map'>('list');
+  const [selectedMapNodeId, setSelectedMapNodeId] = useState<number | null>(null);
+  const [showSqlSnippetModal, setShowSqlSnippetModal] = useState(false);
+  const [copiedSqlFromModal, setCopiedSqlFromModal] = useState(false);
+  const [gettingGpsForEdit, setGettingGpsForEdit] = useState(false);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [checkpoints, setCheckpoints] = useState<AdminCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +95,7 @@ export default function AdminDashboard() {
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [hideRevokedTeams, setHideRevokedTeams] = useState(false);
 
-  // Edit checkpoint modal state (Title, Area, Clue, QR Hash)
+  // Edit checkpoint modal state (Title, Area, Clue, QR Hash, Lat, Lng)
   const [editingCheckpoint, setEditingCheckpoint] = useState<AdminCheckpoint | null>(null);
   const [editForm, setEditForm] = useState<Partial<AdminCheckpoint>>({});
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -262,6 +275,23 @@ export default function AdminDashboard() {
     setEditingCheckpoint(cp);
     setEditForm({ ...cp });
     setSaveStatus(null);
+  };
+
+  const handleUpdateCoordinatesDirect = async (updated: Partial<AdminCheckpoint> & { id: number }) => {
+    try {
+      const res = await fetch('/api/admin/checkpoints', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        await fetchDashboardData(true);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const handleSaveCheckpoint = async (e: React.FormEvent) => {
@@ -805,6 +835,40 @@ export default function AdminDashboard() {
                   All 24 Nodes
                 </button>
 
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-sunken p-0.5 rounded border border-line">
+                  <button
+                    onClick={() => setCheckpointViewMode('list')}
+                    className={`px-2.5 py-1 text-xs font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1 ${
+                      checkpointViewMode === 'list'
+                        ? 'bg-danger text-on-primary font-extrabold shadow-sm'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    <span>List</span>
+                  </button>
+                  <button
+                    onClick={() => setCheckpointViewMode('map')}
+                    className={`px-2.5 py-1 text-xs font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1 ${
+                      checkpointViewMode === 'map'
+                        ? 'bg-accent text-on-primary font-extrabold shadow-sm'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>OpenStreetMap</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowSqlSnippetModal(true)}
+                  className="px-3 py-1.5 bg-sunken hover:bg-surface text-ink border border-line hover:border-accent text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="View and copy SQL migration snippet for both databases"
+                >
+                  <Copy className="w-3.5 h-3.5 text-accent" />
+                  <span>SQL Snippet</span>
+                </button>
+
                 <button
                   onClick={() => setActiveTab('qr-generator')}
                   className="px-3 py-1.5 bg-primary hover:opacity-90 text-on-primary text-xs font-extrabold uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-card ml-auto"
@@ -815,34 +879,70 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              {checkpoints
-                .filter((cp) => {
-                  const r = cp.route_id || (cp.id <= 12 ? 1 : 2);
-                  if (checkpointRouteFilter === 'all') return true;
-                  return r === checkpointRouteFilter;
-                })
-                .map((cp) => {
-                const pool = cp.questions_pool || [];
-                const routeNumber = cp.route_id || (cp.id <= 12 ? 1 : 2);
-                const stageNumber = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
-                return (
-                  <div key={cp.id} className="bg-surface border border-line hover:border-danger/60 transition-colors p-5 sm:p-6 relative shadow-md rounded-sm">
-                    {/* Node Header */}
-                    <div className="flex flex-wrap justify-between items-center gap-2 border-b border-line pb-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${
-                          routeNumber === 1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
-                        }`}>
-                          ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
-                        </span>
-                        <div>
-                          <h3 className="font-bold text-ink text-base sm:text-lg">{cp.title}</h3>
-                          <div className="text-xs text-primary font-bold uppercase">{cp.area}</div>
+            {checkpointViewMode === 'map' ? (
+              <AdminOpenStreetMap
+                checkpoints={checkpoints}
+                routeFilter={checkpointRouteFilter}
+                onUpdateCheckpoint={handleUpdateCoordinatesDirect}
+                onRefresh={() => fetchDashboardData(true)}
+                selectedId={selectedMapNodeId}
+                onSelectCheckpoint={setSelectedMapNodeId}
+              />
+            ) : (
+              <div className="space-y-6">
+                {checkpoints
+                  .filter((cp) => {
+                    const r = cp.route_id || (cp.id <= 12 ? 1 : 2);
+                    if (checkpointRouteFilter === 'all') return true;
+                    return r === checkpointRouteFilter;
+                  })
+                  .map((cp) => {
+                  const pool = cp.questions_pool || [];
+                  const routeNumber = cp.route_id || (cp.id <= 12 ? 1 : 2);
+                  const stageNumber = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
+                  return (
+                    <div key={cp.id} className="bg-surface border border-line hover:border-danger/60 transition-colors p-5 sm:p-6 relative shadow-md rounded-sm">
+                      {/* Node Header */}
+                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-line pb-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${
+                            routeNumber === 1 ? 'bg-accent text-on-primary' : 'bg-route-2 text-on-primary'
+                          }`}>
+                            ROUTE 0{routeNumber} {'//'} NODE 0{stageNumber}
+                          </span>
+                          <div>
+                            <h3 className="font-bold text-ink text-base sm:text-lg">{cp.title}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                              <span className="text-xs text-primary font-bold uppercase">{cp.area}</span>
+                              {cp.latitude && cp.longitude ? (
+                                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                  <MapPin className="w-2.5 h-2.5" />
+                                  {Number(cp.latitude).toFixed(6)}, {Number(cp.longitude).toFixed(6)}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                  <AlertTriangle className="w-2.5 h-2.5" />
+                                  GPS Coords Unset
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedMapNodeId(cp.id);
+                            setCheckpointRouteFilter(routeNumber as 1 | 2);
+                            setCheckpointViewMode('map');
+                          }}
+                          className="text-xs text-cyan-400 hover:text-ink flex items-center gap-1 border border-cyan-500/50 px-2.5 py-1.5 hover:bg-cyan-500/20 cursor-pointer font-bold uppercase transition-colors"
+                          title="Reposition node on interactive OpenStreetMap"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          Drag on Map
+                        </button>
+
                         <button
                           onClick={() => handleStartEdit(cp)}
                           className="text-xs text-accent hover:text-ink flex items-center gap-1 border border-accent/50 px-3 py-1.5 hover:bg-accent/20 cursor-pointer font-bold uppercase"
@@ -977,6 +1077,7 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
+            )}
           </div>
         )}
 
@@ -1061,6 +1162,54 @@ export default function AdminDashboard() {
                   className="w-full bg-sunken border border-line px-3 py-2 text-primary font-bold outline-none focus:border-danger text-base sm:text-sm"
                   required
                 />
+              </div>
+
+              {/* Exact OpenStreetMap Coordinates with Draggable Mini-Map */}
+              <div className="bg-sunken p-3.5 border border-line/70 space-y-3">
+                <MiniDraggableMap
+                  checkpointId={editingCheckpoint.id}
+                  latitude={editForm.latitude}
+                  longitude={editForm.longitude}
+                  routeId={(editingCheckpoint.route_id || (editingCheckpoint.id <= 12 ? 1 : 2)) as 1 | 2}
+                  stage={editingCheckpoint.stage || (editingCheckpoint.id <= 12 ? editingCheckpoint.id : editingCheckpoint.id - 12)}
+                  title={editingCheckpoint.title}
+                  onChange={(lat, lng) => setEditForm(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                  onOpenFullMap={() => {
+                    setSelectedMapNodeId(editingCheckpoint.id);
+                    setCheckpointRouteFilter((editingCheckpoint.route_id || (editingCheckpoint.id <= 12 ? 1 : 2)) as 1 | 2);
+                    setEditingCheckpoint(null);
+                    setCheckpointViewMode('map');
+                  }}
+                />
+
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-line/60">
+                  <div>
+                    <label className="text-[11px] uppercase text-muted font-bold block mb-1">
+                      Latitude
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={editForm.latitude ?? ''}
+                      onChange={e => setEditForm(prev => ({ ...prev, latitude: e.target.value === '' ? null : Number(e.target.value) }))}
+                      placeholder="e.g. 12.823610"
+                      className="w-full bg-surface border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent text-xs rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase text-muted font-bold block mb-1">
+                      Longitude
+                    </label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={editForm.longitude ?? ''}
+                      onChange={e => setEditForm(prev => ({ ...prev, longitude: e.target.value === '' ? null : Number(e.target.value) }))}
+                      placeholder="e.g. 80.044200"
+                      className="w-full bg-surface border border-line px-3 py-2 text-ink font-mono font-bold outline-none focus:border-accent text-xs rounded"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -1239,6 +1388,56 @@ export default function AdminDashboard() {
           }}
           actionLoading={actionLoading}
         />
+      )}
+
+      {/* SQL Migration Snippet Modal */}
+      {showSqlSnippetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs font-mono">
+          <div className="w-full max-w-2xl bg-surface border-2 border-primary p-6 rounded-xl relative shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                <Copy className="w-5 h-5" />
+                Supabase OpenStreetMap SQL Migration Script
+              </h3>
+              <button
+                onClick={() => setShowSqlSnippetModal(false)}
+                className="text-muted hover:text-ink cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-muted mb-3">
+              Run this SQL script in the Supabase SQL Editor for <strong className="text-ink">BOTH Route 1 and Route 2 databases</strong> to add latitude and longitude columns to the checkpoints table and seed exact campus locations:
+            </p>
+
+            <div className="relative flex-1 overflow-hidden rounded border border-line bg-black/80 p-3 mb-4">
+              <pre className="text-xs text-emerald-300 font-mono overflow-auto h-80 leading-relaxed">
+                {generateSqlMigrationSnippet()}
+              </pre>
+            </div>
+
+            <div className="flex justify-between items-center gap-3">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generateSqlMigrationSnippet());
+                  setCopiedSqlFromModal(true);
+                  setTimeout(() => setCopiedSqlFromModal(false), 2500);
+                }}
+                className="flex-1 py-2.5 bg-primary hover:opacity-90 text-on-primary font-bold uppercase tracking-wider text-xs rounded transition-colors cursor-pointer flex items-center justify-center gap-2 shadow"
+              >
+                {copiedSqlFromModal ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedSqlFromModal ? 'Copied to Clipboard!' : 'Copy SQL Script'}</span>
+              </button>
+              <button
+                onClick={() => setShowSqlSnippetModal(false)}
+                className="px-4 py-2.5 border border-line text-muted hover:text-ink text-xs uppercase cursor-pointer rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

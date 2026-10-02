@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
       area,
       clue,
       qr_hash,
+      latitude,
+      longitude,
       questions_pool (
         id,
         node_id,
@@ -77,7 +79,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id, title, area, clue, qr_hash } = await req.json();
+    const { id, title, area, clue, qr_hash, latitude, longitude } = await req.json();
 
     if (!id || id < 1 || id > 24) {
       return NextResponse.json({ error: 'Valid checkpoint ID (1-24) required' }, { status: 400 });
@@ -91,15 +93,24 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Database unconfigured' }, { status: 500 });
     }
 
+    const updatePayload: Record<string, unknown> = {
+      title,
+      area,
+      clue,
+      qr_hash,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (latitude !== undefined) {
+      updatePayload.latitude = latitude !== null && latitude !== '' ? Number(latitude) : null;
+    }
+    if (longitude !== undefined) {
+      updatePayload.longitude = longitude !== null && longitude !== '' ? Number(longitude) : null;
+    }
+
     const { data: updated, error } = await supabase
       .from('checkpoints')
-      .update({
-        title,
-        area,
-        clue,
-        qr_hash,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();

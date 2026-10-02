@@ -155,17 +155,25 @@ CREATE TABLE IF NOT EXISTS public.checkpoints (
     area TEXT NOT NULL,
     clue TEXT NOT NULL,
     qr_hash TEXT UNIQUE NOT NULL, -- SHA-256 hash encoded in physical QR
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE (route_id, stage)
 );
 
--- Ensure route_id and stage exist and constraints are updated if table was previously created
+-- Ensure route_id, stage, latitude, and longitude exist and constraints are updated if table was previously created
 ALTER TABLE public.checkpoints 
     ADD COLUMN IF NOT EXISTS route_id INTEGER NOT NULL DEFAULT 1 CHECK (route_id IN (1, 2));
 
 ALTER TABLE public.checkpoints 
     ADD COLUMN IF NOT EXISTS stage INTEGER;
+
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+
+ALTER TABLE public.checkpoints 
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
 -- Set stage from id for existing records (nodes 1..12)
 UPDATE public.checkpoints SET stage = id WHERE stage IS NULL;
@@ -464,7 +472,7 @@ GRANT EXECUTE ON FUNCTION public.remove_operative_session(UUID, TEXT, TEXT) TO a
 -- ==============================================================================
 -- 11. SEED 24 CHECKPOINTS (ROUTE 1: 1..12, ROUTE 2: 13..24) WITH SHA-256 CODES
 -- ==============================================================================
-INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash)
+INSERT INTO public.checkpoints (id, route_id, stage, title, area, clue, qr_hash, latitude, longitude)
 VALUES
 -- ROUTE 1: Hippocrates Loop
 (
@@ -472,84 +480,96 @@ VALUES
     'Node 01: Hippocrates Hall',
     'Medical Complex - Hippocrates Concourse',
     'Begin at Hippocrates Hall. Search near the main entrance directory board and seminar foyer on the ground level.',
-    'bd9eac87121e230733f08e604f2e962c531bbcb9775a6b99ed20b30d346afc8c'
+    'bd9eac87121e230733f08e604f2e962c531bbcb9775a6b99ed20b30d346afc8c',
+    12.820845, 80.038512
 ),
 (
     2, 1, 2,
     'Node 02: N Block',
     'Academic Quad - N-Block Ground Arcade',
     'Advance to N Block. Inspect the perimeter pillars adjacent to the main departmental notice bulletin.',
-    '3583502fd2948d5900f18951f422c396e3c31187e8fea9ada199cd0e330b0433'
+    '3583502fd2948d5900f18951f422c396e3c31187e8fea9ada199cd0e330b0433',
+    12.823610, 80.042530
 ),
 (
     3, 1, 3,
     'Node 03: Shiva Temple',
     'Campus Sanctuary - Shiva Temple Grounds',
     'Navigate towards the campus Shiva Temple. Look along the perimeter stone walkway boundary markers.',
-    '400a3ac3a0f3beb94798989c12750fad125c537a40b7393f8e812284977b3b8b'
+    '400a3ac3a0f3beb94798989c12750fad125c537a40b7393f8e812284977b3b8b',
+    12.821520, 80.040210
 ),
 (
     4, 1, 4,
     'Node 04: BEL Block',
     'Technology Sector - BEL Block Entrance Foyer',
     'Locate BEL Block. Search the exterior pillar near the engineering laboratory entrance corridor sign.',
-    '53cfdaff40cb230500abc46f9f32be5c47ae98d19ebab65f6f713a4e4f7f9d10'
+    '53cfdaff40cb230500abc46f9f32be5c47ae98d19ebab65f6f713a4e4f7f9d10',
+    12.824230, 80.043040
 ),
 (
     5, 1, 5,
     'Node 05: TP Building',
     'Tech Park Zone - TP Building Ground Podium',
     'Proceed to TP Building. Check the structural support column beside the central elevator bank.',
-    '39cd553d3ef594283ab642c0ff5dd435d4e1e8f58bb2802b82cfd3d1e4429222'
+    '39cd553d3ef594283ab642c0ff5dd435d4e1e8f58bb2802b82cfd3d1e4429222',
+    12.824850, 80.045620
 ),
 (
     6, 1, 6,
     'Node 06: Clock Tower',
     'Campus Heart - Heritage Clock Tower Plaza',
     'Head to the landmark Clock Tower. Search the stonework base facing the central pedestrian avenue.',
-    '928b524ce9d888864289c090b7aaeb3c63dab7816d7b0a2b78d6d566a40c1dbc'
+    '928b524ce9d888864289c090b7aaeb3c63dab7816d7b0a2b78d6d566a40c1dbc',
+    12.823210, 80.042850
 ),
 (
     7, 1, 7,
     'Node 07: UB Building',
     'University Building - Ground Floor Concourse',
     'Enter the University Building (UB). Locate the checkpoint near the main atrium digital information terminal.',
-    '08ec07fbd278124a852535d8d6acfa9d20d02ccb5aacbf2e897ed03827c651ea'
+    '08ec07fbd278124a852535d8d6acfa9d20d02ccb5aacbf2e897ed03827c651ea',
+    12.823540, 80.045010
 ),
 (
     8, 1, 8,
     'Node 08: Architecture Block',
     'School of Architecture - Design Portico',
     'Move to the Architecture Block. Search near the model exhibition foyer and student gallery facade.',
-    'dc441c40a0b5b4ba2f505f5033be64d2c25dc00084676a623342568de3ccb6f2'
+    'dc441c40a0b5b4ba2f505f5033be64d2c25dc00084676a623342568de3ccb6f2',
+    12.825220, 80.046530
 ),
 (
     9, 1, 9,
     'Node 09: Law College',
     'School of Law - Academic Portal',
     'Advance to Law College. Look near the moot court hall outer bulletin frame.',
-    'd46853b77c3dc0cbcece6817e23a29ddb0c58910f2b37e173627fa819069fb44'
+    'd46853b77c3dc0cbcece6817e23a29ddb0c58910f2b37e173627fa819069fb44',
+    12.825810, 80.048020
 ),
 (
     10, 1, 10,
     'Node 10: Vendhar',
     'Vendhar Square - Central Promenade',
     'Reach Vendhar Square. Inspect the perimeter brick wall facing the central landscaped island.',
-    'f862cc2b52f6bff77e2347f7e84d06ac3b71d1bc26f9d49b90a0a4df74fde4a7'
+    'f862cc2b52f6bff77e2347f7e84d06ac3b71d1bc26f9d49b90a0a4df74fde4a7',
+    12.823050, 80.043210
 ),
 (
     11, 1, 11,
     'Node 11: Medical College',
     'Health Sciences - SRM Medical College Quad',
     'Proceed to SRM Medical College. Search near the dean office outer corridor archway.',
-    '7b6d3809e4ba60d514cc86ab57e4c88999ae00a00389036411bdd583fe358b18'
+    '7b6d3809e4ba60d514cc86ab57e4c88999ae00a00389036411bdd583fe358b18',
+    12.821210, 80.038840
 ),
 (
     12, 1, 12,
     'Node 12: Hippocrates Hall',
     'Grand Finale - Hippocrates Hall Apex Podium',
     'Return to Hippocrates Hall for the final breach! Scan the victory checkpoint situated at the main podium stage.',
-    'c789491605d4e6055d42a72a83ac31529b05e7d51a9fc93be11b7a6dfd63b88f'
+    'c789491605d4e6055d42a72a83ac31529b05e7d51a9fc93be11b7a6dfd63b88f',
+    12.820845, 80.038512
 ),
 
 -- ROUTE 2: Hospital to Arts Loop
@@ -558,84 +578,96 @@ VALUES
     'Node 01: SRM General Hospital Lawn & Entrance',
     'Hospital Frontage - Emergency Lawn & Gateway',
     'Rendezvous at SRM General Hospital Lawn & Entrance. Search near the emergency ramp guide sign.',
-    '53a63eea12e8a9d16dce66c36914f5d9ecdd3a0b3188630000472398a899e1e6'
+    '53a63eea12e8a9d16dce66c36914f5d9ecdd3a0b3188630000472398a899e1e6',
+    12.819820, 80.037810
 ),
 (
     14, 2, 2,
     'Node 02: Dental / Pharmacy Block',
     'Health Sciences - Dental & Pharmacy Arcade',
     'Proceed to Dental / Pharmacy Block. Look near the clinical dispensary lobby notice board.',
-    '97409beb417220658ccb5a621a9052b8c5f87f4b6146b22bef80847b95970285'
+    '97409beb417220658ccb5a621a9052b8c5f87f4b6146b22bef80847b95970285',
+    12.820240, 80.039020
 ),
 (
     15, 2, 3,
     'Node 03: Bio-Tech Block & Life Sciences Lawn',
     'Bio-Sciences Sector - Life Sciences Lawn & Pod',
     'Navigate to the Bio-Tech Block. Check the ground pavilion overlooking the Life Sciences Lawn.',
-    'e9a7253f987f01d999741858a9791710df97e48c114d79ad1e5ee498d8d927bd'
+    'e9a7253f987f01d999741858a9791710df97e48c114d79ad1e5ee498d8d927bd',
+    12.821030, 80.041050
 ),
 (
     16, 2, 4,
     'Node 04: Dr. T.P. Ganesan Auditorium',
     'Grand Convention - Auditorium Portico',
     'Advance to Dr. T.P. Ganesan Auditorium. Search near the grand staircase leading to the main entrance foyer.',
-    'c784139c044369902fde1c9c5c3434058c94acd771b88c9849df26374813a1e5'
+    'c784139c044369902fde1c9c5c3434058c94acd771b88c9849df26374813a1e5',
+    12.822040, 80.044020
 ),
 (
     17, 2, 5,
     'Node 05: Vendhar Square & Clock Tower Area',
     'Central Junction - Vendhar Square & Clock Tower',
     'Move to the Vendhar Square & Clock Tower Area. Inspect the base of the lighting mast facing the plaza.',
-    '7891214434f28f03c7a2074c0989f0afdcd3442568b7a9fc9fea44e6417761f9'
+    '7891214434f28f03c7a2074c0989f0afdcd3442568b7a9fc9fea44e6417761f9',
+    12.823210, 80.042850
 ),
 (
     18, 2, 6,
     'Node 06: BEL Block',
     'Engineering Wing - BEL Block East Gateway',
     'Locate BEL Block. Search the exterior covered pathway leading to the computing research labs.',
-    '6cb0b82b2bfa0fd7e8e7b49cb579bf4e5f77260c855981a318241cbbda0defb8'
+    '6cb0b82b2bfa0fd7e8e7b49cb579bf4e5f77260c855981a318241cbbda0defb8',
+    12.824230, 80.043040
 ),
 (
     19, 2, 7,
     'Node 07: Java Green / Main Canteen',
     'Food Court Plaza - Java Green & Main Canteen',
     'Head to Java Green / Main Canteen. Inspect the wooden pergola pillar near the outdoor seating walkway.',
-    '561da7e62342f209ffbcc79777b3d17f41c50d8db17c21a868ddda687f75415d'
+    '561da7e62342f209ffbcc79777b3d17f41c50d8db17c21a868ddda687f75415d',
+    12.823920, 80.043510
 ),
 (
     20, 2, 8,
     'Node 08: SRM Tech Park',
     'IT Sector - SRM Tech Park Main Atrium',
     'Proceed to SRM Tech Park. Search near the ground floor directory totem by the glass revolving doors.',
-    '7020a54c0e185c7abc6940c0d6a174f1af9296f391097a3a15b62d2b307d959a'
+    '7020a54c0e185c7abc6940c0d6a174f1af9296f391097a3a15b62d2b307d959a',
+    12.824850, 80.045620
 ),
 (
     21, 2, 9,
     'Node 09: Central Library / University Building (UB)',
     'Knowledge Core - Central Library & UB Concourse',
     'Enter the Central Library / UB Building. Check near the library return drop kiosk on the concourse level.',
-    '1983f06654e9265d3521764f883397ec9db406708521b8737497d7c107f3c8eb'
+    '1983f06654e9265d3521764f883397ec9db406708521b8737497d7c107f3c8eb',
+    12.823540, 80.045010
 ),
 (
     22, 2, 10,
     'Node 10: Post Office & Bank Complex',
     'Campus Services - Post Office & Banking Arcade',
     'Locate the Post Office & Bank Complex. Search beside the ATM vestibule outer glass panel.',
-    'b5b82967ac52ded872bc7cf842f2727233e3468228d955271e085211ff81c003'
+    'b5b82967ac52ded872bc7cf842f2727233e3468228d955271e085211ff81c003',
+    12.824050, 80.045830
 ),
 (
     23, 2, 11,
     'Node 11: School of Law',
     'Juridical Wing - School of Law Forecourt',
     'Advance to the School of Law. Look near the legal aid clinic entrance sign on the ground floor.',
-    '52471a6be7f54b7a7a906d7d6b16b10ec164b4434d265c4d10282c049cd2ec67'
+    '52471a6be7f54b7a7a906d7d6b16b10ec164b4434d265c4d10282c049cd2ec67',
+    12.825810, 80.048020
 ),
 (
     24, 2, 12,
     'Node 12: Faculty of Science & Humanities (Arts College)',
     'Arts & Humanities - FSH Main Entrance Portico',
     'Reach Faculty of Science & Humanities (Arts College). Scan the final node at the main administrative portal, then rush to finish at Hippocrates Hall!',
-    '9e561fdf50f2ea36c0d81c75a2ddcc901ff2b355370573169b61df0008d63a4c'
+    '9e561fdf50f2ea36c0d81c75a2ddcc901ff2b355370573169b61df0008d63a4c',
+    12.826220, 80.047030
 )
 ON CONFLICT (id) DO UPDATE SET
     route_id = EXCLUDED.route_id,
@@ -643,7 +675,9 @@ ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     area = EXCLUDED.area,
     clue = EXCLUDED.clue,
-    qr_hash = EXCLUDED.qr_hash;
+    qr_hash = EXCLUDED.qr_hash,
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude;
 
 -- ==============================================================================
 -- 12. SEED QUESTIONS POOL (Bank of questions per node for random assignment)
