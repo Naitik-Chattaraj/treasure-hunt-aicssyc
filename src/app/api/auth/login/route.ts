@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBothSupabaseAdmins } from '@/lib/supabase';
 import { signTeamToken, updateDeviceMap } from '@/lib/auth';
+import { namesMatch, normalizeName, validateMembers, validatePersonName } from '@/lib/validation';
+import { TeamMember } from '@/types/hunt';
 
 interface TeamDbRow {
   id: string;
@@ -39,8 +41,9 @@ export async function POST(req: NextRequest) {
     if (isLoginMode) {
       const trimmedUid = uid?.trim();
       const trimmedTeam = teamName?.trim();
-      if (!trimmedUid || !trimmedTeam) {
-        return NextResponse.json({ error: 'Missing team name or 6-digit access code' }, { status: 400 });
+      const leadName = typeof teamLead === 'string' ? teamLead : '';
+      if (!trimmedUid || !trimmedTeam || !leadName.trim()) {
+        return NextResponse.json({ error: 'Missing team name, team lead name or 6-digit access code' }, { status: 400 });
       }
 
       // Check Route 1 database first
@@ -85,14 +88,35 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INCORRECT TEAM NAME FOR THIS ACCESS CODE.' }, { status: 401 });
       }
 
+      if (!namesMatch(team.team_lead, leadName)) {
+        return NextResponse.json({ error: 'INCORRECT TEAM LEAD NAME FOR THIS TEAM.' }, { status: 401 });
+      }
+
     } else {
       // Registration Mode
       const trimmedTeam = teamName?.trim();
-      const trimmedLead = teamLead?.trim();
+      const trimmedLead = typeof teamLead === 'string' ? normalizeName(teamLead) : '';
 
       if (!trimmedTeam || !trimmedLead) {
         return NextResponse.json({ error: 'Missing required credentials' }, { status: 400 });
       }
+
+      const leadError = validatePersonName(trimmedLead, 'Team Lead Name');
+      if (leadError) {
+        return NextResponse.json({ error: leadError }, { status: 400 });
+      }
+
+      const membersError = validateMembers(members);
+      if (membersError) {
+        return NextResponse.json({ error: membersError }, { status: 400 });
+      }
+
+      const roster = (members as TeamMember[]).map(m => ({
+        name: normalizeName(m.name),
+        role: m.role,
+        regNo: m.regNo.trim().toUpperCase(),
+        phone: m.phone.trim(),
+      }));
 
       // Check if team name already exists across both databases
       const { data: existingTeamR1 } = await db1
@@ -124,7 +148,6 @@ export async function POST(req: NextRequest) {
         // Create a unique 6-digit alphanumeric code
         const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
         const generatedUid = generateCode();
-        const defaultMembers = Array.isArray(members) && members.length >= 4 ? members : [];
 
         // Horizontally load-balance teams across Route 1 and Route 2 databases
         let assignedRoute: 1 | 2 = 1;
@@ -152,7 +175,7 @@ export async function POST(req: NextRequest) {
             uid: generatedUid,
             team_name: trimmedTeam,
             team_lead: trimmedLead,
-            members: defaultMembers,
+            members: roster,
             status: 'pending',
             current_stage: 1,
             assigned_route: assignedRoute,
