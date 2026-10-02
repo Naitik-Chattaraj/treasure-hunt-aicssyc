@@ -73,7 +73,7 @@ export default function ChallengeModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answer.trim() || cooldown > 0) return;
+    if (loading || !answer.trim() || cooldown > 0) return;
 
     setLoading(true);
     setError(false);
@@ -90,10 +90,11 @@ export default function ChallengeModal({
       } else {
         setError(true);
         setErrorMessage(res.message || 'Incorrect answer.');
-        if (res.cooldownSeconds) {
-          setCooldown(res.cooldownSeconds);
+        const wait = res.cooldownSeconds ?? res.waitSeconds;
+        if (wait) {
+          setCooldown(wait);
         }
-        setTimeout(() => setError(false), 800);
+        setTimeout(() => setError(false), 2000);
       }
     } catch {
       setError(true);

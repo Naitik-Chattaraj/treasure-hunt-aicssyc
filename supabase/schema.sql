@@ -172,8 +172,7 @@ BEGIN
     END IF;
 END $$;
 
--- 11. RPC FUNCTIONS
-CREATE OR REPLACE FUNCTION public.claim_attempt(team_id UUID, lock_seconds INTEGER)
+CREATE OR REPLACE FUNCTION public.claim_attempt(team_id UUID, lock_seconds INTEGER DEFAULT 1)
 RETURNS UUID AS $$
 DECLARE
   returned_id UUID;
@@ -186,6 +185,8 @@ BEGIN
   RETURN returned_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.claim_attempt(UUID, INTEGER) TO authenticated, service_role, anon;
 
 -- ==============================================================================
 -- 11. SEED 24 CHECKPOINTS (ROUTE 1: 1..12, ROUTE 2: 13..24) WITH SHA-256 CODES

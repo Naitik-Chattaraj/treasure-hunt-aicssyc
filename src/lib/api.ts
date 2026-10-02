@@ -19,6 +19,7 @@ export interface SolveResult {
   completed?: boolean;
   completionToken?: string | null;
   cooldownSeconds?: number;
+  waitSeconds?: number;
   message?: string;
 }
 
