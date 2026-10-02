@@ -8,35 +8,8 @@
  * Components use the semantic names below; only these values change between themes.
  */
 
-/* Dark: "desert at night" */
-:root {
-  --canvas: #1A130C;
-  --dune: #241A10;
-  --surface: #2A1F14;
-  --surface-2: #33261A;
-  --sunken: #150F09;
-  --line: #4A3826;
-  --line-strong: #8A6D48;
-
-  --ink: #F6E8CF;
-  --muted: #C9B08A;
-
-  --primary: #E0A84E;
-  --primary-hover: #EDBA62;
-  --on-primary: #2A1A08;
-  --wood: #6B4316;
-
-  --accent: #5FD6BC;
-  --route-1: var(--accent);
-  --route-2: #C7A6EA;
-  --success: #8BCB7F;
-  --danger: #F2856F;
-
-  --map-art: rgba(224, 168, 78, 0.10);
-  color-scheme: dark;
-}
-
 /* Light: "sand and parchment" (default) */
+:root,
 html.light {
   --canvas: #F3D6A8;
   --dune: #EAC48C;
@@ -62,6 +35,34 @@ html.light {
 
   --map-art: rgba(110, 66, 20, 0.16);
   color-scheme: light;
+}
+
+/* Dark: "desert at night" */
+html.dark {
+  --canvas: #1A130C;
+  --dune: #241A10;
+  --surface: #2A1F14;
+  --surface-2: #33261A;
+  --sunken: #150F09;
+  --line: #4A3826;
+  --line-strong: #8A6D48;
+
+  --ink: #F6E8CF;
+  --muted: #C9B08A;
+
+  --primary: #E0A84E;
+  --primary-hover: #EDBA62;
+  --on-primary: #2A1A08;
+  --wood: #6B4316;
+
+  --accent: #5FD6BC;
+  --route-1: var(--accent);
+  --route-2: #C7A6EA;
+  --success: #8BCB7F;
+  --danger: #F2856F;
+
+  --map-art: rgba(224, 168, 78, 0.10);
+  color-scheme: dark;
 }
 
 @theme inline {

@@ -390,7 +390,7 @@ export default function AdminOpenStreetMap({
       const cp = checkpoints.find((c) => c.id === id);
       const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
 
-      setSavingId(id);
+      setSaving(true);
       try {
         const ok = await onUpdateCheckpoint({
           id,
@@ -412,7 +412,7 @@ export default function AdminOpenStreetMap({
       } catch (err) {
         showToast(`Error saving node: ${err}`, 'error');
       } finally {
-        setSavingId(null);
+        setSaving(false);
       }
     },
     [movedNodes, checkpoints, onUpdateCheckpoint, onRefresh, showToast]
@@ -807,19 +807,12 @@ export default function AdminOpenStreetMap({
         <div className="lg:col-span-2 relative h-[500px] sm:h-[600px] rounded-lg border border-line overflow-hidden shadow-inner bg-zinc-900">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-          {/* Live Dragging HUD Banner */}
-          {liveDrag && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md flex items-center gap-2.5 animate-pulse">
-              <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
-              <span>
-                Dragging{' '}
-                <strong className="text-accent">
-                  Route {liveDrag.route} // Node 0{liveDrag.stage}
-                </strong>{' '}
-                &rarr; Lat: {liveDrag.lat.toFixed(6)}, Lng: {liveDrag.lng.toFixed(6)}
-              </span>
-            </div>
-          )}
+          {/* Live Dragging HUD Banner (Direct DOM ref for zero-latency 60fps tracking) */}
+          <div
+            ref={dragHudRef}
+            style={{ display: 'none' }}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md items-center gap-2.5 pointer-events-none"
+          />
 
           {/* Unsaved Changes Floating Bar (When Auto-Save is OFF and nodes moved) */}
           {!autoSave && movedCount > 0 && (

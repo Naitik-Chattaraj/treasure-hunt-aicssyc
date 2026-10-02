@@ -15,7 +15,7 @@ function subscribe(onChange: () => void) {
 }
 
 function getTheme(): Theme {
-  return document.documentElement.classList.contains('light') ? 'light' : 'dark';
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
 export default function ThemeToggle({ className = '' }: { className?: string }) {

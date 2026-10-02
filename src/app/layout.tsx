@@ -26,9 +26,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-// Applies the saved theme (sand by default) before first paint so pages never flash the wrong theme.
+// Applies the saved theme (light by default) before first paint so pages never flash the wrong theme.
 // Keep the storage key in sync with ThemeToggle.
-const themeInitScript = `(function(){try{var t=localStorage.getItem('aicssyc_theme');if(t!=='light'&&t!=='dark'){t='light'}var c=document.documentElement.classList;c.remove('light','dark');c.add(t)}catch(e){}})();`;
+const themeInitScript = `(function(){try{var t=localStorage.getItem('aicssyc_theme');if(t!=='dark'){t='light'}var c=document.documentElement.classList;c.remove('light','dark');c.add(t)}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${lilitaOne.variable} h-full antialiased`}
+      className={`${inter.variable} ${lilitaOne.variable} light h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
