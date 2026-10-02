@@ -15,7 +15,6 @@ import {
   Zap,
   Undo2,
   Crosshair,
-  Layers,
 } from 'lucide-react';
 import {
   CAMPUS_CENTER,
@@ -382,7 +381,7 @@ export default function AdminOpenStreetMap({
   );
 
   // 7. Save a specific moved node to Database
-  const handleSaveMovedNode = useCallback(
+  const _handleSaveMovedNode = useCallback(
     async (id: number) => {
       const moved = movedNodes[id];
       if (!moved) return;
@@ -877,7 +876,7 @@ export default function AdminOpenStreetMap({
               <span>
                 Dragging{' '}
                 <strong className="text-accent">
-                  Route {liveDrag.route} // Node 0{liveDrag.stage}
+                  Route {liveDrag.route} {'//'} Node 0{liveDrag.stage}
                 </strong>{' '}
                 &rarr; Lat: {liveDrag.lat.toFixed(6)}, Lng: {liveDrag.lng.toFixed(6)}
               </span>

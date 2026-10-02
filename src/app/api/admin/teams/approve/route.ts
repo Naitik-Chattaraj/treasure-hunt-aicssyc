@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    // Start time is no longer set on approval, it's set on first scan.
+    // Set start time when approved for the first time
+    if (status === 'approved' && !team.start_time) {
+      updatePayload.start_time = new Date().toISOString();
+    }
 
     const { data: updated, error } = await targetDb
       .from('teams')

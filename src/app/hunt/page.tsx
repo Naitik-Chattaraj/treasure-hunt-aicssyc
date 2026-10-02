@@ -28,6 +28,7 @@ import ChallengeModal from '@/components/ChallengeModal';
 import SequenceViolationModal from '@/components/SequenceViolationModal';
 import VictoryScreen from '@/components/VictoryScreen';
 import ThemeToggle from '@/components/ThemeToggle';
+import BaseDecoderAntiCheatModal from '@/components/BaseDecoderAntiCheatModal';
 
 export default function HuntHUD() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function HuntHUD() {
   const [reloadingStatus, setReloadingStatus] = useState(false);
 
   const isFieldScout = profile?.operativeRole === 'Field Scout';
-  const isBaseDecoder = !isFieldScout;
+  const isBaseDecoder = Boolean(profile && profile.operativeRole !== 'Field Scout');
 
   const loadData = async (silent = false, forceRefresh = false) => {
     if (!silent) setLoading(true);
@@ -593,6 +594,9 @@ export default function HuntHUD() {
           onClose={() => setViolationNode(null)} 
         />
       )}
+
+      {/* Base Decoder Anti-Cheat, Mandatory Fullscreen, and Tab/Unfocus Penalty Modal */}
+      <BaseDecoderAntiCheatModal isBaseDecoder={isBaseDecoder} />
     </main>
   );
 }

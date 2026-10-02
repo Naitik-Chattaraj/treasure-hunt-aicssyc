@@ -7,7 +7,6 @@ import {
   X,
   Navigation,
   Crosshair,
-  Check,
   Compass,
   AlertCircle,
   Flag,
@@ -703,11 +702,12 @@ export default function TacticalMapModal({
                     {distanceToTarget !== null ? formatDistance(distanceToTarget) : 'Acquiring GPS...'}
                   </span>
                   {bearingToTarget !== null && (
-                    <Compass
-                      className="w-4 h-4 text-accent transition-transform duration-300 shrink-0"
-                      style={{ transform: `rotate(${bearingToTarget}deg)` }}
-                      title={`Bearing: ${Math.round(bearingToTarget)}°`}
-                    />
+                    <span title={`Bearing: ${Math.round(bearingToTarget)}°`}>
+                      <Compass
+                        className="w-4 h-4 text-accent transition-transform duration-300 shrink-0"
+                        style={{ transform: `rotate(${bearingToTarget}deg)` }}
+                      />
+                    </span>
                   )}
                 </div>
                 <span className="text-[10px] text-muted block">
