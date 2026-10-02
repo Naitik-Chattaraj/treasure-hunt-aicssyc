@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { api } from '@/lib/api';
 import { 
   Terminal, 
@@ -11,7 +10,6 @@ import {
   ShieldCheck, 
   Clock, 
   RefreshCw, 
-  ShieldAlert, 
   Users, 
   Plus, 
   Trash2, 
@@ -24,6 +22,7 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { TeamMember } from '@/types/hunt';
+import { normalizeName, validateMembers, validatePersonName } from '@/lib/validation';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -131,9 +130,7 @@ export default function LoginPage() {
       if (trimmed.length > 35) return 'Team Name cannot exceed 35 characters.';
     }
     if (name === 'teamLead' && !isLoginMode) {
-      if (!trimmed) return 'Team Lead Name is required.';
-      if (trimmed.length < 2) return 'Team Lead Name must be at least 2 characters.';
-      if (!/^[a-zA-Z\s.'-]+$/.test(trimmed)) return 'Only letters, spaces, and hyphens allowed.';
+      return validatePersonName(value, 'Team Lead Name');
     }
     if (name === 'uid' && isLoginMode) {
       if (!trimmed) return '6-Digit Access Code is required.';
@@ -141,8 +138,7 @@ export default function LoginPage() {
       if (!/^[A-Za-z0-9]+$/.test(trimmed)) return 'Access Code must be alphanumeric.';
     }
     if (name === 'operativeName' && isLoginMode) {
-      if (!trimmed) return 'Operative Name is required.';
-      if (trimmed.length < 2) return 'Operative Name must be at least 2 characters.';
+      return validatePersonName(value, "Team Leader's Name");
     }
     return '';
   };
@@ -171,7 +167,7 @@ export default function LoginPage() {
     if (members.length >= 5) return;
     setMembers(prev => [
       ...prev,
-      { name: '', role: 'Field Scout', regNo: `REG-00${prev.length + 1}`, phone: '' }
+      { name: '', role: 'Field Scout', regNo: '', phone: '' }
     ]);
   };
 
@@ -222,42 +218,24 @@ export default function LoginPage() {
       return;
     }
 
+    const finalMembers = members.map(m => ({
+      name: normalizeName(m.name),
+      role: m.role,
+      regNo: m.regNo.trim().toUpperCase(),
+      phone: m.phone.trim(),
+    }));
+
     if (!isLoginMode) {
-      if (members.length < 4 || members.length > 5) {
-        setAuthError('TEAMS MUST HAVE 4 OR 5 MEMBERS.');
+      const membersError = validateMembers(finalMembers);
+      if (membersError) {
+        setShowMembers(true);
+        setAuthError(membersError);
         return;
-      }
-
-      const decoderCount = members.filter(m => m.role.toLowerCase().includes('decoder')).length;
-      const scoutCount = members.filter(m => m.role.toLowerCase().includes('scout')).length;
-
-      if (decoderCount !== 2) {
-        setAuthError('TEAM MUST HAVE EXACTLY 2 BASE DECODERS.');
-        return;
-      }
-      if (scoutCount < 2 || scoutCount > 3) {
-        setAuthError('TEAM MUST HAVE 2 OR 3 FIELD SCOUTS.');
-        return;
-      }
-
-      for (const m of members) {
-        if (!m.regNo.trim() || !m.phone.trim()) {
-           setAuthError('ALL MEMBERS MUST PROVIDE REG NO AND PHONE.');
-           return;
-        }
       }
     }
 
     setLoading(true);
     setAuthError('');
-
-    // Ensure member names are filled if empty
-    const finalMembers = members.map((m, i) => ({
-      name: m.name.trim() || (i === 0 ? teamLead.trim() : `Member ${i + 1}`),
-      role: m.role,
-      regNo: m.regNo.trim(),
-      phone: m.phone.trim(),
-    }));
 
     const finalOperativeName = isLoginMode 
       ? operativeName.trim() 
@@ -267,7 +245,7 @@ export default function LoginPage() {
       const res = await api.login(
         uid.trim(), 
         teamName.trim(), 
-        teamLead.trim(), 
+        isLoginMode ? operativeName.trim() : normalizeName(teamLead), 
         finalMembers, 
         isLoginMode,
         finalOperativeName,
@@ -643,7 +621,9 @@ export default function LoginPage() {
                             className="flex-1 bg-cyber-panel border border-cyber-border px-2 py-1.5 text-foreground text-xs outline-none focus:border-cyber-cyan placeholder-gray-500"
                           />
                           <input
-                            type="text"
+                            type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
                             placeholder="Phone No."
                             value={m.phone}
                             onChange={e => {
@@ -722,16 +702,6 @@ export default function LoginPage() {
           </form>
           </>
         )}
-
-        <div className="mt-6 pt-4 border-t border-cyber-border/40 text-center">
-          <Link
-            href="/admin/login"
-            className="text-[11px] text-gray-500 hover:text-cyber-pink transition-colors font-mono tracking-wider flex items-center justify-center gap-1.5"
-          >
-            <ShieldAlert className="w-3 h-3" />
-            Staff / Admin Login
-          </Link>
-        </div>
       </div>
     </main>
   );
