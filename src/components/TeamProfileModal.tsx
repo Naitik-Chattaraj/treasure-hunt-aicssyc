@@ -1,7 +1,7 @@
 'use client';
 
 import { TeamProfile, HuntProgress } from '@/types/hunt';
-import { CheckCircle2, Clock, LogOut, Users, X } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Copy, LogOut, Users, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -17,6 +17,7 @@ export default function TeamProfileModal({
 }) {
   const router = useRouter();
   const [elapsed, setElapsed] = useState<string>('00:00:00');
+  const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     if (!progress.startTime) return;
@@ -30,6 +31,16 @@ export default function TeamProfileModal({
     }, 1000);
     return () => clearInterval(interval);
   }, [progress.startTime]);
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
 
   const handleLogout = async () => {
     await api.logout();
@@ -56,8 +67,17 @@ export default function TeamProfileModal({
 
         <h2 id="profile-title" className="pr-10 text-2xl font-bold">{profile.teamName}</h2>
         <div className="mt-2 mb-5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-md border border-line bg-sunken px-2 py-1">
+          <span className="inline-flex items-center gap-1 rounded-md border border-line bg-sunken py-0.5 pl-2 pr-0.5">
             Access code <span className="ml-1 font-mono font-semibold tracking-wider text-primary">{profile.uid}</span>
+            <button
+              type="button"
+              onClick={() => handleCopyCode(profile.uid)}
+              className="flex h-8 w-8 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+              aria-label={copiedCode ? 'Access code copied' : 'Copy access code'}
+              title="Copy access code"
+            >
+              {copiedCode ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+            </button>
           </span>
           <span className="rounded-md border border-line bg-sunken px-2 py-1">Lead: <span className="font-medium">{profile.teamLead}</span></span>
           <span className={`rounded-md border px-2 py-1 font-semibold ${

@@ -16,6 +16,7 @@ import {
   Lock,
   Map as MapIcon,
   MapPin,
+  RefreshCw,
   ScanLine,
   ScrollText,
   Send,
@@ -54,11 +55,12 @@ export default function HuntHUD() {
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
   const [now, setNow] = useState<number>(0);
+  const [reloadingStatus, setReloadingStatus] = useState(false);
 
   const isFieldScout = profile?.operativeRole === 'Field Scout';
   const isBaseDecoder = !isFieldScout;
 
-  const loadData = async (silent = false) => {
+  const loadData = async (silent = false, forceRefresh = false) => {
     if (!silent) setLoading(true);
     try {
       // Egress & Latency Optimization: Parallelize getMe and getCheckpoint if stage is known
@@ -71,7 +73,8 @@ export default function HuntHUD() {
 
       if (knownStage && knownStage <= 12) {
         const stageChanged = !currentCp || (currentCp.stage !== undefined && currentCp.stage !== knownStage);
-        const shouldFetchCp = stageChanged || waitingForUnlock;
+        // Avoid aggressive background polling of getCheckpoint when base decoder is awaiting QR scan to save egress
+        const shouldFetchCp = stageChanged || forceRefresh || (!silent && waitingForUnlock);
 
         const results = await Promise.all([
           api.getMe(),
@@ -244,6 +247,29 @@ export default function HuntHUD() {
     setManualSubmitting(false);
   };
 
+  const handleReloadStatus = async () => {
+    setReloadingStatus(true);
+    try {
+      const wasUnlockedBefore = !!activeCheckpointRef.current?.qrScanned;
+      await loadData(false, true);
+      const isNowUnlocked = !!activeCheckpointRef.current?.qrScanned;
+      if (!wasUnlockedBefore && isNowUnlocked) {
+        const targetNode = activeCheckpointRef.current?.stage || progress?.currentStage || 1;
+        setScanNotice(`QR VERIFIED: Node 0${targetNode} unlocked!`);
+        setShowChallenge(true);
+        setTimeout(() => setScanNotice(null), 6000);
+      } else if (!isNowUnlocked) {
+        setScanNotice('AWAITING FIELD SCOUT: QR code not scanned yet.');
+        setTimeout(() => setScanNotice(null), 3000);
+      }
+    } catch {
+      setScanNotice('Network error: Failed to check QR status.');
+      setTimeout(() => setScanNotice(null), 3000);
+    } finally {
+      setReloadingStatus(false);
+    }
+  };
+
   const handleChallengeSuccess = async () => {
     setShowChallenge(false);
     await loadData(false);
@@ -302,13 +328,27 @@ export default function HuntHUD() {
       Solve the challenge
     </button>
   ) : (
-    <button
-      onClick={() => setShowScanner(true)}
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface text-sm font-medium text-ink transition-colors hover:border-ink/40 cursor-pointer"
-    >
-      <ScanLine className="h-4 w-4 text-muted" aria-hidden="true" />
-      Waiting for the field scan · scan here instead
-    </button>
+    <div className="w-full space-y-2">
+      <button
+        onClick={handleReloadStatus}
+        disabled={reloadingStatus}
+        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-lg bg-primary btn-treasure text-base font-semibold text-on-primary shadow-card transition-colors hover:bg-primary-hover disabled:opacity-60 cursor-pointer"
+      >
+        <RefreshCw className={`h-5 w-5 shrink-0 ${reloadingStatus ? 'animate-spin' : ''}`} aria-hidden="true" />
+        {reloadingStatus ? 'Checking for the scan…' : 'Check if QR is scanned'}
+      </button>
+      <div className="flex items-center justify-between gap-2 px-1 text-sm text-muted">
+        <span>Your Field Scout scans on campus</span>
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="inline-flex min-h-11 items-center gap-1.5 underline underline-offset-4 transition-colors hover:text-ink cursor-pointer"
+        >
+          <ScanLine className="h-4 w-4" aria-hidden="true" />
+          Scan with camera
+        </button>
+      </div>
+    </div>
   );
 
   return (
@@ -402,6 +442,18 @@ export default function HuntHUD() {
                   ? isFieldScout ? 'QR verified. Your decoders are solving the challenge.' : 'QR verified. The challenge is ready to solve.'
                   : isFieldScout ? 'Find this spot on campus and scan its QR code.' : 'Waiting for your Field Scout to scan this checkpoint.'}
               </span>
+              {isBaseDecoder && !isQrUnlocked && (
+                <button
+                  type="button"
+                  onClick={handleReloadStatus}
+                  disabled={reloadingStatus}
+                  title="Check if your Field Scout has scanned the QR"
+                  className="ml-auto inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-line-strong px-3 text-sm font-medium text-ink transition-colors hover:border-ink/40 disabled:opacity-60 cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 ${reloadingStatus ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  {reloadingStatus ? 'Checking…' : 'Reload'}
+                </button>
+              )}
               {isBaseDecoder && isQrUnlocked && hasChallenge && (
                 <button
                   onClick={() => setShowChallenge(true)}
