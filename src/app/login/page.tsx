@@ -555,7 +555,7 @@ export default function LoginPage() {
               {!isLoginMode && (
                 <div>
                   <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <label htmlFor="teamLead" className="text-sm font-medium">Team lead <span className="text-muted">(Base Decoder)</span></label>
+                    <label htmlFor="teamLead" className="text-sm font-medium">Team lead</label>
                     {validMark(!!(touched.teamLead && !fieldErrors.teamLead && teamLead.trim()))}
                   </div>
                   <input
