@@ -557,7 +557,7 @@ export default function HuntHUD() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">Treasure map</span>
-                <span className="block text-sm text-muted">See every checkpoint on your route</span>
+                <span className="block text-sm text-muted">View current &amp; next 2 checkpoints on your route</span>
               </span>
               <ChevronRight className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
             </button>

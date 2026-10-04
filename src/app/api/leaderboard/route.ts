@@ -8,6 +8,7 @@ interface LeaderboardTeamRow {
   current_stage: number;
   start_time: string | null;
   completed_at: string | null;
+  completion_token?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   assigned_route?: number;
   updated_at?: string | null;
@@ -39,7 +40,7 @@ export async function GET() {
     }
 
     let allTeams: LeaderboardTeamRow[] = [];
-    const selectFields = 'id, team_name, team_lead, current_stage, start_time, completed_at, status, assigned_route, updated_at';
+    const selectFields = 'id, team_name, team_lead, current_stage, start_time, completed_at, completion_token, status, assigned_route, updated_at';
 
     if (isMultiDb && db2) {
       // Query approved and disqualified/rejected teams in parallel from both Route 1 and Route 2 databases
@@ -73,19 +74,25 @@ export async function GET() {
       allTeams = teams || [];
     }
 
-    // Backend provides timestamps and status; time calculations and dynamic live sorting happen on the frontend
-    const formatted = allTeams.map((t) => ({
-      id: t.id,
-      teamName: t.team_name,
-      teamLead: t.team_lead,
-      currentStage: t.current_stage,
-      assignedRoute: t.assigned_route || 1,
-      startTime: t.start_time,
-      completedAt: t.completed_at,
-      completed_at: t.completed_at,
-      updatedAt: t.updated_at,
-      status: t.status,
-    }));
+    // Backend provides timestamps, status and victory code; time calculations and dynamic live sorting happen on the frontend
+    const formatted = allTeams.map((t) => {
+      const isFinished = t.current_stage > 12 || Boolean(t.completed_at);
+      const victoryCode = t.completion_token || (isFinished ? `WIN-${t.id.slice(0, 8).toUpperCase()}` : null);
+      return {
+        id: t.id,
+        teamName: t.team_name,
+        teamLead: t.team_lead,
+        currentStage: t.current_stage,
+        assignedRoute: t.assigned_route || 1,
+        startTime: t.start_time,
+        completedAt: t.completed_at,
+        completed_at: t.completed_at,
+        updatedAt: t.updated_at,
+        status: t.status,
+        completionToken: victoryCode,
+        completion_token: victoryCode,
+      };
+    });
 
     // Update in-memory cache
     cachedData = formatted;

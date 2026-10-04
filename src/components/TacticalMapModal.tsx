@@ -290,10 +290,15 @@ export default function TacticalMapModal({
     const completedCoords: [number, number][] = [];
     const upcomingCoords: [number, number][] = [];
 
-    // Sort nodes by stage
-    const sortedNodes = [...nodes].sort((a, b) => a.stage - b.stage);
+    // Restrict visible nodes: Only the current node and the next two nodes
+    const visibleStages = progress.currentStage > 12
+      ? [12]
+      : [currentStageNumber, currentStageNumber + 1, currentStageNumber + 2].filter((s) => s <= 12);
 
-    sortedNodes.forEach((node) => {
+    const visibleNodes = nodes.filter((n) => visibleStages.includes(n.stage));
+    const sortedVisibleNodes = [...visibleNodes].sort((a, b) => a.stage - b.stage);
+
+    sortedVisibleNodes.forEach((node) => {
       const lat = Number(node.latitude);
       const lng = Number(node.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
@@ -301,32 +306,15 @@ export default function TacticalMapModal({
       const pt: [number, number] = [lat, lng];
       bounds.push(pt);
 
-      const isCompleted =
-        progress.completedNodes?.some((n) => n.nodeId === node.id) ||
-        node.stage < progress.currentStage;
-      const isCurrent = node.stage === progress.currentStage;
+      const isCurrent = node.stage === currentStageNumber;
+      const isNext1 = node.stage === currentStageNumber + 1;
+      const isNext2 = node.stage === currentStageNumber + 2;
 
-      if (isCompleted || isCurrent) {
-        completedCoords.push(pt);
-      }
-      if (isCurrent || node.stage >= progress.currentStage) {
-        upcomingCoords.push(pt);
-      }
+      upcomingCoords.push(pt);
 
-      // Marker Icon Design
+      // Marker Icon Design for Current Node and Next Two Nodes
       let markerHtml = '';
-      if (isCompleted) {
-        markerHtml = `
-          <div class="relative flex items-center justify-center cursor-pointer transition-transform hover:scale-125">
-            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-lg border-2 border-white ring-2 ring-emerald-400/50">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            </div>
-            <span class="absolute -bottom-5 whitespace-nowrap bg-black/85 text-emerald-300 font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-500/40 shadow">
-              #0${node.stage} Cleared
-            </span>
-          </div>
-        `;
-      } else if (isCurrent) {
+      if (isCurrent) {
         markerHtml = `
           <div class="relative flex items-center justify-center cursor-pointer">
             <div class="absolute -inset-3 rounded-full bg-amber-500/30 animate-ping"></div>
@@ -339,15 +327,34 @@ export default function TacticalMapModal({
             </span>
           </div>
         `;
-      } else {
+      } else if (isNext1) {
         markerHtml = `
-          <div class="relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110 opacity-85">
-            <div class="w-7 h-7 rounded-full bg-stone-800 text-stone-300 flex items-center justify-center font-bold text-xs shadow-md border-2 border-stone-500">
+          <div class="relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
+            <div class="w-8 h-8 rounded-full bg-cyan-600 text-white flex items-center justify-center font-extrabold text-xs shadow-lg border-2 border-white ring-2 ring-cyan-400/60">
               0${node.stage}
             </div>
-            <span class="absolute -bottom-5 whitespace-nowrap bg-black/80 text-stone-400 font-mono text-[9px] px-1 py-0.2 rounded border border-stone-700">
-              Node 0${node.stage}
+            <span class="absolute -bottom-5 whitespace-nowrap bg-black/90 text-cyan-300 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-cyan-500/50 shadow">
+              Next Node (+1)
             </span>
+          </div>
+        `;
+      } else if (isNext2) {
+        markerHtml = `
+          <div class="relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
+            <div class="w-8 h-8 rounded-full bg-purple-700 text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white/80 ring-2 ring-purple-500/50">
+              0${node.stage}
+            </div>
+            <span class="absolute -bottom-5 whitespace-nowrap bg-black/90 text-purple-300 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-purple-500/50 shadow">
+              Next Node (+2)
+            </span>
+          </div>
+        `;
+      } else {
+        markerHtml = `
+          <div class="relative flex items-center justify-center cursor-pointer">
+            <div class="w-7 h-7 rounded-full bg-stone-800 text-stone-300 flex items-center justify-center font-bold text-xs shadow-md border border-stone-600">
+              0${node.stage}
+            </div>
           </div>
         `;
       }
@@ -368,26 +375,15 @@ export default function TacticalMapModal({
       markersRef.current.push(marker);
     });
 
-    // 5. Draw the "Travelled Route" Polyline (Solid Glowing Line)
-    if (completedCoords.length >= 2) {
-      travelledLineRef.current = L.polyline(completedCoords, {
-        color: '#10b981', // Emerald green
-        weight: 5,
-        opacity: 0.9,
-        lineCap: 'round',
-        lineJoin: 'round',
-        dashArray: undefined,
-      }).addTo(map);
-    }
-
-    // 6. Draw the "Upcoming Route" Polyline (Dashed Line)
+    // 5. Connect Visible Upcoming Nodes (Current -> Next 1 -> Next 2)
     if (upcomingCoords.length >= 2) {
       upcomingLineRef.current = L.polyline(upcomingCoords, {
-        color: '#f59e0b', // Amber
-        weight: 3,
-        opacity: 0.7,
+        color: '#f59e0b', // Amber connecting current to next 2 nodes
+        weight: 3.5,
+        opacity: 0.85,
         dashArray: '8, 8',
         lineCap: 'round',
+        lineJoin: 'round',
       }).addTo(map);
     }
 
@@ -396,7 +392,7 @@ export default function TacticalMapModal({
       lastFittedRouteRef.current = currentRoute;
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
     }
-  }, [nodes, progress, mapReady, userLocation, currentRoute]);
+  }, [nodes, progress, mapReady, userLocation, currentRoute, currentStageNumber]);
 
   // 7. Update User Live Location & Accuracy on Map
   useEffect(() => {
@@ -494,11 +490,16 @@ export default function TacticalMapModal({
     }
   };
 
-  // Fit all checkpoints in view
+  // Fit visible checkpoints in view (current target & next 2 upcoming nodes)
   const handleFitAll = () => {
     if (!mapInstanceRef.current || nodes.length === 0) return;
     setFollowingUser(false);
-    const bounds: [number, number][] = nodes
+    const visibleStages = progress.currentStage > 12
+      ? [12]
+      : [currentStageNumber, currentStageNumber + 1, currentStageNumber + 2].filter((s) => s <= 12);
+    const visibleNodes = nodes.filter((n) => visibleStages.includes(n.stage));
+
+    const bounds: [number, number][] = visibleNodes
       .map((n) => [Number(n.latitude), Number(n.longitude)] as [number, number])
       .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
 
@@ -540,8 +541,7 @@ export default function TacticalMapModal({
                 </span>
               </div>
               <p className="truncate text-xs text-muted">
-                Target: {currentTargetNode?.title || `Checkpoint ${currentStageNumber}`} ·{' '}
-                {completedStages.length}/12 Cleared
+                Showing Current Node & Next 2 Nodes · Target: {currentTargetNode?.title || `Checkpoint ${currentStageNumber}`}
               </p>
             </div>
           </div>
@@ -619,26 +619,26 @@ export default function TacticalMapModal({
             <button
               onClick={handleFitAll}
               className="p-2.5 bg-surface/90 hover:bg-surface text-ink border border-line rounded-lg shadow-lg backdrop-blur-md transition-all cursor-pointer flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
-              title="View all 12 checkpoints"
+              title="View current node and next 2 checkpoints"
             >
               <RotateCcw className="w-4 h-4" />
-              <span className="hidden sm:inline">Fit Route</span>
+              <span className="hidden sm:inline">Fit Visible</span>
             </button>
           </div>
 
           {/* Map Legend Overlay */}
           <div className="absolute top-4 right-14 z-10 hidden sm:flex flex-col gap-1.5 bg-surface/95 border border-line p-2.5 rounded-lg text-xs shadow-lg backdrop-blur-md">
             <div className="flex items-center gap-2 text-ink text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-400"></span>
-              <span>Cleared Node</span>
-            </div>
-            <div className="flex items-center gap-2 text-ink text-[11px]">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white animate-pulse"></span>
               <span className="font-bold text-amber-400">Current Target</span>
             </div>
             <div className="flex items-center gap-2 text-ink text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-full bg-stone-700 border border-stone-500"></span>
-              <span className="text-muted">Upcoming Ahead</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 border border-cyan-400"></span>
+              <span className="text-cyan-400 font-semibold">Next Node (+1)</span>
+            </div>
+            <div className="flex items-center gap-2 text-ink text-[11px]">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-700 border border-purple-400"></span>
+              <span className="text-purple-400 font-semibold">Next Node (+2)</span>
             </div>
             {userLocation && (
               <div className="flex items-center gap-2 text-ink text-[11px]">

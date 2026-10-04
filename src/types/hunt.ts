@@ -73,5 +73,7 @@ export interface LeaderboardEntry {
   completed_at?: string | null;
   status: TeamStatus;
   elapsedSeconds?: number | null;
+  completionToken?: string | null;
+  completion_token?: string | null;
 }
 

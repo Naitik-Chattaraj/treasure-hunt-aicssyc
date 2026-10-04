@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle2, Clock, Medal, RefreshCw, ShieldAlert, Trophy } from 'lucide-react';
+import { CheckCircle2, Clock, Medal, RefreshCw, ShieldAlert, Trophy, Copy, Check } from 'lucide-react';
 import { LeaderboardEntry } from '@/types/hunt';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -15,6 +15,16 @@ export default function LeaderboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [now, setNow] = useState<number>(0);
+  const [copiedTeamId, setCopiedTeamId] = useState<string | null>(null);
+
+  const copyVictoryCode = (code: string, teamId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedTeamId(teamId);
+    setTimeout(() => {
+      setCopiedTeamId((prev) => (prev === teamId ? null : prev));
+    }, 2500);
+  };
 
   const fetchLeaderboard = useCallback(async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
@@ -263,6 +273,25 @@ export default function LeaderboardPage() {
                       {routeBadge(team.assignedRoute)}
                     </div>
                     <div className="truncate text-sm text-muted">Lead: {team.teamLead}</div>
+                    {(team.currentStage > 12 || team.completedAt) && (
+                      <div className="mt-2 flex items-center justify-between gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                            <Trophy className="h-3 w-3" /> Victory Code
+                          </div>
+                          <div className="font-mono text-xs font-bold text-ink truncate select-all">
+                            {team.completionToken || 'WIN-VERIFIED-2026'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => copyVictoryCode(team.completionToken || 'WIN-VERIFIED-2026', `podium-${team.id}`, e)}
+                          className="p-1 rounded text-amber-600 dark:text-amber-400 hover:text-ink hover:bg-amber-500/20 transition-colors cursor-pointer shrink-0"
+                          title="Copy Victory Code"
+                        >
+                          {copiedTeamId === `podium-${team.id}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between border-t border-line pt-3 text-sm">
                     <span className={team.currentStage > 12 ? 'font-semibold text-success' : 'text-muted'}>{stageText(team.currentStage)}</span>
@@ -298,7 +327,7 @@ export default function LeaderboardPage() {
                 {leaderboard.map((team, idx) => {
                   const rank = idx + 1;
                   const isDisqualified = team.status === 'rejected';
-                  const isWinner = team.currentStage > 12;
+                  const isWinner = team.currentStage > 12 || Boolean(team.completedAt ?? team.completed_at);
                   const progressPercent = Math.min(100, Math.round(((team.currentStage - 1) / 12) * 100));
 
                   return (
@@ -334,6 +363,36 @@ export default function LeaderboardPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Victory Code for finished teams */}
+                        {isWinner && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <div className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-700 dark:text-amber-300">
+                              <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
+                              <span className="text-[10px] font-sans font-semibold uppercase text-muted">Victory Code:</span>
+                              <span className="select-all tracking-wide text-ink font-mono font-bold">
+                                {team.completionToken || 'WIN-VERIFIED-2026'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => copyVictoryCode(team.completionToken || 'WIN-VERIFIED-2026', team.id, e)}
+                              className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-medium text-muted hover:text-ink hover:border-line-strong transition-colors cursor-pointer"
+                              title="Copy Victory Code"
+                            >
+                              {copiedTeamId === team.id ? (
+                                <>
+                                  <Check className="h-3 w-3 text-success" />
+                                  <span className="text-success text-[10px] font-semibold">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3" />
+                                  <span className="text-[10px]">Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                         <div className="mt-0.5 text-xs text-muted sm:hidden">
                           {isDisqualified ? 'Disqualified' : stageText(team.currentStage)}
                         </div>

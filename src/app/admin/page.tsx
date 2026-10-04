@@ -88,6 +88,8 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [hideRevokedTeams, setHideRevokedTeams] = useState(false);
+  const [teamsViewMode, setTeamsViewMode] = useState<'table' | 'map'>('table');
+  const [selectedTeamMapId, setSelectedTeamMapId] = useState<string | null>(null);
 
   // Edit checkpoint modal state (Title, Area, Clue, QR Hash, Lat, Lng)
   const [editingCheckpoint, setEditingCheckpoint] = useState<AdminCheckpoint | null>(null);
@@ -643,13 +645,42 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* All Teams Roster Table */}
+            {/* All Teams Roster Table & Live Tracking */}
             <div className="bg-surface border border-line overflow-hidden rounded-sm">
               <div className="p-4 sm:p-5 border-b border-line flex flex-wrap justify-between items-center gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-accent flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  All Teams ({(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length})
-                </h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-accent flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    All Teams ({(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length})
+                  </h2>
+
+                  {/* View Mode Toggle: Table View vs Live Team Map */}
+                  <div className="flex items-center bg-sunken p-0.5 rounded border border-line">
+                    <button
+                      onClick={() => setTeamsViewMode('table')}
+                      className={`px-3 py-1 text-xs font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                        teamsViewMode === 'table'
+                          ? 'bg-accent text-on-primary font-extrabold shadow-sm'
+                          : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Table View</span>
+                    </button>
+                    <button
+                      onClick={() => setTeamsViewMode('map')}
+                      className={`px-3 py-1 text-xs font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                        teamsViewMode === 'map'
+                          ? 'bg-primary text-on-primary font-extrabold shadow-sm'
+                          : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Live Team Map</span>
+                    </button>
+                  </div>
+                </div>
+
                 <label className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted cursor-pointer select-none">
                   <input 
                     type="checkbox" 
@@ -661,128 +692,158 @@ export default function AdminDashboard() {
                 </label>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-sunken text-muted uppercase tracking-wider border-b border-line">
-                    <tr>
-                      <th className="px-4 py-3">Access Code</th>
-                      <th className="px-4 py-3">Team Name</th>
-                      <th className="px-4 py-3">Team Lead</th>
-                      <th className="px-4 py-3">Team</th>
-                      <th className="px-4 py-3">Assigned Route</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Current Progress</th>
-                      <th className="px-4 py-3">Start Time</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line/50">
-                    {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).map((t) => (
-                      <tr key={t.id} className="hover:bg-sunken/60 transition-colors">
-                        <td className="px-4 py-3 text-accent font-bold">{t.uid}</td>
-                        <td className="px-4 py-3 font-bold">
-                          <button
-                            onClick={() => setSquadModalTeam(t)}
-                            className="text-ink hover:text-accent transition-colors text-left cursor-pointer flex items-center gap-1.5"
-                            title="Click to view all team members & positions"
-                          >
-                            <span>{t.team_name}</span>
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-ink">{t.team_lead}</td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => setSquadModalTeam(t)}
-                            className="px-2.5 py-1 bg-sunken hover:bg-surface border border-accent/40 hover:border-accent text-accent text-xs font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                            title="Inspect full operative roster (Base Decoders & Field Scouts)"
-                          >
-                            <Users className="w-3.5 h-3.5 text-primary" />
-                            <span>{t.members?.length || 4} Operatives</span>
-                          </button>
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={t.assigned_route || 1}
-                            onChange={(e) => handleUpdateTeamRoute(t.id, Number(e.target.value) as 1 | 2)}
-                            disabled={actionLoading === t.id}
-                            className={`min-h-9 px-2 py-1 text-xs font-bold uppercase rounded-md border cursor-pointer ${
-                              (t.assigned_route || 1) === 1
-                                ? 'bg-route-1/10 text-route-1 border-route-1/50'
-                                : 'bg-route-2/10 text-route-2 border-route-2/50'
-                            }`}
-                          >
-                            <option value={1} className="bg-sunken text-accent">Route 1 (Hippocrates)</option>
-                            <option value={2} className="bg-sunken text-route-2">Route 2 (Hospital)</option>
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 text-xs font-bold uppercase border ${
-                            t.status === 'approved'
-                              ? 'bg-success/10 text-success border-success/40'
-                              : t.status === 'pending'
-                              ? 'bg-primary/10 text-primary border-primary/40'
-                              : 'bg-danger/10 text-danger border-danger/40'
-                          }`}>
-                            {t.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {t.current_stage > 12 ? (
-                            <span className="text-success font-bold flex items-center gap-1">
-                              <Trophy className="w-3.5 h-3.5" />
-                              COMPLETED (WINNER)
-                            </span>
-                          ) : (
-                            <span className="text-primary font-bold">
-                              NODE 0{t.current_stage} / 12
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-muted">
-                          {t.start_time ? new Date(t.start_time).toLocaleTimeString() : 'Not started'}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            
-                            {t.status === 'pending' ? (
-                              <button
-                                onClick={() => handleApproveReject(t.id, 'approved')}
-                                className="px-2 py-1 flex items-center gap-1 bg-success/20 text-success border border-success hover:bg-success hover:text-on-primary font-bold text-xs uppercase cursor-pointer"
-                              >
-                                <CheckCircle2 className="w-3 h-3" />
-                                Approve
-                              </button>
-                            ) : t.status === 'approved' ? (
-                              <button
-                                onClick={() => handleApproveReject(t.id, 'rejected')}
-                                className="px-2 py-1 flex items-center gap-1 text-danger border border-danger/40 hover:border-danger font-bold text-xs uppercase cursor-pointer"
-                              >
-                                <XCircle className="w-3 h-3" />
-                                Revoke
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleApproveReject(t.id, 'approved')}
-                                className="px-2 py-1 flex items-center gap-1 text-success border border-success/40 hover:border-success font-bold text-xs uppercase cursor-pointer"
-                              >
-                                <CheckCircle2 className="w-3 h-3" />
-                                Re-Approve
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length === 0 && (
+              {teamsViewMode === 'map' ? (
+                <div className="p-4 sm:p-5">
+                  <AdminOpenStreetMap
+                    checkpoints={checkpoints}
+                    routeFilter={checkpointRouteFilter}
+                    onUpdateCheckpoint={handleUpdateCoordinatesDirect}
+                    onRefresh={() => fetchDashboardData(true)}
+                    selectedId={selectedMapNodeId}
+                    onSelectCheckpoint={setSelectedMapNodeId}
+                    teams={teams}
+                    selectedTeamId={selectedTeamMapId}
+                    onSelectTeam={setSelectedTeamMapId}
+                    onInspectTeamSquad={setSquadModalTeam}
+                    showTeamsDefault={true}
+                  />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-sunken text-muted uppercase tracking-wider border-b border-line">
                       <tr>
-                        <td colSpan={9} className="p-8 text-center text-muted">
-                          No teams registered yet.
-                        </td>
+                        <th className="px-4 py-3">Access Code</th>
+                        <th className="px-4 py-3">Team Name</th>
+                        <th className="px-4 py-3">Team Lead</th>
+                        <th className="px-4 py-3">Team</th>
+                        <th className="px-4 py-3">Assigned Route</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Current Progress</th>
+                        <th className="px-4 py-3">Start Time</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-line/50">
+                      {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).map((t) => (
+                        <tr key={t.id} className="hover:bg-sunken/60 transition-colors">
+                          <td className="px-4 py-3 text-accent font-bold">{t.uid}</td>
+                          <td className="px-4 py-3 font-bold">
+                            <button
+                              onClick={() => setSquadModalTeam(t)}
+                              className="text-ink hover:text-accent transition-colors text-left cursor-pointer flex items-center gap-1.5"
+                              title="Click to view all team members & positions"
+                            >
+                              <span>{t.team_name}</span>
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-ink">{t.team_lead}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => setSquadModalTeam(t)}
+                              className="px-2.5 py-1 bg-sunken hover:bg-surface border border-accent/40 hover:border-accent text-accent text-xs font-bold uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                              title="Inspect full operative roster (Base Decoders & Field Scouts)"
+                            >
+                              <Users className="w-3.5 h-3.5 text-primary" />
+                              <span>{t.members?.length || 4} Operatives</span>
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={t.assigned_route || 1}
+                              onChange={(e) => handleUpdateTeamRoute(t.id, Number(e.target.value) as 1 | 2)}
+                              disabled={actionLoading === t.id}
+                              className={`min-h-9 px-2 py-1 text-xs font-bold uppercase rounded-md border cursor-pointer ${
+                                (t.assigned_route || 1) === 1
+                                  ? 'bg-route-1/10 text-route-1 border-route-1/50'
+                                  : 'bg-route-2/10 text-route-2 border-route-2/50'
+                              }`}
+                            >
+                              <option value={1} className="bg-sunken text-accent">Route 1 (Hippocrates)</option>
+                              <option value={2} className="bg-sunken text-route-2">Route 2 (Hospital)</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 text-xs font-bold uppercase border ${
+                              t.status === 'approved'
+                                ? 'bg-success/10 text-success border-success/40'
+                                : t.status === 'pending'
+                                ? 'bg-primary/10 text-primary border-primary/40'
+                                : 'bg-danger/10 text-danger border-danger/40'
+                            }`}>
+                              {t.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {t.current_stage > 12 ? (
+                              <span className="text-success font-bold flex items-center gap-1">
+                                <Trophy className="w-3.5 h-3.5" />
+                                COMPLETED (WINNER)
+                              </span>
+                            ) : (
+                              <span className="text-primary font-bold">
+                                NODE 0{t.current_stage} / 12
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-muted">
+                            {t.start_time ? new Date(t.start_time).toLocaleTimeString() : 'Not started'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedTeamMapId(t.id);
+                                  const targetRoute = (t.assigned_route || 1) as 1 | 2;
+                                  setCheckpointRouteFilter(targetRoute);
+                                  setTeamsViewMode('map');
+                                }}
+                                className="px-2 py-1 flex items-center gap-1 bg-accent/15 text-accent border border-accent/40 hover:bg-accent hover:text-on-primary font-bold text-xs uppercase cursor-pointer transition-colors"
+                                title="Track this team on OpenStreetMap"
+                              >
+                                <MapPin className="w-3 h-3" />
+                                <span>Track</span>
+                              </button>
+                              {t.status === 'pending' ? (
+                                <button
+                                  onClick={() => handleApproveReject(t.id, 'approved')}
+                                  className="px-2 py-1 flex items-center gap-1 bg-success/20 text-success border border-success hover:bg-success hover:text-on-primary font-bold text-xs uppercase cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Approve
+                                </button>
+                              ) : t.status === 'approved' ? (
+                                <button
+                                  onClick={() => handleApproveReject(t.id, 'rejected')}
+                                  className="px-2 py-1 flex items-center gap-1 text-danger border border-danger/40 hover:border-danger font-bold text-xs uppercase cursor-pointer"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  Revoke
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleApproveReject(t.id, 'approved')}
+                                  className="px-2 py-1 flex items-center gap-1 text-success border border-success/40 hover:border-success font-bold text-xs uppercase cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Re-Approve
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {(hideRevokedTeams ? teams.filter(t => t.status !== 'rejected') : teams).length === 0 && (
+                        <tr>
+                          <td colSpan={9} className="p-8 text-center text-muted">
+                            No teams registered yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -877,6 +938,11 @@ export default function AdminDashboard() {
                 onRefresh={() => fetchDashboardData(true)}
                 selectedId={selectedMapNodeId}
                 onSelectCheckpoint={setSelectedMapNodeId}
+                teams={teams}
+                selectedTeamId={selectedTeamMapId}
+                onSelectTeam={setSelectedTeamMapId}
+                onInspectTeamSquad={setSquadModalTeam}
+                showTeamsDefault={true}
               />
             ) : (
               <div className="space-y-6">

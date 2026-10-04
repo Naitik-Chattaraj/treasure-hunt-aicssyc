@@ -13,16 +13,18 @@ interface MapNodeItem {
   longitude: number;
 }
 
-// In-memory cache for map nodes per route to prevent unnecessary DB egress
-const cache = new Map<1 | 2, { nodes: MapNodeItem[]; cachedAt: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+// In-memory cache for map nodes per route and stage
+const cache = new Map<string, { nodes: MapNodeItem[]; cachedAt: number }>();
+const CACHE_TTL_MS = 60 * 1000; // 1 minute
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export function invalidateMapNodesCache(route?: 1 | 2) {
   if (route) {
-    cache.delete(route);
+    for (const key of cache.keys()) {
+      if (key.startsWith(`${route}:`)) cache.delete(key);
+    }
   } else {
     cache.clear();
   }
@@ -40,56 +42,66 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    // Determine route:
-    // 1. Explicit query param (?route=1 or ?route=2)
-    // 2. Live database lookup on team's assigned_route (for mid-game route changes where JWT is unchanged)
-    // 3. Fallback to JWT payload.assignedRoute
+    // Determine route and current stage for the requesting team:
+    let teamCurrentStage: number = 1;
+    let liveRoute: 1 | 2 | null = null;
+    try {
+      const primaryDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 2 : 1);
+      if (primaryDb) {
+        const { data: teamPrimary } = await primaryDb
+          .from('teams')
+          .select('assigned_route, current_stage')
+          .eq('id', payload.teamId)
+          .maybeSingle();
+        if (teamPrimary) {
+          if (teamPrimary.assigned_route) liveRoute = teamPrimary.assigned_route === 2 ? 2 : 1;
+          if (teamPrimary.current_stage) teamCurrentStage = teamPrimary.current_stage;
+        }
+      }
+
+      if (!liveRoute && isRoute2Configured()) {
+        const altDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 1 : 2);
+        if (altDb) {
+          const { data: teamAlt } = await altDb
+            .from('teams')
+            .select('assigned_route, current_stage')
+            .eq('id', payload.teamId)
+            .maybeSingle();
+          if (teamAlt) {
+            if (teamAlt.assigned_route) liveRoute = teamAlt.assigned_route === 2 ? 2 : 1;
+            if (teamAlt.current_stage) teamCurrentStage = teamAlt.current_stage;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not query live team assigned_route/stage for map-nodes:', err);
+    }
+
     const reqRoute = req.nextUrl.searchParams.get('route');
     let assignedRoute: 1 | 2;
-
     if (reqRoute === '1' || reqRoute === '2') {
       assignedRoute = reqRoute === '2' ? 2 : 1;
     } else {
-      let liveRoute: 1 | 2 | null = null;
-      try {
-        const primaryDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 2 : 1);
-        if (primaryDb) {
-          const { data: teamPrimary } = await primaryDb
-            .from('teams')
-            .select('assigned_route')
-            .eq('id', payload.teamId)
-            .maybeSingle();
-          if (teamPrimary?.assigned_route) {
-            liveRoute = teamPrimary.assigned_route === 2 ? 2 : 1;
-          }
-        }
-
-        if (!liveRoute && isRoute2Configured()) {
-          const altDb = getSupabaseAdmin(payload.assignedRoute === 2 ? 1 : 2);
-          if (altDb) {
-            const { data: teamAlt } = await altDb
-              .from('teams')
-              .select('assigned_route')
-              .eq('id', payload.teamId)
-              .maybeSingle();
-            if (teamAlt?.assigned_route) {
-              liveRoute = teamAlt.assigned_route === 2 ? 2 : 1;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Could not query live team assigned_route for map-nodes:', err);
-      }
-
       assignedRoute = liveRoute || (payload.assignedRoute === 2 ? 2 : 1);
     }
 
-    // Check memory cache first unless cache-busting timestamp is provided
+    // Helper: Only return current node and next two nodes
+    const filterVisibleNodes = (allNodes: MapNodeItem[]) => {
+      const current = teamCurrentStage;
+      if (current > 12) {
+        return allNodes.filter((n) => n.stage === 12);
+      }
+      const allowedStages = [current, current + 1, current + 2].filter((s) => s <= 12);
+      return allNodes.filter((n) => allowedStages.includes(n.stage));
+    };
+
+    // Check memory cache first
+    const cacheKey = `${assignedRoute}:${teamCurrentStage}`;
     const hasCacheBuster = req.nextUrl.searchParams.has('_t');
-    const cached = cache.get(assignedRoute);
+    const cached = cache.get(cacheKey);
     if (!hasCacheBuster && cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
       return NextResponse.json(
-        { nodes: cached.nodes, assignedRoute },
+        { nodes: cached.nodes, assignedRoute, currentStage: teamCurrentStage },
         {
           headers: {
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -118,8 +130,9 @@ export async function GET(req: NextRequest) {
           longitude: node.lng,
         }));
 
+      const visible = filterVisibleNodes(fallbackNodes);
       return NextResponse.json(
-        { nodes: fallbackNodes, assignedRoute },
+        { nodes: visible, assignedRoute, currentStage: teamCurrentStage },
         {
           headers: {
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -147,9 +160,10 @@ export async function GET(req: NextRequest) {
 
       const rawList = fallbackRange || [];
       const resolved = resolveWithDefaults(rawList, assignedRoute);
-      cache.set(assignedRoute, { nodes: resolved, cachedAt: Date.now() });
+      const visible = filterVisibleNodes(resolved);
+      cache.set(cacheKey, { nodes: visible, cachedAt: Date.now() });
       return NextResponse.json(
-        { nodes: resolved, assignedRoute },
+        { nodes: visible, assignedRoute, currentStage: teamCurrentStage },
         {
           headers: {
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -159,9 +173,10 @@ export async function GET(req: NextRequest) {
     }
 
     const resolved = resolveWithDefaults(dbCheckpoints, assignedRoute);
-    cache.set(assignedRoute, { nodes: resolved, cachedAt: Date.now() });
+    const visible = filterVisibleNodes(resolved);
+    cache.set(cacheKey, { nodes: visible, cachedAt: Date.now() });
     return NextResponse.json(
-      { nodes: resolved, assignedRoute },
+      { nodes: visible, assignedRoute, currentStage: teamCurrentStage },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -170,7 +185,6 @@ export async function GET(req: NextRequest) {
     );
   } catch (err) {
     console.error('API /hunt/map-nodes error:', err);
-    // Graceful fallback to default campus coordinates
     const fallbackRoute = 1;
     const fallbackNodes = Object.values(CAMPUS_DEFAULT_COORDINATES)
       .filter((node) => node.routeId === fallbackRoute)
@@ -186,7 +200,7 @@ export async function GET(req: NextRequest) {
       }));
 
     return NextResponse.json(
-      { nodes: fallbackNodes, assignedRoute: fallbackRoute },
+      { nodes: fallbackNodes.slice(0, 3), assignedRoute: fallbackRoute, currentStage: 1 },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

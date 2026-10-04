@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { loadLeaflet } from '@/lib/leaflet-loader';
 import {
   MapPin,
@@ -14,6 +14,12 @@ import {
   Zap,
   Undo2,
   Crosshair,
+  Users,
+  Trophy,
+  Search,
+  X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   CAMPUS_CENTER,
@@ -21,6 +27,21 @@ import {
   calculateDistanceMeters,
   formatDistance,
 } from '@/lib/coordinates';
+
+export interface AdminMapTeam {
+  id: string;
+  uid: string;
+  team_name: string;
+  team_lead: string;
+  status: 'pending' | 'approved' | 'rejected';
+  current_stage: number;
+  assigned_route?: 1 | 2;
+  start_time: string | null;
+  completed_at: string | null;
+  completion_token: string | null;
+  created_at: string;
+  members?: Array<{ name: string; role: string; regNo: string; phone: string }>;
+}
 
 export interface AdminCheckpointCoord {
   id: number;
@@ -41,6 +62,11 @@ interface AdminOpenStreetMapProps {
   onRefresh: () => void;
   selectedId?: number | null;
   onSelectCheckpoint?: (id: number | null) => void;
+  teams?: AdminMapTeam[];
+  selectedTeamId?: string | null;
+  onSelectTeam?: (teamId: string | null) => void;
+  onInspectTeamSquad?: (team: AdminMapTeam) => void;
+  showTeamsDefault?: boolean;
 }
 
 export default function AdminOpenStreetMap({
@@ -50,6 +76,11 @@ export default function AdminOpenStreetMap({
   onRefresh,
   selectedId: controlledSelectedId,
   onSelectCheckpoint,
+  teams = [],
+  selectedTeamId: controlledSelectedTeamId,
+  onSelectTeam,
+  onInspectTeamSquad,
+  showTeamsDefault = true,
 }: AdminOpenStreetMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +92,16 @@ export default function AdminOpenStreetMap({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const polyline2Ref = useRef<any>(null);
 
+  // Team tracking markers and trail lines
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamMarkersRef = useRef<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamTrailLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamUpcomingLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamBeaconCircleRef = useRef<any>(null);
+
   // Direct DOM ref for zero-latency dragging HUD banner (prevents 60fps React re-render lag)
   const dragHudRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef<boolean>(false);
@@ -69,9 +110,15 @@ export default function AdminOpenStreetMap({
   // In-memory persistent map of latest coordinates per checkpoint ID
   const coordsRef = useRef<Map<number, { lat: number; lng: number }>>(new Map());
 
-  // Selection
+  // Checkpoint selection
   const [internalSelectedId, setInternalSelectedId] = useState<number | null>(null);
   const activeSelectedId = controlledSelectedId !== undefined ? controlledSelectedId : internalSelectedId;
+
+  // Team tracking state
+  const [showTeams, setShowTeams] = useState<boolean>(showTeamsDefault);
+  const [internalSelectedTeamId, setInternalSelectedTeamId] = useState<string | null>(null);
+  const activeSelectedTeamId = controlledSelectedTeamId !== undefined ? controlledSelectedTeamId : internalSelectedTeamId;
+  const [teamSearchQuery, setTeamSearchQuery] = useState<string>('');
 
   // Track moved nodes pending save (when autoSave is false)
   const [movedNodes, setMovedNodes] = useState<Record<number, { lat: number; lng: number; origLat: number; origLng: number }>>({});
@@ -98,6 +145,64 @@ export default function AdminOpenStreetMap({
 
   const selectedCp = checkpoints.find((cp) => cp.id === activeSelectedId) || null;
 
+  // Team mapping helpers
+  const getNodeForTeam = useCallback((team: AdminMapTeam): number => {
+    const route = team.assigned_route || 1;
+    const stage = Math.min(Math.max(team.current_stage || 1, 1), 12);
+    return route === 2 ? stage + 12 : stage;
+  }, []);
+
+  // Map of checkpoint ID -> teams currently at that node
+  const teamsByNodeId = useMemo(() => {
+    const map = new Map<number, AdminMapTeam[]>();
+    if (!teams || teams.length === 0) return map;
+
+    teams.forEach((t) => {
+      if (t.status === 'rejected') return;
+      const nid = getNodeForTeam(t);
+      const list = map.get(nid) || [];
+      list.push(t);
+      map.set(nid, list);
+    });
+    return map;
+  }, [teams, getNodeForTeam]);
+
+  // Selected team object
+  const focusedTeam = useMemo(() => {
+    if (!activeSelectedTeamId || !teams) return null;
+    return teams.find((t) => t.id === activeSelectedTeamId) || null;
+  }, [activeSelectedTeamId, teams]);
+
+  // Teams at currently selected checkpoint
+  const selectedCpTeams = useMemo(() => {
+    if (!selectedCp) return [];
+    return teamsByNodeId.get(selectedCp.id) || [];
+  }, [selectedCp, teamsByNodeId]);
+
+  // Total active teams count within current route filter
+  const totalTrackedTeamsCount = useMemo(() => {
+    if (!teams) return 0;
+    return teams.filter((t) => {
+      if (t.status === 'rejected') return false;
+      const r = t.assigned_route || 1;
+      return routeFilter === 'all' || r === routeFilter;
+    }).length;
+  }, [teams, routeFilter]);
+
+  // Active nodes that have at least one team
+  const activeNodesWithTeams = useMemo(() => {
+    const list: { nodeId: number; stage: number; route: 1 | 2; count: number; teams: AdminMapTeam[] }[] = [];
+    filteredCheckpoints.forEach((cp) => {
+      const tList = teamsByNodeId.get(cp.id) || [];
+      if (tList.length > 0) {
+        const route = (cp.route_id || (cp.id <= 12 ? 1 : 2)) as 1 | 2;
+        const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
+        list.push({ nodeId: cp.id, stage, route, count: tList.length, teams: tList });
+      }
+    });
+    return list;
+  }, [filteredCheckpoints, teamsByNodeId]);
+
   // Show toast notification
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
@@ -112,6 +217,27 @@ export default function AdminOpenStreetMap({
       if (onSelectCheckpoint) onSelectCheckpoint(id);
     },
     [onSelectCheckpoint]
+  );
+
+  const handleSelectTeam = useCallback(
+    (teamId: string | null) => {
+      setInternalSelectedTeamId(teamId);
+      if (onSelectTeam) onSelectTeam(teamId);
+      if (teamId && teams) {
+        const team = teams.find((t) => t.id === teamId);
+        if (team) {
+          const route = team.assigned_route || 1;
+          const stage = Math.min(Math.max(team.current_stage || 1, 1), 12);
+          const nodeId = route === 2 ? stage + 12 : stage;
+          handleSelectCheckpoint(nodeId);
+          const pos = coordsRef.current.get(nodeId);
+          if (pos && mapInstanceRef.current) {
+            mapInstanceRef.current.setView([pos.lat, pos.lng], 18, { animate: true });
+          }
+        }
+      }
+    },
+    [onSelectTeam, teams, handleSelectCheckpoint]
   );
 
   // Helper to resolve coordinates
@@ -151,12 +277,15 @@ export default function AdminOpenStreetMap({
     if (polyline2Ref.current) polyline2Ref.current.setLatLngs(r2);
   }, []);
 
-  // Construct Leaflet DivIcon
+  // Construct Leaflet DivIcon with team count badge
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buildIcon = useCallback((L: any, cp: AdminCheckpointCoord, isSelected: boolean, isMoved: boolean) => {
     const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
     const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
     const hasCustom = cp.latitude != null && cp.longitude != null;
+
+    const nodeTeams = teamsByNodeId.get(cp.id) || [];
+    const teamCount = nodeTeams.length;
 
     const bgClass = route === 1 ? 'bg-cyan-600' : 'bg-purple-600';
     const borderClass = isSelected
@@ -175,10 +304,19 @@ export default function AdminOpenStreetMap({
       ? `R${route}-0${stage} ● Unsaved`
       : `R${route}-0${stage} ${hasCustom ? '✓' : '⚠️'}`;
 
+    const teamBadgeHtml = showTeams && teamCount > 0
+      ? `
+        <div class="absolute -top-3.5 -right-3.5 bg-amber-500 text-black font-extrabold text-[10px] px-1.5 py-0.5 rounded-full shadow-lg border-2 border-white flex items-center gap-0.5 animate-pulse z-30 pointer-events-none" title="${teamCount} team(s) at this node: ${nodeTeams.map(t => t.team_name).join(', ')}">
+          👥 ${teamCount}
+        </div>
+      `
+      : '';
+
     return L.divIcon({
       className: `admin-marker-pin marker-id-${cp.id}`,
       html: `
         <div class="group relative flex items-center justify-center cursor-grab active:cursor-grabbing select-none" style="pointer-events: auto; transition: none;">
+          ${teamBadgeHtml}
           <div class="w-8 h-8 rounded-full ${bgClass} text-white flex items-center justify-center font-bold text-xs shadow-xl border-2 ${borderClass}" style="transition: none;">
             ${stage}
           </div>
@@ -186,14 +324,14 @@ export default function AdminOpenStreetMap({
             ${tagLabel}
           </span>
           <div class="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/95 text-[10px] text-white font-mono px-2 py-0.5 rounded pointer-events-none whitespace-nowrap border border-line shadow-lg">
-            Drag to Move
+            ${teamCount > 0 ? `${teamCount} team(s) here · Drag to Move` : 'Drag to Move'}
           </div>
         </div>
       `,
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
-  }, []);
+  }, [teamsByNodeId, showTeams]);
 
   // Update visual appearance of markers without destroying DOM or canceling drags
   const refreshMarkerStyles = useCallback(() => {
@@ -209,6 +347,11 @@ export default function AdminOpenStreetMap({
       marker.setIcon(buildIcon(L, cp, isSelected, isMoved));
     });
   }, [checkpoints, activeSelectedId, movedNodes, buildIcon]);
+
+  // Trigger marker style refresh when teams, selection, or moved nodes change
+  useEffect(() => {
+    refreshMarkerStyles();
+  }, [refreshMarkerStyles, showTeams, teamsByNodeId]);
 
   // Synchronize input fields when selected checkpoint changes
   useEffect(() => {
@@ -235,10 +378,8 @@ export default function AdminOpenStreetMap({
       coordsRef.current.set(id, { lat: cleanLat, lng: cleanLng });
       updatePolylines();
 
-      // ALWAYS select this node so inspector displays it
       handleSelectCheckpoint(id);
 
-      // ALWAYS fill the text fields with the dropped coordinates
       const latStr = cleanLat.toFixed(6);
       const lngStr = cleanLng.toFixed(6);
       setLatInput(latStr);
@@ -392,44 +533,7 @@ export default function AdminOpenStreetMap({
     [movedNodes, checkpoints, activeSelectedId, updatePolylines, showToast]
   );
 
-  // 7. Save a specific moved node to Database
-  const handleSaveMovedNode = useCallback(
-    async (id: number) => {
-      const moved = movedNodes[id];
-      if (!moved) return;
-
-      const cp = checkpoints.find((c) => c.id === id);
-      const stage = cp ? cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12) : id;
-
-      setSaving(true);
-      try {
-        const ok = await onUpdateCheckpoint({
-          id,
-          latitude: moved.lat,
-          longitude: moved.lng,
-        });
-
-        if (ok) {
-          showToast(`✓ Node 0${stage} location successfully saved to database!`, 'success');
-          setMovedNodes((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
-          onRefresh();
-        } else {
-          showToast(`Failed to save Node 0${stage} to database`, 'error');
-        }
-      } catch (err) {
-        showToast(`Error saving node: ${err}`, 'error');
-      } finally {
-        setSaving(false);
-      }
-    },
-    [movedNodes, checkpoints, onUpdateCheckpoint, onRefresh, showToast]
-  );
-
-  // 8. Save All Moved Nodes in one batch
+  // Save all moved nodes in batch
   const handleSaveAllMoved = useCallback(async () => {
     const ids = Object.keys(movedNodes).map(Number);
     if (ids.length === 0) return;
@@ -450,43 +554,74 @@ export default function AdminOpenStreetMap({
     }
 
     setSaving(false);
-    setMovedNodes({});
-    onRefresh();
-    showToast(`✓ Saved ${successCount} node(s) to Supabase database!`, 'success');
+    if (successCount === ids.length) {
+      showToast(`✓ All ${successCount} moved checkpoints saved to database!`, 'success');
+      setMovedNodes({});
+      onRefresh();
+    } else {
+      showToast(`Saved ${successCount} of ${ids.length} checkpoints. Please retry unsaved nodes.`, 'error');
+      onRefresh();
+    }
   }, [movedNodes, onUpdateCheckpoint, onRefresh, showToast]);
 
-  // Reset to SRM building preset
+  // Reset to SRM preset coordinates
   const handleResetToPreset = useCallback(async () => {
     if (activeSelectedId == null) return;
     const def = CAMPUS_DEFAULT_COORDINATES[activeSelectedId];
     if (!def) return;
 
-    const cleanLat = Number(def.lat.toFixed(6));
-    const cleanLng = Number(def.lng.toFixed(6));
-
     const marker = markersMapRef.current.get(activeSelectedId);
     if (marker) {
-      marker.setLatLng([cleanLat, cleanLng]);
+      marker.setLatLng([def.lat, def.lng]);
     }
-    coordsRef.current.set(activeSelectedId, { lat: cleanLat, lng: cleanLng });
+    coordsRef.current.set(activeSelectedId, { lat: def.lat, lng: def.lng });
     updatePolylines();
 
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([cleanLat, cleanLng], 18, { animate: true });
+    const stage = activeSelectedId <= 12 ? activeSelectedId : activeSelectedId - 12;
+    setLatInput(def.lat.toFixed(6));
+    setLngInput(def.lng.toFixed(6));
+
+    if (autoSave) {
+      setSaving(true);
+      try {
+        const ok = await onUpdateCheckpoint({
+          id: activeSelectedId,
+          latitude: def.lat,
+          longitude: def.lng,
+        });
+        if (ok) {
+          showToast(`✓ Reset Node 0${stage} to ${def.name} preset coordinates!`, 'success');
+          setMovedNodes((prev) => {
+            const next = { ...prev };
+            delete next[activeSelectedId];
+            return next;
+          });
+          onRefresh();
+        }
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setMovedNodes((prev) => ({
+        ...prev,
+        [activeSelectedId]: {
+          lat: def.lat,
+          lng: def.lng,
+          origLat: def.lat,
+          origLng: def.lng,
+        },
+      }));
+      showToast(`Reset Node 0${stage} to ${def.name} preset. Click 'Save' to persist.`, 'info');
     }
+  }, [activeSelectedId, autoSave, onUpdateCheckpoint, onRefresh, updatePolylines, showToast]);
 
-    setLatInput(cleanLat.toFixed(6));
-    setLngInput(cleanLng.toFixed(6));
-
-    await handleNodeDropped(activeSelectedId, cleanLat, cleanLng);
-  }, [activeSelectedId, handleNodeDropped, updatePolylines]);
-
-  // Admin Device GPS
+  // Acquire admin device GPS
   const handleGetAdminLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      alert('Geolocation is not supported by your browser.');
       return;
     }
+
     setGettingGps(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -508,7 +643,7 @@ export default function AdminOpenStreetMap({
           updatePolylines();
           handleNodeDropped(activeSelectedId, lat, lng);
         } else {
-          showToast(`Admin GPS: ${lat}, ${lng}`, 'info');
+          showToast(`Admin GPS acquired: ${lat}, ${lng}`, 'info');
         }
       },
       (err) => {
@@ -603,7 +738,7 @@ export default function AdminOpenStreetMap({
     };
   }, []);
 
-  // 2. Synchronize Markers with Checkpoints data and Route Filter
+  // 2. Synchronize Checkpoint Markers with Checkpoints data and Route Filter
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const L = (window as any).L;
@@ -624,7 +759,6 @@ export default function AdminOpenStreetMap({
 
     // Create markers for newly visible checkpoints
     filteredCheckpoints.forEach((cp) => {
-      // Initialize coordinate in memory if not already present
       if (!coordsRef.current.has(cp.id) || !movedNodes[cp.id]) {
         const res = resolveCoord(cp);
         coordsRef.current.set(cp.id, { lat: res.lat, lng: res.lng });
@@ -640,20 +774,16 @@ export default function AdminOpenStreetMap({
       let marker = markersMapRef.current.get(cp.id);
 
       if (!marker) {
-        // Instantiate Draggable Marker with autoPan: false to prevent jitter
         marker = L.marker([coord.lat, coord.lng], {
           icon,
           draggable: true,
           autoPan: false,
         }).addTo(map);
 
-        // Marker Click -> Select checkpoint
         marker.on('click', () => {
-          if (isDraggingRef.current || justDraggedRef.current) return;
           handleSelectCheckpoint(cp.id);
         });
 
-        // Marker Drag Start -> Lock state and show HUD directly via DOM (Zero React lag, no DOM destruction)
         marker.on('dragstart', () => {
           isDraggingRef.current = true;
           justDraggedRef.current = true;
@@ -662,147 +792,307 @@ export default function AdminOpenStreetMap({
           }
         });
 
-        // Marker Dragging -> Update polyline, live input text fields & HUD directly at 60fps
         marker.on('drag', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           const pos = e.target.getLatLng();
-          const cleanLat = pos.lat.toFixed(6);
-          const cleanLng = pos.lng.toFixed(6);
+          const cleanLat = Number(pos.lat.toFixed(6));
+          const cleanLng = Number(pos.lng.toFixed(6));
 
-          coordsRef.current.set(cp.id, { lat: pos.lat, lng: pos.lng });
-
-          // Update Leaflet polylines immediately
+          coordsRef.current.set(cp.id, { lat: cleanLat, lng: cleanLng });
           updatePolylines();
 
-          // Immediately update sidebar coordinate text fields live as you drag
-          if (latInputRef.current) latInputRef.current.value = cleanLat;
-          if (lngInputRef.current) lngInputRef.current.value = cleanLng;
-
-          // Update HUD directly
           if (dragHudRef.current) {
             const stage = cp.stage || (cp.id <= 12 ? cp.id : cp.id - 12);
-            const route = cp.route_id || (cp.id <= 12 ? 1 : 2);
             dragHudRef.current.innerHTML = `
-              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-              <span><strong>R${route}-0${stage}</strong> &rarr; Lat: ${cleanLat}, Lng: ${cleanLng}</span>
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+              <span class="font-bold">Dragging Node 0${stage}:</span>
+              <span>(${cleanLat.toFixed(6)}, ${cleanLng.toFixed(6)})</span>
             `;
           }
         });
 
-        // Marker Drag End -> Commit coordinates, fill text fields, and unlock
         marker.on('dragend', (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
           isDraggingRef.current = false;
           if (dragHudRef.current) {
             dragHudRef.current.style.display = 'none';
           }
-          const finalPos = e.target.getLatLng();
-          const cleanLat = Number(finalPos.lat.toFixed(6));
-          const cleanLng = Number(finalPos.lng.toFixed(6));
 
-          // Ensure input fields are completely filled and React state is in sync
-          setLatInput(cleanLat.toFixed(6));
-          setLngInput(cleanLng.toFixed(6));
-          if (latInputRef.current) latInputRef.current.value = cleanLat.toFixed(6);
-          if (lngInputRef.current) lngInputRef.current.value = cleanLng.toFixed(6);
-
-          // Focus this checkpoint and register drop
-          handleSelectCheckpoint(cp.id);
-          handleNodeDropped(cp.id, cleanLat, cleanLng);
+          const pos = e.target.getLatLng();
+          handleNodeDropped(cp.id, pos.lat, pos.lng);
 
           setTimeout(() => {
             justDraggedRef.current = false;
-          }, 400);
+          }, 350);
         });
 
         markersMapRef.current.set(cp.id, marker);
       } else {
-        // Marker exists: update position only if not currently moved or dragging
-        if (!isDraggingRef.current && !movedNodes[cp.id]) {
-          marker.setLatLng([coord.lat, coord.lng]);
-        }
-        if (!isDraggingRef.current) {
-          marker.setIcon(icon);
-        }
+        marker.setIcon(icon);
       }
     });
 
     updatePolylines();
+  }, [filteredCheckpoints, activeSelectedId, movedNodes, resolveCoord, buildIcon, handleSelectCheckpoint, handleNodeDropped, updatePolylines]);
 
-    // Initial fit view if no checkpoint selected
-    if (bounds.length > 0 && activeSelectedId == null) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+  // 3. Render Team Markers and Selected Team Trail onto Map
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+    if (!map || !L) return;
+
+    // Clear previous team markers
+    teamMarkersRef.current.forEach((m) => m.remove());
+    teamMarkersRef.current = [];
+
+    // Clear previous team trail lines
+    if (teamTrailLineRef.current) {
+      teamTrailLineRef.current.remove();
+      teamTrailLineRef.current = null;
     }
+    if (teamUpcomingLineRef.current) {
+      teamUpcomingLineRef.current.remove();
+      teamUpcomingLineRef.current = null;
+    }
+    if (teamBeaconCircleRef.current) {
+      teamBeaconCircleRef.current.remove();
+      teamBeaconCircleRef.current = null;
+    }
+
+    if (!showTeams || !teams || teams.length === 0) return;
+
+    // Filter teams based on status, routeFilter and search query
+    const validTeams = teams.filter((t) => {
+      if (t.status === 'rejected') return false;
+      const tRoute = t.assigned_route || 1;
+      if (routeFilter !== 'all' && tRoute !== routeFilter) return false;
+      if (teamSearchQuery.trim()) {
+        const q = teamSearchQuery.toLowerCase();
+        return t.team_name.toLowerCase().includes(q) || t.team_lead.toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    // Group valid teams by target checkpoint ID
+    const grouped = new Map<number, AdminMapTeam[]>();
+    validTeams.forEach((t) => {
+      const nid = getNodeForTeam(t);
+      const list = grouped.get(nid) || [];
+      list.push(t);
+      grouped.set(nid, list);
+    });
+
+    // Draw trail for selected team if any
+    const focusedTeam = activeSelectedTeamId ? teams.find((t) => t.id === activeSelectedTeamId) : null;
+    if (focusedTeam) {
+      const fRoute = focusedTeam.assigned_route || 1;
+      const fStage = Math.min(Math.max(focusedTeam.current_stage || 1, 1), 12);
+
+      const completedCoords: [number, number][] = [];
+      for (let s = 1; s <= fStage; s++) {
+        const cid = fRoute === 1 ? s : s + 12;
+        const cpos = coordsRef.current.get(cid);
+        if (cpos) completedCoords.push([cpos.lat, cpos.lng]);
+      }
+
+      const upcomingCoords: [number, number][] = [];
+      for (let s = fStage; s <= 12; s++) {
+        const cid = fRoute === 1 ? s : s + 12;
+        const cpos = coordsRef.current.get(cid);
+        if (cpos) upcomingCoords.push([cpos.lat, cpos.lng]);
+      }
+
+      if (completedCoords.length >= 2) {
+        teamTrailLineRef.current = L.polyline(completedCoords, {
+          color: '#10b981',
+          weight: 4.5,
+          opacity: 0.9,
+          lineCap: 'round',
+        }).addTo(map);
+      }
+
+      if (upcomingCoords.length >= 2) {
+        teamUpcomingLineRef.current = L.polyline(upcomingCoords, {
+          color: '#f59e0b',
+          weight: 3,
+          opacity: 0.8,
+          dashArray: '6, 6',
+          lineCap: 'round',
+        }).addTo(map);
+      }
+
+      const currentCid = fRoute === 1 ? fStage : fStage + 12;
+      const currentPos = coordsRef.current.get(currentCid);
+      if (currentPos) {
+        teamBeaconCircleRef.current = L.circle([currentPos.lat, currentPos.lng], {
+          radius: 22,
+          color: '#f59e0b',
+          fillColor: '#f59e0b',
+          fillOpacity: 0.25,
+          weight: 2,
+        }).addTo(map);
+      }
+    }
+
+    // Render team markers on the map
+    grouped.forEach((nodeTeams, nodeId) => {
+      const basePos = coordsRef.current.get(nodeId);
+      if (!basePos) return;
+
+      nodeTeams.forEach((team, idx) => {
+        const isTeamSelected = team.id === activeSelectedTeamId;
+        const total = nodeTeams.length;
+        // Radial offset around the checkpoint node so multiple team pins don't overlap
+        const radius = total > 1 ? 0.00022 : 0.00015;
+        const angle = total > 1 ? (idx / total) * 2 * Math.PI - Math.PI / 2 : -Math.PI / 3;
+        const tLat = basePos.lat + Math.sin(angle) * radius;
+        const tLng = basePos.lng + Math.cos(angle) * (radius * 1.25);
+
+        const routeColor = (team.assigned_route || 1) === 1 ? 'bg-cyan-600' : 'bg-purple-600';
+        const isCleared = team.current_stage > 12;
+        const stageLabel = isCleared ? 'Finished' : `0${team.current_stage}`;
+
+        const teamHtml = `
+          <div class="team-pin-wrapper select-none cursor-pointer flex items-center gap-1.5 rounded-full px-2 py-0.5 shadow-xl transition-all hover:scale-110 ${
+            isTeamSelected
+              ? 'bg-amber-500 text-black font-extrabold ring-4 ring-amber-400 scale-110 z-40'
+              : 'bg-black/90 text-white border border-line-strong hover:border-amber-400 z-20'
+          }" style="pointer-events: auto;">
+            <span class="w-2.5 h-2.5 rounded-full ${routeColor} border border-white shrink-0"></span>
+            <span class="text-[11px] font-bold truncate max-w-[85px]">${team.team_name}</span>
+            <span class="text-[9px] font-mono opacity-80 ${isCleared ? 'text-emerald-400 font-bold' : ''}">[${stageLabel}]</span>
+          </div>
+        `;
+
+        const teamIcon = L.divIcon({
+          className: `team-map-pin team-id-${team.id}`,
+          html: teamHtml,
+          iconSize: [110, 26],
+          iconAnchor: [55, 13],
+        });
+
+        const tMarker = L.marker([tLat, tLng], { icon: teamIcon, zIndexOffset: isTeamSelected ? 1000 : 500 }).addTo(map);
+
+        tMarker.on('click', () => {
+          handleSelectTeam(team.id);
+          handleSelectCheckpoint(nodeId);
+        });
+
+        teamMarkersRef.current.push(tMarker);
+      });
+    });
   }, [
-    filteredCheckpoints,
-    activeSelectedId,
-    movedNodes,
-    buildIcon,
-    resolveCoord,
-    handleNodeDropped,
+    showTeams,
+    teams,
+    activeSelectedTeamId,
+    routeFilter,
+    teamSearchQuery,
+    getNodeForTeam,
+    handleSelectTeam,
     handleSelectCheckpoint,
-    updatePolylines,
   ]);
 
-  // Keep marker styling in sync with selection
-  useEffect(() => {
-    refreshMarkerStyles();
-  }, [refreshMarkerStyles]);
+  // Format elapsed time helper
+  const formatTeamElapsed = (startTime: string | null, completedAt: string | null) => {
+    if (!startTime) return 'Not started';
+    const start = new Date(startTime).getTime();
+    const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+    if (isNaN(start) || isNaN(end)) return '--:--:--';
+    const diff = Math.max(0, Math.floor((end - start) / 1000));
+    const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+    const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
 
   const movedCount = Object.keys(movedNodes).length;
 
   return (
     <div className="space-y-4">
-      {/* Toast Feedback */}
+      {/* Toast Banner */}
       {toast && (
         <div
-          className={`fixed top-16 right-4 z-50 px-4 py-2.5 rounded-lg shadow-xl text-xs font-bold font-mono flex items-center gap-2 border transition-all animate-in slide-in-from-top-2 ${toast.type === 'success'
-              ? 'bg-emerald-950/95 text-emerald-300 border-emerald-500/70'
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-lg shadow-xl text-xs font-mono font-bold flex items-center gap-2 border transition-all animate-in fade-in slide-in-from-top-2 ${
+            toast.type === 'success'
+              ? 'bg-emerald-950 text-emerald-300 border-emerald-500'
               : toast.type === 'error'
-                ? 'bg-rose-950/95 text-rose-300 border-rose-500/70'
-                : 'bg-cyan-950/95 text-cyan-300 border-cyan-500/70'
-            }`}
+                ? 'bg-rose-950 text-rose-300 border-rose-500'
+                : 'bg-zinc-900 text-cyan-300 border-cyan-500'
+          }`}
         >
-          {toast.type === 'success' ? (
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-          ) : toast.type === 'error' ? (
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-          ) : (
-            <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-          )}
+          {toast.type === 'success' && <Check className="w-4 h-4 text-emerald-400" />}
+          {toast.type === 'error' && <AlertTriangle className="w-4 h-4 text-rose-400" />}
+          {toast.type === 'info' && <Info className="w-4 h-4 text-cyan-400" />}
           <span>{toast.message}</span>
         </div>
       )}
 
-      {/* Map Action Toolbar */}
-      <div className="bg-surface border border-line p-3 sm:p-4 rounded-lg flex flex-wrap justify-between items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-cyan-600/20 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/40">
-            <MapPin className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
-              <span>Interactive OpenStreetMap Studio</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-600/20 text-cyan-400 border border-cyan-500/30">
-                Drag &amp; Drop Enabled
-              </span>
-            </h3>
-            <p className="text-xs text-muted">
-              Drag numbered pins directly on the map to calibrate node coordinates. Route paths bend live as you drag.
-            </p>
-          </div>
+      {/* Top Map Toolbar: Teams Tracking & Auto-Save & Fit Route */}
+      <div className="bg-surface border border-line p-3 sm:p-4 rounded-lg flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        {/* Left: Team Tracking Controls */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowTeams(!showTeams)}
+            className={`px-3 py-1.5 text-xs font-bold uppercase rounded border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              showTeams
+                ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-sm'
+                : 'bg-sunken text-muted border-line hover:text-ink'
+            }`}
+            title="Toggle team tracking pins on map"
+          >
+            {showTeams ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            <span>Teams on Map ({totalTrackedTeamsCount})</span>
+          </button>
+
+          {showTeams && (
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 pointer-events-none" />
+              <input
+                type="text"
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                placeholder="Search team or lead..."
+                className="pl-8 pr-7 py-1 text-xs bg-sunken border border-line rounded w-36 sm:w-48 outline-none text-ink placeholder:text-muted focus:border-amber-400"
+              />
+              {teamSearchQuery && (
+                <button
+                  onClick={() => setTeamSearchQuery('')}
+                  className="absolute right-2 text-muted hover:text-ink cursor-pointer p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {activeSelectedTeamId && (
+            <button
+              onClick={() => handleSelectTeam(null)}
+              className="px-2 py-1 text-xs text-amber-400 hover:text-white border border-amber-500/40 hover:bg-amber-500/20 rounded flex items-center gap-1 cursor-pointer font-bold uppercase transition-colors"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear Trail</span>
+            </button>
+          )}
         </div>
 
+        {/* Right: GPS, Auto-Save & Fit Route */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Auto-Save Toggle */}
           <button
-            onClick={() => setAutoSave(!autoSave)}
-            className={`px-3 py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer border transition-colors shadow-sm ${autoSave
-                ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/60 hover:bg-emerald-600/30'
+            onClick={() => {
+              const next = !autoSave;
+              setAutoSave(next);
+              showToast(`Auto-save on drop is now ${next ? 'ENABLED' : 'DISABLED'}`, 'info');
+            }}
+            className={`px-3 py-1.5 text-xs font-bold uppercase rounded border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              autoSave
+                ? 'bg-emerald-950 text-emerald-300 border-emerald-500 font-extrabold shadow-sm'
                 : 'bg-sunken text-muted border-line hover:text-ink'
-              }`}
+            }`}
             title="Automatically update database when pin is dropped"
           >
             <Zap className={`w-3.5 h-3.5 ${autoSave ? 'text-emerald-400 fill-emerald-400' : ''}`} />
-            <span>Auto-Save on Drop: {autoSave ? 'ON' : 'OFF'}</span>
+            <span>Auto-Save: {autoSave ? 'ON' : 'OFF'}</span>
           </button>
 
           {/* Admin Current GPS */}
@@ -828,10 +1118,43 @@ export default function AdminOpenStreetMap({
         </div>
       </div>
 
+      {/* Team Distribution Summary Strip (Quick-jump to nodes with active teams) */}
+      {showTeams && activeNodesWithTeams.length > 0 && (
+        <div className="bg-sunken border border-line p-2.5 rounded-lg flex items-center gap-2 overflow-x-auto text-xs">
+          <span className="text-[11px] font-bold uppercase text-muted tracking-wider flex items-center gap-1 shrink-0">
+            <Users className="w-3.5 h-3.5 text-amber-500" />
+            Active Team Nodes:
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {activeNodesWithTeams.map((item) => (
+              <button
+                key={item.nodeId}
+                onClick={() => {
+                  handleSelectCheckpoint(item.nodeId);
+                  const pos = coordsRef.current.get(item.nodeId);
+                  if (pos && mapInstanceRef.current) {
+                    mapInstanceRef.current.setView([pos.lat, pos.lng], 18, { animate: true });
+                  }
+                }}
+                className={`px-2 py-0.5 rounded border text-xs font-mono font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                  activeSelectedId === item.nodeId
+                    ? 'bg-amber-500 text-black border-amber-400 font-extrabold'
+                    : 'bg-surface text-ink border-line hover:border-amber-400'
+                }`}
+                title={`Jump to Node 0${item.stage} (${item.count} team(s): ${item.teams.map(t => t.team_name).join(', ')})`}
+              >
+                <span>N0{item.stage}</span>
+                <span className="bg-amber-500/20 text-amber-400 px-1 rounded text-[10px]">{item.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Map + Inspection Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* OpenStreetMap Canvas */}
-        <div className="lg:col-span-2 relative h-[500px] sm:h-[600px] rounded-lg border border-line overflow-hidden shadow-inner bg-zinc-900">
+        <div className="lg:col-span-2 relative h-[500px] sm:h-[620px] rounded-lg border border-line overflow-hidden shadow-inner bg-zinc-900">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
           {/* Live Dragging HUD Banner (Direct DOM ref for zero-latency 60fps tracking) */}
@@ -841,7 +1164,7 @@ export default function AdminOpenStreetMap({
             className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-black/90 border-2 border-accent px-4 py-2 rounded-full text-xs font-mono text-white shadow-2xl backdrop-blur-md items-center gap-2.5 pointer-events-none"
           />
 
-          {/* Unsaved Changes Floating Bar (When Auto-Save is OFF and nodes moved) */}
+          {/* Unsaved Changes Floating Bar */}
           {!autoSave && movedCount > 0 && (
             <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-3 z-20 bg-amber-950/95 border-2 border-amber-400 p-3 rounded-lg shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="flex items-center gap-2 text-amber-300">
@@ -859,10 +1182,87 @@ export default function AdminOpenStreetMap({
             </div>
           )}
 
+          {/* Floating Selected Team Tracking HUD */}
+          {focusedTeam && (
+            <div className="absolute top-3 left-3 z-20 w-72 sm:w-80 bg-surface/98 border-2 border-amber-500 p-3.5 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-500 border border-amber-500/40">
+                      Tracking Team
+                    </span>
+                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded border ${
+                      (focusedTeam.assigned_route || 1) === 1
+                        ? 'bg-route-1/20 border-route-1/40 text-route-1'
+                        : 'bg-route-2/20 border-route-2/40 text-route-2'
+                    }`}>
+                      Route 0{focusedTeam.assigned_route || 1}
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-sm sm:text-base text-ink truncate">{focusedTeam.team_name}</h4>
+                  <div className="text-xs text-muted truncate">Lead: <span className="text-ink font-semibold">{focusedTeam.team_lead}</span></div>
+                </div>
+                <button
+                  onClick={() => handleSelectTeam(null)}
+                  className="p-1 text-muted hover:text-ink cursor-pointer"
+                  title="Close team tracking card"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 my-2.5 text-xs bg-sunken p-2 rounded border border-line">
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-bold block">Current Node</span>
+                  <span className="font-bold text-primary">
+                    {focusedTeam.current_stage > 12 ? (
+                      <span className="text-success flex items-center gap-1">
+                        <Trophy className="w-3 h-3" /> Cleared
+                      </span>
+                    ) : (
+                      `Node 0${focusedTeam.current_stage} / 12`
+                    )}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-bold block">Time Elapsed</span>
+                  <span className="font-mono font-bold text-ink">
+                    {formatTeamElapsed(focusedTeam.start_time, focusedTeam.completed_at)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 pt-1">
+                <button
+                  onClick={() => {
+                    const nid = getNodeForTeam(focusedTeam);
+                    const pos = coordsRef.current.get(nid);
+                    if (pos && mapInstanceRef.current) {
+                      mapInstanceRef.current.setView([pos.lat, pos.lng], 18, { animate: true });
+                    }
+                  }}
+                  className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold uppercase rounded cursor-pointer transition-colors flex items-center justify-center gap-1 shadow"
+                >
+                  <Crosshair className="w-3.5 h-3.5" />
+                  <span>Focus Node</span>
+                </button>
+                {onInspectTeamSquad && (
+                  <button
+                    onClick={() => onInspectTeamSquad(focusedTeam)}
+                    className="flex-1 py-1.5 bg-surface hover:bg-surface-2 text-ink border border-line text-xs font-bold uppercase rounded cursor-pointer transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Users className="w-3.5 h-3.5 text-accent" />
+                    <span>Squad</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Quick Help Tip */}
           <div className="absolute bottom-3 left-3 z-10 bg-black/85 border border-line/60 px-3 py-1.5 rounded text-[11px] text-stone-300 backdrop-blur-xs flex items-center gap-2 shadow">
             <Info className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span>Drag pins or click anywhere on the map to set exact coordinates</span>
+            <span>Click team pins or nodes to inspect progress & track teams on campus</span>
           </div>
 
           {/* Legend Overlay */}
@@ -876,7 +1276,8 @@ export default function AdminOpenStreetMap({
               <span>Route 2</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-emerald-400">✓ Saved</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>Team Pin</span>
             </div>
           </div>
         </div>
@@ -929,8 +1330,79 @@ export default function AdminOpenStreetMap({
                 </div>
               )}
 
+              {/* Teams Currently at this Checkpoint Section */}
+              <div className="pt-2 border-t border-line">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] uppercase font-bold text-amber-500 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    Teams at this Node ({selectedCpTeams.length})
+                  </span>
+                </div>
+
+                {selectedCpTeams.length === 0 ? (
+                  <div className="p-2.5 bg-sunken border border-line rounded text-xs text-muted text-center">
+                    No active teams currently hunting at this node
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {selectedCpTeams.map((team) => {
+                      const isTracking = team.id === activeSelectedTeamId;
+                      return (
+                        <div
+                          key={team.id}
+                          className={`p-2.5 rounded border transition-all text-xs ${
+                            isTracking
+                              ? 'bg-amber-500/10 border-amber-400 shadow-sm'
+                              : 'bg-sunken border-line hover:border-amber-400/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="font-bold text-ink truncate">{team.team_name}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase border ${
+                              (team.assigned_route || 1) === 1
+                                ? 'bg-route-1/10 border-route-1/40 text-route-1'
+                                : 'bg-route-2/10 border-route-2/40 text-route-2'
+                            }`}>
+                              R0{team.assigned_route || 1}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-muted mb-2 font-mono">
+                            <span>Lead: {team.team_lead}</span>
+                            <span>{formatTeamElapsed(team.start_time, team.completed_at)}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleSelectTeam(isTracking ? null : team.id)}
+                              className={`flex-1 py-1 text-[11px] font-bold uppercase rounded cursor-pointer transition-colors flex items-center justify-center gap-1 ${
+                                isTracking
+                                  ? 'bg-amber-500 text-black font-extrabold'
+                                  : 'bg-surface border border-line hover:border-amber-400 text-ink'
+                              }`}
+                            >
+                              <Crosshair className="w-3 h-3" />
+                              <span>{isTracking ? 'Active Trail' : 'Track Trail'}</span>
+                            </button>
+                            {onInspectTeamSquad && (
+                              <button
+                                onClick={() => onInspectTeamSquad(team)}
+                                className="px-2 py-1 bg-surface border border-line hover:border-accent text-accent text-[11px] font-bold uppercase rounded cursor-pointer transition-colors"
+                                title="Inspect Team Squad"
+                              >
+                                <Users className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Coordinate Form */}
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3 text-xs pt-2 border-t border-line">
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="font-bold text-ink uppercase text-[11px]">
@@ -1059,7 +1531,7 @@ export default function AdminOpenStreetMap({
               <MapPin className="w-10 h-10 text-line-strong animate-bounce" />
               <h4 className="font-bold text-ink text-sm uppercase">No Node Selected</h4>
               <p className="text-xs">
-                Click any numbered checkpoint marker on the map to inspect, drag, or edit its exact OpenStreetMap GPS position.
+                Click any numbered checkpoint marker or team pin on the map to inspect teams, drag, or edit coordinates.
               </p>
             </div>
           )}
@@ -1078,6 +1550,7 @@ export default function AdminOpenStreetMap({
                 const isSelected = activeSelectedId === cp.id;
                 const isMoved = !!movedNodes[cp.id];
                 const hasCoords = cp.latitude != null && cp.longitude != null;
+                const tCount = (teamsByNodeId.get(cp.id) || []).length;
 
                 return (
                   <button
@@ -1089,7 +1562,7 @@ export default function AdminOpenStreetMap({
                         mapInstanceRef.current.setView(marker.getLatLng(), 18, { animate: true });
                       }
                     }}
-                    className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-colors cursor-pointer ${isSelected
+                    className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-colors cursor-pointer flex items-center gap-1 ${isSelected
                         ? 'bg-accent text-on-primary border-accent ring-2 ring-accent/60'
                         : isMoved
                           ? 'bg-amber-950/80 text-amber-300 border-amber-400 ring-1 ring-amber-400 animate-pulse'
@@ -1098,7 +1571,9 @@ export default function AdminOpenStreetMap({
                             : 'bg-sunken text-muted border-dashed border-line hover:border-amber-400'
                       }`}
                   >
-                    0{stage} {isMoved ? '●' : hasCoords ? '✓' : ''}
+                    <span>0{stage}</span>
+                    {tCount > 0 && <span className="bg-amber-500 text-black px-1 rounded-full text-[9px] font-extrabold">{tCount}</span>}
+                    {isMoved ? '●' : hasCoords ? '✓' : ''}
                   </button>
                 );
               })}
