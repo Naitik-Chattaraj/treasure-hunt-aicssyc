@@ -36,7 +36,7 @@ export interface AdminTeamData {
   completed_at: string | null;
   completion_token: string | null;
   created_at: string;
-  members: AdminTeamMember[];
+  members?: AdminTeamMember[];
 }
 
 interface AdminTeamSquadModalProps {

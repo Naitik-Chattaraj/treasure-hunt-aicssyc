@@ -50,7 +50,7 @@ interface AdminTeam {
   completed_at: string | null;
   completion_token: string | null;
   created_at: string;
-  members: Array<{ name: string; role: string; regNo: string; phone: string }>;
+  members?: Array<{ name: string; role: string; regNo: string; phone: string }>;
 }
 
 interface QuestionPoolItem {
@@ -704,7 +704,7 @@ export default function AdminDashboard() {
                     teams={teams}
                     selectedTeamId={selectedTeamMapId}
                     onSelectTeam={setSelectedTeamMapId}
-                    onInspectTeamSquad={setSquadModalTeam}
+                    onInspectTeamSquad={(team) => setSquadModalTeam(team)}
                     showTeamsDefault={true}
                   />
                 </div>
@@ -941,7 +941,7 @@ export default function AdminDashboard() {
                 teams={teams}
                 selectedTeamId={selectedTeamMapId}
                 onSelectTeam={setSelectedTeamMapId}
-                onInspectTeamSquad={setSquadModalTeam}
+                onInspectTeamSquad={(team) => setSquadModalTeam(team)}
                 showTeamsDefault={true}
               />
             ) : (
