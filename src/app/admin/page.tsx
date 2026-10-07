@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Users, 
   CheckCircle2, 
   XCircle, 
   RefreshCw, 
   LogOut, 
-  Radio, 
   Layers, 
   ExternalLink,
   Edit,
@@ -429,8 +429,15 @@ export default function AdminDashboard() {
       {/* Top Admin Header (Fixed on Top) */}
       <header className="sticky top-0 z-40 w-full bg-surface/95 border-b border-line px-3 py-2.5 sm:px-6 sm:py-3 flex flex-wrap justify-between items-center gap-2 sm:gap-4 shadow-card">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/15 text-primary shrink-0">
-            <Radio className="w-5 h-5" aria-hidden="true" />
+          <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+            <Image
+              src="/ic_launcher.png"
+              alt="Mission Control Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">

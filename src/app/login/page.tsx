@@ -25,6 +25,33 @@ import AccessCodeModal from '@/components/AccessCodeModal';
 import { TeamMember } from '@/types/hunt';
 import { normalizeName, validateMembers, validatePersonName } from '@/lib/validation';
 
+function detectDeviceRole(): 'Field Scout' | 'Base Decoder' {
+  if (typeof window === 'undefined') return 'Base Decoder';
+
+  const ua = (navigator.userAgent || navigator.vendor || '').toLowerCase();
+
+  // Mobile smartphones (iOS, Android, etc.)
+  const isMobileUA = /android|iphone|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua);
+  if (isMobileUA) return 'Field Scout';
+
+  // Tablets or touch devices (iPad, Android tablets)
+  const isTabletUA = /ipad|tablet/i.test(ua);
+  if (isTabletUA) return 'Field Scout';
+
+  // iPadOS masquerading as desktop Safari (Macintosh UA with touch points)
+  const isIPadOS = /macintosh/i.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+  if (isIPadOS) return 'Field Scout';
+
+  // Screen width & coarse pointer fallback (e.g. mobile viewports, mobile emulation)
+  const isSmallScreen = window.innerWidth <= 768;
+  const isCoarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  if (isSmallScreen || (isCoarsePointer && window.innerWidth <= 1024)) {
+    return 'Field Scout';
+  }
+
+  return 'Base Decoder';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [teamName, setTeamName] = useState('');
@@ -83,6 +110,8 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    let hasExplicitSavedRole = false;
+
     // Check if there is a pending registration saved on this device
     if (typeof window !== 'undefined') {
       const savedPending = localStorage.getItem('treasure_hunt_pending_reg');
@@ -95,7 +124,10 @@ export default function LoginPage() {
             if (parsed.teamLead) setTeamLead(parsed.teamLead);
             if (parsed.members) setMembers(parsed.members);
             if (parsed.operativeName) setOperativeName(parsed.operativeName);
-            if (parsed.operativeRole) setOperativeRole(parsed.operativeRole);
+            if (parsed.operativeRole) {
+              setOperativeRole(parsed.operativeRole);
+              hasExplicitSavedRole = true;
+            }
             setPendingApproval(true);
 
             // Re-verify status with the server
@@ -129,6 +161,11 @@ export default function LoginPage() {
         } catch {
           localStorage.removeItem('treasure_hunt_pending_reg');
         }
+      }
+
+      // Auto-select based on device type for convenience (Field Scout for mobile, Base Decoder for laptop/desktop)
+      if (!hasExplicitSavedRole) {
+        setOperativeRole(detectDeviceRole());
       }
     }
 
@@ -621,8 +658,8 @@ export default function LoginPage() {
                     <legend className="mb-2 text-sm font-medium">Your role on this device</legend>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { role: 'Base Decoder' as const, Icon: BrainCircuit, where: 'In the room', what: 'Solves the questions', tone: 'accent' },
-                        { role: 'Field Scout' as const, Icon: Footprints, where: 'On campus', what: 'Scans the QR codes', tone: 'primary' },
+                        { role: 'Base Decoder' as const, Icon: BrainCircuit, where: 'In the room · Laptop', what: 'Solves the questions', tone: 'accent' },
+                        { role: 'Field Scout' as const, Icon: Footprints, where: 'On campus · Mobile', what: 'Scans the QR codes', tone: 'primary' },
                       ].map(({ role, Icon, where, what, tone }) => {
                         const selected = operativeRole === role;
                         return (
@@ -650,7 +687,7 @@ export default function LoginPage() {
                       })}
                     </div>
                     <p className="mt-2 text-xs text-muted">
-                      Up to 2 Base Decoder and 3 Field Scout devices can be signed in at once. Logging in on another device signs out the oldest one for that role.
+                      Auto-selected for this device (tap to switch). Up to 2 Base Decoder and 3 Field Scout devices can be signed in at once.
                     </p>
                   </fieldset>
                 </div>
@@ -755,10 +792,13 @@ export default function LoginPage() {
 
                   <fieldset className="rounded-lg border border-line bg-sunken p-3">
                     <legend className="sr-only">This device&apos;s role</legend>
-                    <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
-                      <UserCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-                      This device will be used by
-                    </p>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="flex items-center gap-1.5 text-sm font-medium">
+                        <UserCheck className="h-4 w-4 text-primary" aria-hidden="true" />
+                        This device will be used by
+                      </p>
+                      <span className="text-xs text-muted font-normal">Auto-detected (tap to switch)</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -774,7 +814,8 @@ export default function LoginPage() {
                         }`}
                       >
                         <BrainCircuit className="h-4 w-4" aria-hidden="true" />
-                        Base Decoder
+                        <span>Base Decoder</span>
+                        <span className="text-xs opacity-75 font-normal hidden sm:inline">(Laptop)</span>
                       </button>
                       <button
                         type="button"
@@ -790,7 +831,8 @@ export default function LoginPage() {
                         }`}
                       >
                         <Footprints className="h-4 w-4" aria-hidden="true" />
-                        Field Scout
+                        <span>Field Scout</span>
+                        <span className="text-xs opacity-75 font-normal hidden sm:inline">(Mobile)</span>
                       </button>
                     </div>
                   </fieldset>
